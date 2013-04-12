@@ -43,7 +43,7 @@ if (ARGV.length < 0)
     exit 0
 end
 
-client = Client.new $options
+client = Kesh::Mumble::Client.new $options
 
 trap("INT") do
     client.exit_by_user

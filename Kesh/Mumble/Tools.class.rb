@@ -1,5 +1,4 @@
 requireLibrary '../../Mumble'
-require File.expand_path "../MessageTypes", __FILE__
 
 module Kesh
 	module Mumble

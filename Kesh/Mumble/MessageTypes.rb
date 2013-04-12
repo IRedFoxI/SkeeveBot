@@ -1,6 +1,6 @@
 # from https://github.com/mumble-voip/mumble.git/src/Message.h
 
-require File.expand_path "../Mumble.pb", __FILE__
+require File.expand_path "../Protocol/Mumble.pb", __FILE__
 
 module Kesh
 	module Muble

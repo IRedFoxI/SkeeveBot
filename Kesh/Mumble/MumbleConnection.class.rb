@@ -3,7 +3,6 @@ require 'socket'
 require 'openssl'
 require 'fileutils'
 
-require File.expand_path "../Mumble.pb", __FILE__
 require File.expand_path "../MessageTypes", __FILE__
 
 module Kesh
