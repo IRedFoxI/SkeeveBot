@@ -13,8 +13,11 @@ module Kesh
 				@port = port
 				@username = username
 				@options = options
-				unless File.exists?(@username) # Move this to a settings or identities folder
-					FileUtils.mkdir @username
+				unless File.exists?( "Identities" )
+				        FileUtils.mkdir "Identities"
+				end
+				unless File.exists?( File.join( "Identities", @username ) )
+					FileUtils.mkdir File.join( "Identities", @username )
 				end
 
 				# Version 1.2.3
@@ -248,16 +251,16 @@ module Kesh
 			protected
 			# SSL Setup
 			def ssl_key_setup
-				if (File.exists? File.join(@username, 'private_key.pem'))
-					@key = OpenSSL::PKey::RSA.new File.read File.join(@username, 'private_key.pem')
+				if ( File.exists? File.join( "Identities", @username, 'private_key.pem' ) )
+					@key = OpenSSL::PKey::RSA.new File.read File.join( "Identities", @username, 'private_key.pem' )
 				else
 					@key = OpenSSL::PKey::RSA.new 2048
-					open File.join(@username, 'private_key.pem'), 'w' do |io| io.write @key.to_pem end
-					open File.join(@username, 'public_key.pem'), 'w' do |io| io.write @key.public_key.to_pem end
+					open File.join( "Identities", @username, 'private_key.pem' ), 'w' do |io| io.write @key.to_pem end
+					open File.join( "Identities", @username, 'public_key.pem' ), 'w' do |io| io.write @key.public_key.to_pem end
 				end
 
-				if (File.exists? File.join(@username, 'cert.pem'))
-					@cert = OpenSSL::X509::Certificate.new File.read(File.join(@username, 'cert.pem'))
+				if (File.exists? File.join( "Identities", @username, 'cert.pem' ) )
+					@cert = OpenSSL::X509::Certificate.new File.read( File.join( "Identities", @username, 'cert.pem' ) )
 				else
 					subject = "/C=#{@options[:country_code]}/O=#{@options[:organisation]}/OU=#{@options[:organisation_unit]}/CN=#{@username}"
 
@@ -280,7 +283,7 @@ module Kesh
 
 					@cert.sign(@key, OpenSSL::Digest::SHA256.new)
 
-					open File.join(@username, 'cert.pem'), 'w' do |io| io.write @cert.to_pem end
+					open File.join( "Identities", @username, 'cert.pem' ), 'w' do |io| io.write @cert.to_pem end
 				end
 			end
 
@@ -365,4 +368,3 @@ module Kesh
 
 	end
 end
-
