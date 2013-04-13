@@ -3,7 +3,7 @@
 require File.expand_path "../Protocol/Mumble.pb", __FILE__
 
 module Kesh
-	module Muble
+	module Mumble
 
         MP_TYPES = {
             0 => MumbleProto::Version,
