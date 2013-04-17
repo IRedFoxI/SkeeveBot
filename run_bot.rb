@@ -1,11 +1,4 @@
 #!/usr/bin/ruby
-# RubyMumble
-# ----------------------
-#
-# Prerequisites: Ruby, gem ruby_protobuf
-#
-# inspiration: http://pastebin.com/BRMPENUF
-
 
 require 'rubygems'
 require 'optparse'
@@ -14,10 +7,11 @@ require 'fileutils'
 
 require File.expand_path( File.dirname( __FILE__ ) + '/Loader.library.rb' )
 requireLibrary 'Mumble'
+require File.expand_path( File.dirname( __FILE__ ) + '/Bot.class.rb' )
 require File.expand_path "../config", __FILE__
 
 op = OptionParser.new do |opts|
-	opts.banner = "Usage: mbot.rb [OPTIONS] \n\n"
+	opts.banner = "Usage: run_bot.rb [OPTIONS] \n\n"
 	opts.on("-d", "--debug", "Debugging.") do
 		$options[:debug] = true
 	end
@@ -27,7 +21,7 @@ op = OptionParser.new do |opts|
 	end
 	opts.separator("")
 	opts.separator("Example:")
-	opts.separator("  RuMuBo.rb")
+	opts.separator("  run_bot.rb")
 	opts.separator("")
 	opts.separator("Configure:")
 	opts.separator("  edit your config.rb")
@@ -42,16 +36,16 @@ if (ARGV.length < 0)
 	exit 0
 end
 
-client = Kesh::Mumble::Client.new $options
+bot = Bot.new $options
 
 trap("INT") do
-	client.exit_by_user
+	bot.exit_by_user
 	exit 0
 end
 
 Thread.abort_on_exception = true
 
-client.run $servers
+bot.run $servers
 
 
 
