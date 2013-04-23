@@ -112,6 +112,7 @@ class Bot
 			client.register_handler :UserState, method( :on_users_changed )
 			client.register_handler :UserRemove, method( :on_users_changed )
 			client.register_handler :UDPTunnel, method( :on_audio )
+			client.register_text_handler "!help", method( :cmd_help )
 			client.register_text_handler "!find", method( :cmd_find )
 			client.register_text_handler "!goto", method( :cmd_goto )
 			client.register_text_handler "!test", method( :cmd_test )
@@ -127,10 +128,32 @@ class Bot
 	end
 
 	private
+
+	def cmd_help client, message
+		text = message.message
+
+		command = text.split(' ')[ 1 ]
+
+		case command
+		when "find"
+			help_msg_find( client, message )
+		when "goto"
+			help_msg_goto( client, message )
+		when "info"
+			help_msg_info( client, message )
+		else
+			client.send_user_message message.actor, "The following commands are available:"
+			client.send_user_message message.actor, "!help \"command\" - detailed help on the command"
+			client.send_user_message message.actor, "!find \"mumble_nick\" - find which channel someone is in"
+			client.send_user_message message.actor, "!goto \"mumble_command\" - move yourself to someone's channel"
+			client.send_user_message message.actor, "!info \"tribes_nick\" \"stat\" - detailed stats on player"
+		end
+	end
+
 	def cmd_find client, message
 		text = message.message
 
-		nick = text.split(" ")[ 1 ]
+		nick = text.split(' ')[ 1 ]
 		user = client.find_user nick
 		if user
 			client.send_user_message message.actor, "User '#{user.name}' is in Channel '#{user.channel.path}'"
@@ -139,13 +162,24 @@ class Bot
 		end
 	end
 
+	def help_msg_find client, message
+			client.send_user_message message.actor, "Syntax: !find \"mumble_nick\""
+			client.send_user_message message.actor, "Returns \"mumble_nick\"'s channel"
+	end
+
 	def cmd_goto client, message
 		text = message.message
 
-		nick = text.split(" ")[ 1 ]
+		nick = text.split(' ')[ 1 ]
 		target = client.find_user nick
 		source = client.find_user message.actor
 		client.move_user source, target.channel
+	end
+
+	def help_msg_goto client, message
+			client.send_user_message message.actor, "Syntax: !goto \"mumble_nick\""
+			client.send_user_message message.actor, "The bot tries to move you to \"mumble_nick\"'s"
+			client.send_user_message message.actor, "Fails if the bot doesn't have sufficient rights"
 	end
 
 	def cmd_test client, message
@@ -158,7 +192,7 @@ class Bot
 		text = message.message
 		own_nick = client.find_user( message.actor ).name
 
-		nick = text.split(" ")[ 1 ]
+		nick = text.split(' ')[ 1 ]
 		nick = ( nick.nil? ) ? own_nick : nick
 
 		stats = Array.new
@@ -198,17 +232,40 @@ class Bot
 
 	end
 
+	def help_msg_info client, message
+			client.send_user_message message.actor, "Syntax !info"
+			client.send_user_message message.actor, "Returns your level and last login time based on your mumble nick"
+			client.send_user_message message.actor, "Syntax !info \"stat\""
+			client.send_user_message message.actor, "As above but also shows your \"stat\""
+			client.send_user_message message.actor, "Syntax !info \"tribes_nick\""
+			client.send_user_message message.actor, "Returns \"tribes_nick\"'s level and last login time"
+			client.send_user_message message.actor, "Syntax !info \"tribes_nick\" \"stat\""
+			client.send_user_message message.actor, "As above but also shows \"tribes_nick\"'s \"stat\""
+			client.send_user_message message.actor, "\"stat\" can be a space delimited list of these stats:"
+			stats = get_player_stats "SomeFakePlayerName"
+			stats.each do |stat|
+				client.send_user_message message.actor, stat unless stat.eql? "ret_msg"
+			end
+	end
+
 	def get_player_stats nick, *stats
-		query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
-		result = query.send_method( "getplayer", nick )
+		if nick != "SomeFakePlayerName"
+			query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
+			result = query.send_method( "getplayer", nick )
 
-		stats = stats.first
+			stats = stats.first
 
-		statsVals = Array.new
-		stats.each do |stat|
-			statsVals << result[ stat ]
+			statsVals = Array.new
+			stats.each do |stat|
+				statsVals << result[ stat ]
+			end
+			return statsVals
+		else
+			query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
+			result = query.send_method( "getplayer", "Player" )
+			stats = result.keys
+			return stats
 		end
-		return statsVals
 	rescue
 		return
 	end
