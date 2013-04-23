@@ -6,7 +6,6 @@ require 'pp'
 require 'fileutils'
 
 require File.expand_path( File.dirname( __FILE__ ) + '/Loader.library.rb' )
-requireLibrary 'Mumble'
 require File.expand_path( File.dirname( __FILE__ ) + '/Bot.class.rb' )
 require File.expand_path "../config", __FILE__
 

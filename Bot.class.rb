@@ -1,17 +1,23 @@
+# require 'speech'
+# require 'celt-ruby'
+
 requireLibrary 'Mumble'
+requireLibrary 'TribesAPI'
 
 class Bot
 
 	def initialize options
 		@clientcount = 0
 		@options = options
-		@clients = {}
+		@connections = {}
 	end
 
 	def exit_by_user
 		puts ""
 		puts "user exited bot."
-		@clients.keys.first.debug
+		if @connections.keys.first
+			@connections.keys.first.debug
+		end
 	end
 
 	def connected?
@@ -19,7 +25,7 @@ class Bot
 	end
 
 	def on_connected client, message
-		client.switch_channel @clients[client][:channel]
+		client.switch_channel @connections[client][:channel]
 	end
 
 	def on_users_changed client, message
@@ -66,21 +72,21 @@ class Bot
 	end
 
 	def on_audio client, message
-		# packet = message.packet
+		packet = message.packet.bytes.to_a
 
-		# index = 0
-		# tt = Kesh::Mumble::Tools.decode_type_target(packet[index])
-		# index = 1
+		index = 0
+		tt = Kesh::Mumble::Tools.decode_type_target( packet[ index ] )
 
-		# vi1 = Kesh::Mumble::Tools.decode_varint packet, index
-		# index = vi1[:new_index]
-		# session = vi1[:result]
+		index = 1
+		vi1 = Kesh::Mumble::Tools.decode_varint packet, index
+		index = vi1[:new_index]
+		session = vi1[:result]
 
-		# vi2 = Kesh::Mumble::Tools.decode_varint packet, index
-		# index = vi2[:new_index]
-		# sequence = vi2[:result]
+		vi2 = Kesh::Mumble::Tools.decode_varint packet, index
+		index = vi2[:new_index]
+		sequence = vi2[:result]
 
-		# data = packet[index..-1]
+		data = packet[index..-1]
 
 		# slaves = @slave_by_user[client][session]
 
@@ -101,17 +107,18 @@ class Bot
 	def run servers
 		servers.each do |server|
 			@clientcount += 1
-			client = Kesh::Mumble::MumbleClient.new(server[:host], server[:port], server[:nick], @options)
-			client.register_handler :ServerSync, method(:on_connected)
-			client.register_handler :UserState, method(:on_users_changed)
-			client.register_handler :UserRemove, method(:on_users_changed)
-			client.register_handler :UDPTunnel, method(:on_audio)
-			client.register_text_handler "!find", method(:cmd_find)
-			client.register_text_handler "!goto", method(:cmd_goto)
-			client.register_text_handler "!test", method(:cmd_test)
+			client = Kesh::Mumble::MumbleClient.new( server[:host], server[:port], server[:nick], @options )
+			client.register_handler :ServerSync, method( :on_connected )
+			client.register_handler :UserState, method( :on_users_changed )
+			client.register_handler :UserRemove, method( :on_users_changed )
+			client.register_handler :UDPTunnel, method( :on_audio )
+			client.register_text_handler "!find", method( :cmd_find )
+			client.register_text_handler "!goto", method( :cmd_goto )
+			client.register_text_handler "!test", method( :cmd_test )
+			client.register_text_handler "!info", method( :cmd_info )
 
 			client.connect
-			@clients[client] = server
+			@connections[client] = server
 		end
 
 		while connected? do
@@ -123,7 +130,7 @@ class Bot
 	def cmd_find client, message
 		text = message.message
 
-		nick = text[6..-1]
+		nick = text.split(" ")[ 1 ]
 		user = client.find_user nick
 		if user
 			client.send_user_message message.actor, "User '#{user.name}' is in Channel '#{user.channel.path}'"
@@ -135,7 +142,7 @@ class Bot
 	def cmd_goto client, message
 		text = message.message
 
-		nick = text[6..-1]
+		nick = text.split(" ")[ 1 ]
 		target = client.find_user nick
 		source = client.find_user message.actor
 		client.move_user source, target.channel
@@ -146,5 +153,65 @@ class Bot
 			client.send_acl id
 		end
 	end
+
+	def cmd_info client, message
+		text = message.message
+		own_nick = client.find_user( message.actor ).name
+
+		nick = text.split(" ")[ 1 ]
+		nick = ( nick.nil? ) ? own_nick : nick
+
+		stats = Array.new
+		stats << "Name"
+		stats << "Level"
+		stats << "Last_Login_Datetime"
+		stats.push( *text.split(" ")[ 2..-1 ] )
+		stats.map! do |stat|
+			stat.split('_').map!( &:capitalize ).join('_')
+		end
+
+		statsVals = get_player_stats( nick, stats )
+
+		if ( statsVals.nil? && nick != own_nick )
+			stats.insert( 3, nick.split('_').map!( &:capitalize ).join('_') )
+			statsVals = get_player_stats( own_nick, stats )
+		end
+
+		if ( stats[ 3 ] == nick && statsVals[ 3 ].nil? )
+			client.send_user_message message.actor, "Player #{nick} not found."
+		else
+			name = statsVals.shift
+			level = statsVals.shift
+			last_login = statsVals.shift
+			stats.shift( 3 )
+			client.send_user_message message.actor, "Player #{name} has level #{level}."
+			client.send_user_message message.actor, "He/she has last logged in on #{last_login}."
+			while stat = stats.shift
+				statVal = statsVals.shift
+				if statVal
+					client.send_user_message message.actor, "#{stat}: #{statVal}."
+				else
+					client.send_user_message message.actor, "Unknown stat #{stat}."
+				end
+			end			
+		end
+
+	end
+
+	def get_player_stats nick, *stats
+		query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
+		result = query.send_method( "getplayer", nick )
+
+		stats = stats.first
+
+		statsVals = Array.new
+		stats.each do |stat|
+			statsVals << result[ stat ]
+		end
+		return statsVals
+	rescue
+		return
+	end
+
 
 end
