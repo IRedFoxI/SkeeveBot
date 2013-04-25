@@ -121,18 +121,17 @@ module Kesh
 				channel_path = channel.split('/')
 				if channel_path.length == 1
 					channels = @channels.values.select{ |ch| (ch.name == channel) || (ch.channel_id == channel) }
-					return channels.first
-				else
-					channel = @root_channel
-					while channel_name = channel_path.shift
-						channel.ordered_subchannels.each do |ch|
-							if ch.name == channel_name
-								channel = ch
-							end
+					return channels.first unless channels.length != 1
+				end
+				channel = @root_channel
+				while channel_name = channel_path.shift
+					channel.ordered_subchannels.each do |ch|
+						if ch.name == channel_name
+							channel = ch
 						end
 					end
-					return channel
 				end
+				return channel
 			end
 
 			def find_user user
