@@ -1,6 +1,7 @@
 # require 'speech'
 # require 'celt-ruby'
 
+requireLibrary 'IO'
 requireLibrary 'Mumble'
 requireLibrary 'TribesAPI'
 
@@ -10,6 +11,7 @@ class Bot
 		@clientcount = 0
 		@options = options
 		@connections = {}
+		@admins = {}
 	end
 
 	def exit_by_user
@@ -25,7 +27,8 @@ class Bot
 	end
 
 	def on_connected client, message
-		client.switch_channel @connections[client][:channel]
+		client.switch_channel @connections[ client ][ :channel ]
+		load_admin_ini client
 	end
 
 	def on_users_changed client, message
@@ -79,14 +82,14 @@ class Bot
 
 		index = 1
 		vi1 = Kesh::Mumble::Tools.decode_varint packet, index
-		index = vi1[:new_index]
-		session = vi1[:result]
+		index = vi1[ :new_index ]
+		session = vi1[ :result ]
 
 		vi2 = Kesh::Mumble::Tools.decode_varint packet, index
-		index = vi2[:new_index]
-		sequence = vi2[:result]
+		index = vi2[ :new_index ]
+		sequence = vi2[ :result ]
 
-		data = packet[index..-1]
+		data = packet[ index..-1 ]
 
 		# slaves = @slave_by_user[client][session]
 
@@ -117,9 +120,10 @@ class Bot
 			client.register_text_handler "!goto", method( :cmd_goto )
 			client.register_text_handler "!test", method( :cmd_test )
 			client.register_text_handler "!info", method( :cmd_info )
+			client.register_text_handler "!admin", method( :cmd_admin )
 
 			client.connect
-			@connections[client] = server
+			@connections[ client ] = server
 		end
 
 		while connected? do
@@ -141,6 +145,8 @@ class Bot
 			help_msg_goto( client, message )
 		when "info"
 			help_msg_info( client, message )
+		when "admin"
+			help_msg_admin( client, message )
 		else
 			client.send_user_message message.actor, "The following commands are available:"
 			client.send_user_message message.actor, "!help \"command\" - detailed help on the command"
@@ -248,6 +254,52 @@ class Bot
 			end
 	end
 
+	def cmd_admin client, message
+		text = message.message
+
+		command = text.split(' ')[ 1 ]
+
+		case command
+		when "login"
+			cmd_admin_login( client, message )
+		else
+			client.send_user_message message.actor, "Please specify an admin command."
+		end
+	end
+
+	def help_msg_admin client, message
+	end
+
+	def cmd_admin_login client, message
+		text = message.message
+		nick = client.find_user( message.actor ).name
+
+		password = text.split(' ')[ 2 ]
+		if password.eql? @connections[ client ][ :pass ]
+			client.send_user_message message.actor, "Login accepted."
+			if @admins[ client ]
+				if @admins[ client ].has_key? nick
+					if @admins[ client ][ nick ].eql? "SuperUser"
+						client.send_user_message message.actor, "Already a SuperUser."
+					else
+						@admins[ client ][ nick ] = "SuperUser"
+					end
+				else
+					@admins[ client ].merge! nick => "SuperUser"
+				end
+			else
+				@admins[ client ] = { nick => "SuperUser" }
+			end
+			write_admin_ini
+		else
+			client.send_user_message message.actor, "Wrong password."
+		end
+
+	end
+
+	def help_msg_admin_login client, message
+	end
+
 	def get_player_stats nick, *stats
 		if nick != "SomeFakePlayerName"
 			query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
@@ -270,5 +322,31 @@ class Bot
 		return
 	end
 
+	def write_admin_ini
+		ini = Kesh::IO::Storage::IniFile.new
+		@admins.each_pair do |client, adminsHash|
+			sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+  			ini.addSection( sectionName )
+			adminsHash.each_pair do |nick, value|
+				ini.setValue( sectionName, nick, value )
+			end
+		end
+		ini.writeToFile( 'admins.ini' )
+	end
+
+	def load_admin_ini client
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/admins.ini' ) )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'admins.ini' )
+			sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+			adminsSection = ini.getSection( sectionName )
+			if adminsSection
+				adminsHash = Hash.new
+				adminsSection.values.each do |value|
+					adminsHash[ value.name ] = value.value
+				end
+				@admins[ client ] = adminsHash
+			end
+		end
+	end
 
 end
