@@ -31,17 +31,12 @@ class Bot
 
 	def on_connected client, message
 		client.switch_channel @connections[ client ][ :channel ]
-		load_admins_ini client
-		load_roles_ini client
-		load_aliases_ini client
 		# check channels for signups
 	end
 
 	def on_users_changed client, message
 		chanPath = client.channels[ message.channel_id ].path
 		nick = message.name
-
-		return unless @roles[ client ]
 
 		if @roles[ client ].has_key? chanPath
 			# In a monitored channel
@@ -152,8 +147,12 @@ class Bot
 
 	def run servers
 		servers.each do |server|
+
 			@clientcount += 1
+
 			client = Kesh::Mumble::MumbleClient.new( server[:host], server[:port], server[:nick], @options )
+			@connections[ client ] = server
+
 			client.register_handler :ServerSync, method( :on_connected )
 			client.register_handler :UserState, method( :on_users_changed )
 			client.register_handler :UserRemove, method( :on_users_changed )
@@ -166,8 +165,12 @@ class Bot
 			client.register_text_handler "!admin", method( :cmd_admin )
 			client.register_text_handler "!alias", method( :cmd_alias )
 
+			load_admins_ini client
+			load_roles_ini client
+			load_aliases_ini client
+
 			client.connect
-			@connections[ client ] = server
+
 		end
 
 		while connected? do
