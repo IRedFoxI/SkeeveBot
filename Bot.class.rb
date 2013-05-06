@@ -31,7 +31,6 @@ class Bot
 
 	def on_connected client, message
 		client.switch_channel @connections[ client ][ :channel ]
-		# check channels for signups
 	end
 
 	def on_users_changed client, message
@@ -317,8 +316,6 @@ class Bot
 
 	def cmd_admin client, message
 
-		puts client.find_user( message.actor ).name
-
 		if @admins[ client ].has_key? client.find_user( message.actor ).name
 
 			text = message.message
@@ -330,6 +327,8 @@ class Bot
 				cmd_admin_login( client, message )
 			when "setchan"
 				cmd_admin_setchan( client, message )
+			when "come"
+				cmd_admin_come( client, message )
 			else
 				client.send_user_message message.actor, "Please specify an admin command."
 			end
@@ -414,6 +413,21 @@ class Bot
 	end
 
 	def help_msg_admin_setchan client, message
+	end
+
+	def cmd_admin_come client, message 
+		if @admins[ client ].has_key? client.find_user( message.actor ).name
+
+			chanPath = client.find_user( message.actor ).channel.path
+			client.switch_channel chanPath
+
+		else
+			client.send_user_message message.actor, "No admin privileges."
+		end
+
+	end
+
+	def help_msg_admin_come client, message
 	end
 
 	def cmd_alias client, message 
