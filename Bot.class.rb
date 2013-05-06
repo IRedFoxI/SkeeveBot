@@ -12,6 +12,9 @@ class Bot
 		@options = options
 		@connections = {}
 		@admins = {}
+		@roles = {}
+		@aliases = {}
+		@signedUp = {}
 	end
 
 	def exit_by_user
@@ -28,10 +31,50 @@ class Bot
 
 	def on_connected client, message
 		client.switch_channel @connections[ client ][ :channel ]
-		load_admin_ini client
+		load_admins_ini client
+		load_roles_ini client
+		load_aliases_ini client
+		# check channels for signups
 	end
 
 	def on_users_changed client, message
+		chanPath = client.channels[ message.channel_id ].path
+		nick = message.name
+
+		return unless @roles[ client ]
+
+		if @roles[ client ].has_key? chanPath
+			# In a monitored channel
+
+			chanRole = @roles[ client ][ chanPath ]
+
+			if @signedUp.has_key? nick
+				# Already signed up
+
+				if @signedUp[ nick ].eql? chanRole
+					# No change in role
+				else
+					# Role changed
+					@signedUp[ nick ] = chanRole
+					client.send_user_message message.session, "Your role changed to '#{chanRole.join(' ')}'."
+				end
+
+			else
+				# New Signup
+				@signedUp.merge! nick => chanRole
+				client.send_user_message message.session, "You signed up with role '#{chanRole.join(' ')}'."
+			end
+
+		else
+			# Not in a monitored channel
+
+			if @signedUp.has_key? nick
+				@signedUp.delete nick
+				client.send_user_message message.session, "You were removed."
+			end
+
+		end
+
 		# return if !client.channel
 
 		# client.channel.localusers.each do |u|
@@ -121,6 +164,7 @@ class Bot
 			client.register_text_handler "!test", method( :cmd_test )
 			client.register_text_handler "!info", method( :cmd_info )
 			client.register_text_handler "!admin", method( :cmd_admin )
+			client.register_text_handler "!alias", method( :cmd_alias )
 
 			client.connect
 			@connections[ client ] = server
@@ -255,15 +299,26 @@ class Bot
 	end
 
 	def cmd_admin client, message
-		text = message.message
 
-		command = text.split(' ')[ 1 ]
+		puts client.find_user( message.actor ).name
 
-		case command
-		when "login"
-			cmd_admin_login( client, message )
+		if @admins[ client ].has_key? client.find_user( message.actor ).name
+
+			text = message.message
+
+			command = text.split(' ')[ 1 ]
+
+			case command
+			when "login"
+				cmd_admin_login( client, message )
+			when "setchan"
+				cmd_admin_setchan( client, message )
+			else
+				client.send_user_message message.actor, "Please specify an admin command."
+			end
+
 		else
-			client.send_user_message message.actor, "Please specify an admin command."
+			client.send_user_message message.actor, "No admin priviliges."
 		end
 	end
 
@@ -273,24 +328,31 @@ class Bot
 	def cmd_admin_login client, message
 		text = message.message
 		nick = client.find_user( message.actor ).name
-
 		password = text.split(' ')[ 2 ]
+
 		if password.eql? @connections[ client ][ :pass ]
+
 			client.send_user_message message.actor, "Login accepted."
+
 			if @admins[ client ]
+
 				if @admins[ client ].has_key? nick
+
 					if @admins[ client ][ nick ].eql? "SuperUser"
 						client.send_user_message message.actor, "Already a SuperUser."
 					else
 						@admins[ client ][ nick ] = "SuperUser"
 					end
+
 				else
 					@admins[ client ].merge! nick => "SuperUser"
 				end
 			else
 				@admins[ client ] = { nick => "SuperUser" }
 			end
-			write_admin_ini
+
+			write_admins_ini client
+
 		else
 			client.send_user_message message.actor, "Wrong password."
 		end
@@ -298,6 +360,85 @@ class Bot
 	end
 
 	def help_msg_admin_login client, message
+	end
+
+	def cmd_admin_setchan client, message 
+		if @admins[ client ].has_key? client.find_user( message.actor ).name
+
+			text = message.message
+			chanPath = client.find_user( message.actor ).channel.path
+			chanRole = text.split(' ')[ 2..-1 ]
+
+			if @roles[ client ]
+
+				if @roles[ client ].has_key? chanPath
+					prevValue = @roles[ client ][ chanPath ]
+					@roles[ client ][ chanPath ] = chanRole
+				else
+					@roles[ client ].merge! chanPath => chanRole
+				end
+
+			else
+				@roles[ client ] = { chanPath => chanRole }
+			end
+
+			write_roles_ini client
+
+			if prevValue
+				client.send_user_message message.actor, "Channel #{chanPath} changed from '#{prevValue.join(' ')}' to '#{chanRole.join(' ')}'."
+			else
+				client.send_user_message message.actor, "Channel #{chanPath} set to '#{chanRole.join(' ')}'."
+			end
+
+		else
+			client.send_user_message message.actor, "No admin privileges."
+		end
+
+	end
+
+	def help_msg_admin_setchan client, message
+	end
+
+	def cmd_alias client, message 
+		text = message.message
+		nick = client.find_user( message.actor ).name
+		aliasValue = text.split(' ')[ 1 ]
+
+		if @aliases[ client ]
+
+			if @aliases[ client ].has_key? nick
+
+				prevValue = @aliases[ client ][ nick ]
+
+				if aliasValue.eql? nick
+					@aliases[ client ].delete( nick )
+				else
+					@aliases[ client ][ nick ] = aliasValue
+				end
+
+			else
+				@aliases[ client ].merge! nick => aliasValue
+			end
+
+		else
+			@aliases[ client ] = { nick => aliasValue }
+		end
+
+		write_aliases_ini client
+
+		if prevValue
+			if aliasValue.eql? nick
+				client.send_user_message message.actor, "Previous alias (#{prevValue}) of #{nick} removed."
+			else
+				client.send_user_message message.actor, "Alias of #{nick} changed from #{prevValue} to #{aliasValue}."
+			end
+		else
+			client.send_user_message message.actor, "Alias of #{nick} set to #{aliasValue}."
+		end
+
+	end
+
+	def help_msg_alias client, message
 	end
 
 	def get_player_stats nick, *stats
@@ -322,30 +463,120 @@ class Bot
 		return
 	end
 
-	def write_admin_ini
-		ini = Kesh::IO::Storage::IniFile.new
-		@admins.each_pair do |client, adminsHash|
-			sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
-  			ini.addSection( sectionName )
-			adminsHash.each_pair do |nick, value|
-				ini.setValue( sectionName, nick, value )
-			end
+	def write_admins_ini  client
+		sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/admins.ini' ) )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'admins.ini' )
+			ini.removeSection( sectionName )
+		else
+			ini = Kesh::IO::Storage::IniFile.new
 		end
+
+		ini.addSection( sectionName )
+
+		@admins[ client ].each_pair do |nick, value|
+			ini.setValue( sectionName, nick, value )
+		end
+
 		ini.writeToFile( 'admins.ini' )
 	end
 
-	def load_admin_ini client
+	def load_admins_ini client
 		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/admins.ini' ) )
+
 			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'admins.ini' )
 			sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
 			adminsSection = ini.getSection( sectionName )
+
 			if adminsSection
 				adminsHash = Hash.new
+
 				adminsSection.values.each do |value|
 					adminsHash[ value.name ] = value.value
 				end
+
 				@admins[ client ] = adminsHash
 			end
+
+		end
+	end
+
+	def write_roles_ini client
+		sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/roles.ini' ) )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'roles.ini' )
+			ini.removeSection( sectionName )
+		else
+			ini = Kesh::IO::Storage::IniFile.new
+		end
+
+		ini.addSection( sectionName )
+
+		@roles[ client ].each_pair do |channel, value|
+			ini.setValue( sectionName, channel, value.join(',') )
+		end
+
+		ini.writeToFile( 'roles.ini' )
+	end
+
+	def load_roles_ini client
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/roles.ini' ) )
+
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'roles.ini' )
+			sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+			channelsSection = ini.getSection( sectionName )
+
+			if channelsSection
+				channelsHash = Hash.new
+
+				channelsSection.values.each do |value|
+					channelsHash[ value.name ] = value.value.split(',')
+				end
+
+				@roles[ client ] = channelsHash
+			end
+
+		end
+	end
+
+	def write_aliases_ini client
+		sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/aliases.ini' ) )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'aliases.ini' )
+			ini.removeSection( sectionName )
+		else
+			ini = Kesh::IO::Storage::IniFile.new
+		end
+
+		ini.addSection( sectionName )
+
+		@aliases[ client ].each_pair do |nick, value|
+			ini.setValue( sectionName, nick, value )
+		end
+
+		ini.writeToFile( 'aliases.ini' )
+	end
+
+	def load_aliases_ini client
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/aliases.ini' ) )
+
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'aliases.ini' )
+			sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+			aliasesSection = ini.getSection( sectionName )
+
+			if aliasesSection
+				aliasesHash = Hash.new
+
+				aliasesSection.values.each do |value|
+					aliasesHash[ value.name ] = value.value
+				end
+
+				@aliases[ client ] = aliasesHash
+			end
+
 		end
 	end
 
