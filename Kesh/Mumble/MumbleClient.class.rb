@@ -139,6 +139,11 @@ module Kesh
 				return users.first
 			end
 
+			def find_user_session session
+				users = @users.values.select{ |u| (u.session == session) }
+				return users.first
+			end
+
 			# Highlevel Commands Myself (usually allowed by server)
 			def send_authenticate
 				super @username
