@@ -244,9 +244,11 @@ class Bot
 	def cmd_info client, message
 		text = message.message
 		own_nick = client.find_user( message.actor ).name
+		own_nick = @aliases[ client ].has_key?( own_nick ) ? @aliases[ client ][ own_nick ] : own_nick
 
 		nick = text.split(' ')[ 1 ]
 		nick = ( nick.nil? ) ? own_nick : nick
+		nick = @aliases[ client ].has_key?( nick ) ? @aliases[ client ][ nick ] : nick
 
 		stats = Array.new
 		stats << "Name"
@@ -260,8 +262,20 @@ class Bot
 		statsVals = get_player_stats( nick, stats )
 
 		if ( statsVals.nil? && nick != own_nick )
+
 			stats.insert( 3, nick.split('_').map!( &:capitalize ).join('_') )
 			statsVals = get_player_stats( own_nick, stats )
+
+			if statsVals.nil?
+				client.send_user_message message.actor, "Player #{own_nick} not found."
+				return
+			end
+
+		end
+
+		if statsVals.nil?
+			client.send_user_message message.actor, "Player #{nick} not found."
+			return
 		end
 
 		if ( stats[ 3 ] == nick && statsVals[ 3 ].nil? )
