@@ -35,7 +35,7 @@ class Bot
 
 	def on_users_changed client, message
 		chanPath = client.channels[ message.channel_id ].path
-		nick = message.name
+		nick = client.find_user_session( message.session ).name
 
 		if @roles[ client ].has_key? chanPath
 			# In a monitored channel
