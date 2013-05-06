@@ -42,28 +42,32 @@ class Bot
 
 			chanRole = @roles[ client ][ chanPath ]
 
-			if @signedUp.has_key? nick
+			if @signedUp[ client ].nil?
+				@signedUp[ client ] = Hash.new
+			end
+
+			if @signedUp[ client ].has_key? nick
 				# Already signed up
 
-				if @signedUp[ nick ].eql? chanRole
+				if @signedUp[ client ][ nick ].eql? chanRole
 					# No change in role
 				else
 					# Role changed
-					@signedUp[ nick ] = chanRole
+					@signedUp[ client ][ nick ] = chanRole
 					client.send_user_message message.session, "Your role changed to '#{chanRole.join(' ')}'."
 				end
 
 			else
 				# New Signup
-				@signedUp.merge! nick => chanRole
+				@signedUp[ client ].merge! nick => chanRole
 				client.send_user_message message.session, "You signed up with role '#{chanRole.join(' ')}'."
 			end
 
 		else
 			# Not in a monitored channel
 
-			if @signedUp.has_key? nick
-				@signedUp.delete nick
+			if @signedUp[ client ].has_key? nick
+				@signedUp[ client ].delete nick
 				client.send_user_message message.session, "You were removed."
 			end
 
