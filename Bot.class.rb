@@ -12,7 +12,8 @@ class Bot
 		@options = options
 		@connections = {}
 		@admins = {}
-		@roles = {}
+		@chanRoles = {}
+		@rolesRequired = {}
 		@aliases = {}
 		@signedUp = {}
 	end
@@ -36,12 +37,17 @@ class Bot
 	def on_users_changed client, message
 		chanPath = client.channels[ message.channel_id ].path
 		nick = client.find_user_session( message.session ).name
-		nick = @aliases[ client ].has_key?( nick ) ? @aliases[ client ][ nick ] : nick
 
-		if @roles[ client ].has_key? chanPath
+		if @aliases[ client ]
+			nick = @aliases[ client ].has_key?( nick ) ? @aliases[ client ][ nick ] : nick
+		end
+
+		return unless @chanRoles[ client ]
+
+		if @chanRoles[ client ].has_key? chanPath
 			# In a monitored channel
 
-			chanRole = @roles[ client ][ chanPath ]
+			roles = @chanRoles[ client ][ chanPath ]
 
 			if @signedUp[ client ].nil?
 				@signedUp[ client ] = Hash.new
@@ -50,18 +56,18 @@ class Bot
 			if @signedUp[ client ].has_key? nick
 				# Already signed up
 
-				if @signedUp[ client ][ nick ].eql? chanRole
+				if @signedUp[ client ][ nick ].eql? roles
 					# No change in role
 				else
 					# Role changed
-					@signedUp[ client ][ nick ] = chanRole
-					client.send_user_message message.session, "Your role changed to '#{chanRole.join(' ')}'."
+					@signedUp[ client ][ nick ] = roles
+					client.send_user_message message.session, "Your role changed to '#{roles.join(' ')}'."
 				end
 
 			else
 				# New Signup
-				@signedUp[ client ].merge! nick => chanRole
-				client.send_user_message message.session, "You signed up with role '#{chanRole.join(' ')}'."
+				@signedUp[ client ].merge! nick => roles
+				client.send_user_message message.session, "You signed up with role '#{roles.join(' ')}'."
 			end
 
 		else
@@ -248,11 +254,16 @@ class Bot
 	def cmd_info client, message
 		text = message.message
 		own_nick = client.find_user( message.actor ).name
-		own_nick = @aliases[ client ].has_key?( own_nick ) ? @aliases[ client ][ own_nick ] : own_nick
+		if @aliases[ client ]
+			own_nick = @aliases[ client ].has_key?( own_nick ) ? @aliases[ client ][ own_nick ] : own_nick
+		end
 
 		nick = text.split(' ')[ 1 ]
 		nick = ( nick.nil? ) ? own_nick : nick
-		nick = @aliases[ client ].has_key?( nick ) ? @aliases[ client ][ nick ] : nick
+
+		if @aliases[ client ]
+			nick = @aliases[ client ].has_key?( nick ) ? @aliases[ client ][ nick ] : nick
+		end
 
 		stats = Array.new
 		stats << "Name"
@@ -332,6 +343,10 @@ class Bot
 				cmd_admin_login( client, message )
 			when "setchan"
 				cmd_admin_setchan( client, message )
+			when "setrole"
+				cmd_admin_setrole( client, message )
+			when "delrole"
+				cmd_admin_delrole( client, message )
 			when "come"
 				cmd_admin_come( client, message )
 			else
@@ -388,27 +403,50 @@ class Bot
 
 			text = message.message
 			chanPath = client.find_user( message.actor ).channel.path
-			chanRole = text.split(' ')[ 2..-1 ]
+			roles = text.split(' ')[ 2..-1 ]
 
-			if @roles[ client ]
+			if !@rolesRequired[ client ]
+				client.send_user_message message.actor, "No roles defined."
+				return
+			end
 
-				if @roles[ client ].has_key? chanPath
-					prevValue = @roles[ client ][ chanPath ]
-					@roles[ client ][ chanPath ] = chanRole
+			if !roles.nil?
+				roles.each do |role|
+					if !@rolesRequired[ client ].has_key? role
+						client.send_user_message message.actor, "Unknown role: '#{role}'."
+						return
+					end
+				end
+			end
+
+
+			if @chanRoles[ client ]
+
+				if @chanRoles[ client ].has_key? chanPath
+					prevValue = @chanRoles[ client ][ chanPath ]
+					if roles.nil?
+						@chanRoles[ client ].delete chanPath
+					else
+						@chanRoles[ client ][ chanPath ] = roles
+					end
 				else
-					@roles[ client ].merge! chanPath => chanRole
+					@chanRoles[ client ].merge! chanPath => roles
 				end
 
 			else
-				@roles[ client ] = { chanPath => chanRole }
+				@chanRoles[ client ] = { chanPath => roles }
 			end
 
 			write_roles_ini client
 
 			if prevValue
-				client.send_user_message message.actor, "Channel #{chanPath} changed from '#{prevValue.join(' ')}' to '#{chanRole.join(' ')}'."
+				if roles.nil?
+					client.send_user_message message.actor, "Channel #{chanPath} removed (was '#{prevValue.join(' ')}')."
+				else
+					client.send_user_message message.actor, "Channel #{chanPath} changed from '#{prevValue.join(' ')}' to '#{roles.join(' ')}'."
+				end
 			else
-				client.send_user_message message.actor, "Channel #{chanPath} set to '#{chanRole.join(' ')}'."
+				client.send_user_message message.actor, "Channel #{chanPath} set to '#{roles.join(' ')}'."
 			end
 
 		else
@@ -418,6 +456,88 @@ class Bot
 	end
 
 	def help_msg_admin_setchan client, message
+	end
+
+	def cmd_admin_setrole client, message 
+		if @admins[ client ].has_key? client.find_user( message.actor ).name
+
+			text = message.message
+			chanPath = client.find_user( message.actor ).channel.path
+			role = text.split(' ')[ 2 ]
+			required = text.split(' ')[ 3 ]
+
+			if ( required.nil? && @chanRoles[ client ] && @chanRoles[ client ][ chanPath ] && @chanRoles[ client ][ chanPath ].length == 1 )
+				role = @chanRoles[ client ][ chanPath ] 
+				required = text.split(' ')[ 2 ]
+			end
+
+			if required.nil?
+				client.send_user_message message.actor, "Missing argument."
+				return
+			end
+
+			if @rolesRequired[ client ]
+
+				if @rolesRequired[ client ].has_key? role
+					prevValue = @rolesRequired[ client ][ role ]
+					@rolesRequired[ client ][ role ] = required
+				else
+					@rolesRequired[ client ].merge! role => required
+				end
+
+			else
+				@rolesRequired[ client ] = { role => required }
+			end
+
+			write_roles_ini client
+
+			if prevValue
+				client.send_user_message message.actor, "Role #{role} changed from '#{prevValue}' to '#{required}'."
+			else
+				client.send_user_message message.actor, "Role #{role} set to '#{required}'."
+			end
+
+		else
+			client.send_user_message message.actor, "No admin privileges."
+		end
+
+	end
+
+	def help_msg_admin_setrole client, message
+	end
+
+	def cmd_admin_delrole client, message 
+		if @admins[ client ].has_key? client.find_user( message.actor ).name
+
+			text = message.message
+			chanPath = client.find_user( message.actor ).channel.path
+			role = text.split(' ')[ 2 ]
+
+			if ( role.nil? && @chanRoles[ client ][ chanPath ] && @chanRoles[ client ][ chanPath ].length == 1 )
+				role = @chanRoles[ client ][ chanPath ] 
+			end
+
+			if role.nil?
+				client.send_user_message message.actor, "Missing argument."
+				return
+			end
+
+			if !@rolesRequired[ client ].has_key? role
+					client.send_user_message message.actor, "Unknown role: '#{role}'."
+				return
+			end
+
+			@rolesRequired[ client ].delete rolesRequired
+
+			write_roles_ini
+
+			client.send_user_message message.actor, "Role deleted ('#{role}')."
+
+		end
+
+	end
+
+	def help_msg_admin_delrole client, message
 	end
 
 	def cmd_admin_come client, message 
@@ -539,19 +659,34 @@ class Bot
 	end
 
 	def write_roles_ini client
-		sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+
+		sectionNameBase = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
 
 		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/roles.ini' ) )
 			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'roles.ini' )
-			ini.removeSection( sectionName )
 		else
 			ini = Kesh::IO::Storage::IniFile.new
 		end
 
+		sectionName = "#{sectionNameBase}:roles"
+
+		ini.removeSection( sectionName )
 		ini.addSection( sectionName )
 
-		@roles[ client ].each_pair do |channel, value|
-			ini.setValue( sectionName, channel, value.join(',') )
+		@rolesRequired[ client ].each_pair do |channel, value|
+			ini.setValue( sectionName, channel, value )
+		end
+
+		sectionName = "#{sectionNameBase}:channels"
+
+		ini.removeSection( sectionName )
+
+		if @chanRoles[ client ]
+			ini.addSection( sectionName )
+
+			@chanRoles[ client ].each_pair do |channel, value|
+				ini.setValue( sectionName, channel, value.join(',') )
+			end
 		end
 
 		ini.writeToFile( 'roles.ini' )
@@ -561,17 +696,33 @@ class Bot
 		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/roles.ini' ) )
 
 			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'roles.ini' )
-			sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
-			channelsSection = ini.getSection( sectionName )
 
-			if channelsSection
+			sectionNameBase = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+
+			sectionName = "#{sectionNameBase}:roles"
+			section = ini.getSection( sectionName )
+
+			if section
+				rolesHash = Hash.new
+
+				section.values.each do |value|
+					rolesHash[ value.name ] = value.value.split(',')
+				end
+
+				@rolesRequired[ client ] = rolesHash
+			end
+
+			sectionName = "#{sectionNameBase}:channels"
+			section = ini.getSection( sectionName )
+
+			if section
 				channelsHash = Hash.new
 
-				channelsSection.values.each do |value|
+				section.values.each do |value|
 					channelsHash[ value.name ] = value.value.split(',')
 				end
 
-				@roles[ client ] = channelsHash
+				@chanRoles[ client ] = channelsHash
 			end
 
 		end
