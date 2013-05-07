@@ -35,6 +35,9 @@ class Bot
 	end
 
 	def on_users_changed client, message
+
+		return if message.session.eql? client.session
+
 		chanPath = client.channels[ message.channel_id ].path
 		nick = client.find_user_session( message.session ).name
 
@@ -72,6 +75,8 @@ class Bot
 
 		else
 			# Not in a monitored channel
+
+			return unless @signedUp[ client ]
 
 			if @signedUp[ client ].has_key? nick
 				@signedUp[ client ].delete nick
@@ -412,12 +417,19 @@ class Bot
 			required = text.split(' ')[ 3 ]
 
 			if ( required.nil? && @chanRoles[ client ] && @chanRoles[ client ][ chanPath ] && @chanRoles[ client ][ chanPath ].length == 1 )
-				role = @chanRoles[ client ][ chanPath ] 
+				role = @chanRoles[ client ][ chanPath ].first
 				required = text.split(' ')[ 2 ]
 			end
 
 			if required.nil?
 				client.send_user_message message.actor, "Missing argument."
+				return
+			end
+
+			required.upcase!
+
+			if required.to_i.to_s != required && required != "T"
+				client.send_user_message message.actor, "Argument must be numeric or 'T'."
 				return
 			end
 
@@ -651,7 +663,7 @@ class Bot
 				rolesHash = Hash.new
 
 				section.values.each do |value|
-					rolesHash[ value.name ] = value.value.split(',')
+					rolesHash[ value.name ] = value.value
 				end
 
 				@rolesRequired[ client ] = rolesHash
