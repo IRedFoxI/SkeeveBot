@@ -63,14 +63,37 @@ class Bot
 					# No change in role
 				else
 					# Role changed
+
 					@signedUp[ client ][ nick ] = roles
-					client.send_user_message message.session, "Your role changed to '#{roles.join(' ')}'."
+
+					firstRoleReq = @rolesRequired[ client ][ roles.first ]
+
+					if  firstRoleReq.to_i < 0
+						# Became spectator
+						client.send_user_message message.session, "You became a spectator."
+					elsif firstRoleReq.eql? "T"
+						client.send_user_message message.session, "You joined team '#{roles.first}'."
+					else
+						client.send_user_message message.session, "Your role changed to '#{roles.join(' ')}'."
+					end
+
 				end
 
 			else
 				# New Signup
+
 				@signedUp[ client ].merge! nick => roles
-				client.send_user_message message.session, "You signed up with role '#{roles.join(' ')}'."
+				firstRoleReq = @rolesRequired[ client ][ roles.first ]
+
+				if  firstRoleReq.to_i < 0
+					# Became spectator
+					client.send_user_message message.session, "You became a spectator."
+				elsif firstRoleReq.eql? "T"
+					client.send_user_message message.session, "You joined team '#{roles.first}'."
+				else
+					client.send_user_message message.session, "You signed up with role '#{roles.join(' ')}'."
+				end
+				
 			end
 
 		else
