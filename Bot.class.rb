@@ -48,6 +48,9 @@ class Bot
 
 		return unless @chanRoles[ client ]
 
+		prevRolesNeeded = check_requirements client
+		prevPlayersNeeded = prevRolesNeeded.shift
+
 		stats = Array.new
 		stats << "Name"
 		stats << "Level"
@@ -99,7 +102,7 @@ class Bot
 						
 						client.send_user_message message.session, "Your role(s) changed to '#{roles.join(' ')}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
 						message_all_signups( client, "Player #{name} (level #{level}) changed role(s) to '#{roles.join(' ')}'.", message.session )
-						
+
 					end
 
 				end
@@ -144,35 +147,54 @@ class Bot
 
 		end
 
-		rolesToFill = @rolesRequired[ client ].inject({}) do |h,(role, value)| 
-			h[ role ] = value.to_i
-			h
-		end
+		rolesNeeded = check_requirements client
+		playersNeeded = rolesNeeded.shift
 
-		noPlayers = 0
+		if prevPlayersNeeded >0 && playersNeeded > 0
+			return
 
-		@signedUp[ client ].each_pair do |nick, roles|
-			if @rolesRequired[ client ][ roles.first ].to_i >= 0
-				noPlayers += 1
-				roles.each do |role|
-					rolesToFill[ role ] -= 1
-				end
-			end
-		end
+		elsif prevPlayersNeeded <= 0 && playersNeeded > 0
+			message_all_signups( client, "No longer enough players to start." )
 
-		if noPlayers >= 1 # FIXME: Make this a setting
-			rolesNeeded = Array.new
-			rolesToFill.each do |role, value|
-				if value > 0
-					rolesNeeded << "#{value} #{role}"
-				end
-			end
+		elsif ( prevPlayersNeeded > 0 && playersNeeded <= 0 ) || !rolesNeeded.eql?( prevRolesNeeded ) 
+
 			if rolesNeeded.empty?
 				message_all_signups( client, "Enough players and all required roles are most likely covered. Start picking!" )
 			else
 				message_all_signups( client, "Enough players but missing #{rolesNeeded.join(' and ')}" )
 			end
+			
 		end
+
+	end
+
+	def check_requirements client
+		playersNeeded = 1 # FIXME: Make this a setting
+
+		rolesToFill = @rolesRequired[ client ].inject({}) do |h,(role, value)| 
+			h[ role ] = value.to_i
+			h
+		end
+
+		if @signedUp[ client ]
+			@signedUp[ client ].each_pair do |nick, roles|
+				if @rolesRequired[ client ][ roles.first ].to_i >= 0
+					playersNeeded -= 1
+					roles.each do |role|
+						rolesToFill[ role ] -= 1
+					end
+				end
+			end
+		end
+
+		rolesNeeded = Array.new
+		rolesToFill.each do |role, value|
+			if value > 0
+				rolesNeeded << "#{value} #{role}"
+			end
+		end
+
+		return rolesNeeded.unshift( playersNeeded )
 
 	end
 
