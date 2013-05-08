@@ -17,6 +17,8 @@ class Bot
 		@aliases = {}
 		@muted = {}
 		@signedUp = {}
+		@defaultPlayerNum = 14
+		@playerNum = {}
 	end
 
 	def exit_by_user
@@ -169,7 +171,7 @@ class Bot
 	end
 
 	def check_requirements client
-		playersNeeded = 1 # FIXME: Make this a setting
+		playersNeeded = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
 
 		rolesToFill = @rolesRequired[ client ].inject({}) do |h,(role, value)| 
 			h[ role ] = value.to_i
@@ -409,6 +411,8 @@ class Bot
 				cmd_admin_delrole( client, message )
 			when "come"
 				cmd_admin_come( client, message )
+			when "playernum"
+				cmd_admin_playernum( client, message )
 			else
 				client.send_user_message message.actor, "Please specify an admin command."
 			end
@@ -622,6 +626,30 @@ class Bot
 	def help_msg_admin_come client, message
 	end
 
+	def cmd_admin_playernum client, message 
+		if @admins[ client ].has_key? client.find_user( message.actor ).name
+
+			newPlayerNum = message.message.split(' ')[ 2 ].to_i
+
+			if newPlayerNum.nil? || newPlayerNum == @defaultPlayerNum
+				@playerNum.delete( client )
+				write_roles_ini client
+				client.send_user_message message.actor, "Required number of players set to default value ('#{@defaultPlayerNum}')."
+			else
+				@playerNum[ client ] = newPlayerNum
+				write_roles_ini client
+				client.send_user_message message.actor, "Required number of players set to '#{newPlayerNum}'."
+			end
+
+		else
+			client.send_user_message message.actor, "No admin privileges."
+		end
+
+	end
+
+	def help_msg_admin_playernum client, message
+	end
+
 	def cmd_alias client, message 
 		text = message.message
 		nick = client.find_user( message.actor ).name
@@ -806,8 +834,12 @@ class Bot
 		ini.removeSection( sectionName )
 		ini.addSection( sectionName )
 
-		@rolesRequired[ client ].each_pair do |channel, value|
-			ini.setValue( sectionName, channel, value )
+		if @playerNum[ client ]
+			ini.setValue( sectionName, "PlayerNum", @playerNum[ client ].to_s )
+		end
+
+		@rolesRequired[ client ].each_pair do |role, value|
+			ini.setValue( sectionName, role, value )
 		end
 
 		sectionName = "#{sectionNameBase}:channels"
@@ -839,7 +871,11 @@ class Bot
 				rolesHash = Hash.new
 
 				section.values.each do |value|
-					rolesHash[ value.name ] = value.value
+					if value.name.eql? "PlayerNum"
+						@playerNum[ client ] = value.value.to_i
+					else
+						rolesHash[ value.name ] = value.value
+					end
 				end
 
 				@rolesRequired[ client ] = rolesHash
