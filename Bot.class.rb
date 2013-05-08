@@ -48,6 +48,20 @@ class Bot
 
 		return unless @chanRoles[ client ]
 
+		stats = Array.new
+		stats << "Name"
+		stats << "Level"
+
+		statsVals = get_player_stats( nick, stats )
+
+		if statsVals.nil?
+			name = nick
+			level = "unknown"
+		else
+			name = statsVals.shift
+			level = statsVals.shift
+		end
+
 		if @chanRoles[ client ].has_key? chanPath
 			# In a monitored channel
 
@@ -71,12 +85,21 @@ class Bot
 
 					if  firstRoleReq.to_i < 0
 						# Became spectator
+
 						client.send_user_message message.session, "You became a spectator." unless @muted[ client ] && @muted[ client ].has_key?( nick )
+						message_all_signups( client, "Player #{name} (level #{level}) became a spectator.", message.session )
+
 					elsif firstRoleReq.eql? "T"
+
 						client.send_user_message message.session, "You joined team '#{roles.first}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
+						message_all_signups( client, "Player #{name} (level #{level}) joined team '#{roles.first}'.", message.session )
 						# FIXME: picking started if enough players
+
 					else
-						client.send_user_message message.session, "Your role changed to '#{roles.join(' ')}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
+						
+						client.send_user_message message.session, "Your role(s) changed to '#{roles.join(' ')}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
+						message_all_signups( client, "Player #{name} (level #{level}) changed role(s) to '#{roles.join(' ')}'.", message.session )
+						
 					end
 
 				end
@@ -89,12 +112,21 @@ class Bot
 
 				if  firstRoleReq.to_i < 0
 					# Became spectator
+
 					client.send_user_message message.session, "You became a spectator." unless @muted[ client ] && @muted[ client ].has_key?( nick )
+					message_all_signups( client, "Player #{name} (level #{level}) became a spectator.", message.session )
+
 				elsif firstRoleReq.eql? "T"
+
 					client.send_user_message message.session, "You joined team '#{roles.first}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
+					message_all_signups( client, "Player #{name} (level #{level}) joined team '#{roles.first}'.", message.session )
 					# FIXME: picking started if enough players
+
 				else
-					client.send_user_message message.session, "You signed up with role '#{roles.join(' ')}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
+
+					client.send_user_message message.session, "You signed up with role(s) '#{roles.join(' ')}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
+					message_all_signups( client, "Player #{name} (level #{level}) signed up with role(s) '#{roles.join(' ')}'.", message.session )
+
 				end
 				
 			end
@@ -106,7 +138,8 @@ class Bot
 
 			if @signedUp[ client ].has_key? nick
 				@signedUp[ client ].delete nick
-				client.send_user_message message.session, "You signed off." unless @muted[ client ] && @muted[ client ].has_key?( nick )
+				client.send_user_message message.session, "You left the PuG/mixed channels." unless @muted[ client ] && @muted[ client ].has_key?( nick )
+				message_all_signups( client, "Player #{name} (level #{level}) left", message.session )
 			end
 
 		end
@@ -128,7 +161,7 @@ class Bot
 		end
 
 		if noPlayers >= 1 # FIXME: Make this a setting
-			rolesNeeded = []
+			rolesNeeded = Array.new
 			rolesToFill.each do |role, value|
 				if value > 0
 					rolesNeeded << "#{value} #{role}"
@@ -881,7 +914,7 @@ class Bot
 			@signedUp[ client ].each_key do |nick|
 				next if @muted[ client ] && @muted[ client ].has_key?( nick ) && @muted[ client ][ nick ].eql?( "True" )
 				user = client.find_user( nick )
-				next if exclude.include?( user.session )
+				next if exclude && exclude.include?( user.session )
 				client.send_user_message user.session, message
 			end
 		end
