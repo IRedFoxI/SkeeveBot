@@ -106,7 +106,7 @@ class Bot
 
 			if @signedUp[ client ].has_key? nick
 				@signedUp[ client ].delete nick
-				client.send_user_message message.session, "You were removed." unless @muted[ client ] && @muted[ client ].has_key?( nick )
+				client.send_user_message message.session, "You signed off." unless @muted[ client ] && @muted[ client ].has_key?( nick )
 			end
 
 		end
@@ -134,7 +134,11 @@ class Bot
 					rolesNeeded << "#{value} #{role}"
 				end
 			end
-			message_all_signups( client, "Enough players but missing #{rolesNeeded.join(' and ')}" )
+			if rolesNeeded.empty?
+				message_all_signups( client, "Enough players and all required roles are most likely covered. Start picking!" )
+			else
+				message_all_signups( client, "Enough players but missing #{rolesNeeded.join(' and ')}" )
+			end
 		end
 
 	end
@@ -872,11 +876,12 @@ class Bot
 		end
 	end
 
-	def message_all_signups client, message
+	def message_all_signups client, message, *exclude
 		if @signedUp[ client ]
 			@signedUp[ client ].each_key do |nick|
 				next if @muted[ client ] && @muted[ client ].has_key?( nick ) && @muted[ client ][ nick ].eql?( "True" )
 				user = client.find_user( nick )
+				next if exclude.include?( user.session )
 				client.send_user_message user.session, message
 			end
 		end
