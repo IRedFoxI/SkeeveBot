@@ -15,6 +15,7 @@ class Bot
 		@chanRoles = {}
 		@rolesRequired = {}
 		@aliases = {}
+		@muted = {}
 		@signedUp = {}
 	end
 
@@ -70,12 +71,12 @@ class Bot
 
 					if  firstRoleReq.to_i < 0
 						# Became spectator
-						client.send_user_message message.session, "You became a spectator."
+						client.send_user_message message.session, "You became a spectator." unless @muted[ client ] && @muted[ client ].has_key?( nick )
 					elsif firstRoleReq.eql? "T"
-						client.send_user_message message.session, "You joined team '#{roles.first}'."
+						client.send_user_message message.session, "You joined team '#{roles.first}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
 						# FIXME: picking started if enough players
 					else
-						client.send_user_message message.session, "Your role changed to '#{roles.join(' ')}'."
+						client.send_user_message message.session, "Your role changed to '#{roles.join(' ')}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
 					end
 
 				end
@@ -88,12 +89,12 @@ class Bot
 
 				if  firstRoleReq.to_i < 0
 					# Became spectator
-					client.send_user_message message.session, "You became a spectator."
+					client.send_user_message message.session, "You became a spectator." unless @muted[ client ] && @muted[ client ].has_key?( nick )
 				elsif firstRoleReq.eql? "T"
-					client.send_user_message message.session, "You joined team '#{roles.first}'."
+					client.send_user_message message.session, "You joined team '#{roles.first}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
 					# FIXME: picking started if enough players
 				else
-					client.send_user_message message.session, "You signed up with role '#{roles.join(' ')}'."
+					client.send_user_message message.session, "You signed up with role '#{roles.join(' ')}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
 				end
 				
 			end
@@ -105,7 +106,7 @@ class Bot
 
 			if @signedUp[ client ].has_key? nick
 				@signedUp[ client ].delete nick
-				client.send_user_message message.session, "You were removed."
+				client.send_user_message message.session, "You were removed." unless @muted[ client ] && @muted[ client ].has_key?( nick )
 			end
 
 		end
@@ -175,10 +176,11 @@ class Bot
 			client.register_text_handler "!info", method( :cmd_info )
 			client.register_text_handler "!admin", method( :cmd_admin )
 			client.register_text_handler "!alias", method( :cmd_alias )
+			client.register_text_handler "!mute", method( :cmd_mute )
 
 			load_admins_ini client
 			load_roles_ini client
-			load_aliases_ini client
+			load_playerprefs_ini client
 
 			client.connect
 
@@ -567,6 +569,7 @@ class Bot
 		text = message.message
 		nick = client.find_user( message.actor ).name
 		aliasValue = text.split(' ')[ 1 ]
+		aliasValue = aliasValue ? aliasValue : nick
 
 		if @aliases[ client ]
 
@@ -588,7 +591,12 @@ class Bot
 			@aliases[ client ] = { nick => aliasValue }
 		end
 
-		write_aliases_ini client
+		if @muted[ client ] && @muted[ client ].has_key?( prevValue ? prevValue : nick )
+			@muted[ client ].delete( prevValue ? prevValue : nick )
+			@muted[ client ].merge! aliasValue => "True"
+		end
+
+		write_playerprefs_ini client
 
 		if prevValue
 			if aliasValue.eql? nick
@@ -603,6 +611,66 @@ class Bot
 	end
 
 	def help_msg_alias client, message
+	end
+
+	def cmd_mute client, message 
+		text = message.message
+		nick = client.find_user( message.actor ).name
+
+		if @aliases[ client ]
+			nick = @aliases[ client ].has_key?( nick ) ? @aliases[ client ][ nick ] : nick
+		end
+
+		muteValue = text.split(' ')[ 1 ]
+
+		if muteValue.nil? 
+			muteValue = @muted[ client ] && @muted[ client].has_key?( nick ) ? "False" : "True" 
+		end
+
+		muteValue.capitalize!
+
+		case muteValue
+		when "On"
+			muteValue = "True"
+		when "Off"
+			muteValue = "False"
+		end
+
+		if @muted[ client ]
+
+			if @muted[ client ].has_key? nick
+
+				if muteValue.eql? "False"
+					@muted[ client ].delete( nick )
+					write_playerprefs_ini client
+					client.send_user_message message.actor, "No longer muted."
+					return
+				end
+
+			else
+
+				if muteValue.eql? "True"
+					@muted[ client ].merge! nick => muteValue
+					write_playerprefs_ini client
+					client.send_user_message message.actor, "Muted."
+					return
+				end
+				
+			end
+
+		else
+
+			if muteValue.eql? "True"
+				@muted[ client ] = { nick => muteValue }
+				write_playerprefs_ini client
+				client.send_user_message message.actor, "Muted."
+				return
+			end
+
+		end
+	end
+
+	def help_msg_mute client, message
 	end
 
 	def get_player_stats nick, *stats
@@ -736,30 +804,48 @@ class Bot
 		end
 	end
 
-	def write_aliases_ini client
-		sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+	def write_playerprefs_ini client
+		sectionNameBase = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
 
-		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/aliases.ini' ) )
-			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'aliases.ini' )
-			ini.removeSection( sectionName )
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/playerprefs.ini' ) )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'playerprefs.ini' )
 		else
 			ini = Kesh::IO::Storage::IniFile.new
 		end
 
+		sectionName = "#{sectionNameBase}:aliases"
+
+		ini.removeSection( sectionName )
 		ini.addSection( sectionName )
 
-		@aliases[ client ].each_pair do |nick, value|
-			ini.setValue( sectionName, nick, value )
+		if @aliases[ client ]
+			@aliases[ client ].each_pair do |nick, value|
+				ini.setValue( sectionName, nick, value )
+			end
 		end
 
-		ini.writeToFile( 'aliases.ini' )
+		sectionName = "#{sectionNameBase}:muted"
+
+		ini.removeSection( sectionName )
+		ini.addSection( sectionName )
+
+		if @muted[ client ]
+			@muted[ client ].each_pair do |nick, value|
+				ini.setValue( sectionName, nick, value )
+			end
+		end
+
+		ini.writeToFile( 'playerprefs.ini' )
 	end
 
-	def load_aliases_ini client
-		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/aliases.ini' ) )
+	def load_playerprefs_ini client
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/playerprefs.ini' ) )
 
-			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'aliases.ini' )
-			sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'playerprefs.ini' )
+
+			sectionNameBase = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+
+			sectionName = "#{sectionNameBase}:aliases"
 			aliasesSection = ini.getSection( sectionName )
 
 			if aliasesSection
@@ -772,14 +858,28 @@ class Bot
 				@aliases[ client ] = aliasesHash
 			end
 
+			sectionName = "#{sectionNameBase}:muted"
+			mutedSection = ini.getSection( sectionName )
+
+			if mutedSection
+				mutedHash = Hash.new
+
+				mutedSection.values.each do |value|
+					mutedHash[ value.name ] = value.value
+				end
+
+				@muted[ client ] = mutedHash
+			end
+
 		end
 	end
 
 	def message_all_signups client, message
 		if @signedUp[ client ]
 			@signedUp[ client ].each_key do |nick|
+				next if @muted[ client ] && @muted[ client ].has_key?( nick ) && @muted[ client ][ nick ].eql?( "True" )
 				user = client.find_user( nick )
-				client.send_user_message user.session, message # FIXME: quiet mode
+				client.send_user_message user.session, message
 			end
 		end
 	end
