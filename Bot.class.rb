@@ -257,12 +257,13 @@ class Bot
 	def cmd_info client, message
 		text = message.message
 		own_nick = client.find_user( message.actor ).name
+
 		if @aliases[ client ]
 			own_nick = @aliases[ client ].has_key?( own_nick ) ? @aliases[ client ][ own_nick ] : own_nick
 		end
 
 		nick = text.split(' ')[ 1 ]
-		nick = ( nick.nil? ) ? own_nick : nick
+		nick = nick.nil? ? own_nick : nick
 
 		if @aliases[ client ]
 			nick = @aliases[ client ].has_key?( nick ) ? @aliases[ client ][ nick ] : nick
@@ -271,7 +272,6 @@ class Bot
 		stats = Array.new
 		stats << "Name"
 		stats << "Level"
-		stats << "Last_Login_Datetime"
 		stats.push( *text.split(" ")[ 2..-1 ] )
 		stats.map! do |stat|
 			stat.split('_').map!( &:capitalize ).join('_')
@@ -281,7 +281,7 @@ class Bot
 
 		if ( statsVals.nil? && nick != own_nick )
 
-			stats.insert( 3, nick.split('_').map!( &:capitalize ).join('_') )
+			stats.insert( 2, nick.split('_').map!( &:capitalize ).join('_') )
 			statsVals = get_player_stats( own_nick, stats )
 
 			if statsVals.nil?
@@ -296,15 +296,13 @@ class Bot
 			return
 		end
 
-		if ( stats[ 3 ] == nick && statsVals[ 3 ].nil? )
+		if ( stats[ 2 ] == nick && statsVals[ 2 ].nil? )
 			client.send_user_message message.actor, "Player #{nick} not found."
 		else
 			name = statsVals.shift
 			level = statsVals.shift
-			last_login = statsVals.shift
-			stats.shift( 3 )
+			stats.shift( 2 )
 			client.send_user_message message.actor, "Player #{name} has level #{level}."
-			client.send_user_message message.actor, "He/she has last logged in on #{last_login}."
 			while stat = stats.shift
 				statVal = statsVals.shift
 				if statVal
