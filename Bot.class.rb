@@ -36,7 +36,7 @@ class Bot
 
 	def on_users_changed client, message
 
-		return if message.session.eql? client.session
+		return if message.name.eql? @connections[ client ][ :nick ]
 
 		chanPath = client.channels[ message.channel_id ].path
 		nick = client.find_user_session( message.session ).name
@@ -73,6 +73,7 @@ class Bot
 						client.send_user_message message.session, "You became a spectator."
 					elsif firstRoleReq.eql? "T"
 						client.send_user_message message.session, "You joined team '#{roles.first}'."
+						# FIXME: picking started if enough players
 					else
 						client.send_user_message message.session, "Your role changed to '#{roles.join(' ')}'."
 					end
@@ -90,6 +91,7 @@ class Bot
 					client.send_user_message message.session, "You became a spectator."
 				elsif firstRoleReq.eql? "T"
 					client.send_user_message message.session, "You joined team '#{roles.first}'."
+					# FIXME: picking started if enough players
 				else
 					client.send_user_message message.session, "You signed up with role '#{roles.join(' ')}'."
 				end
@@ -106,6 +108,32 @@ class Bot
 				client.send_user_message message.session, "You were removed."
 			end
 
+		end
+
+		rolesToFill = @rolesRequired[ client ].inject({}) do |h,(role, value)| 
+			h[ role ] = value.to_i
+			h
+		end
+
+		noPlayers = 0
+
+		@signedUp[ client ].each_pair do |nick, roles|
+			if @rolesRequired[ client ][ roles.first ].to_i >= 0
+				noPlayers += 1
+				roles.each do |role|
+					rolesToFill[ role ] -= 1
+				end
+			end
+		end
+
+		if noPlayers >= 1 # FIXME: Make this a setting
+			rolesNeeded = []
+			rolesToFill.each do |role, value|
+				if value > 0
+					rolesNeeded << "#{value} #{role}"
+				end
+			end
+			message_all_signups( client, "Enough players but missing #{rolesNeeded.join(' and ')}" )
 		end
 
 	end
@@ -744,6 +772,15 @@ class Bot
 				@aliases[ client ] = aliasesHash
 			end
 
+		end
+	end
+
+	def message_all_signups client, message
+		if @signedUp[ client ]
+			@signedUp[ client ].each_key do |nick|
+				user = client.find_user( nick )
+				client.send_user_message user.session, message # FIXME: quiet mode
+			end
 		end
 	end
 
