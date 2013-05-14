@@ -105,7 +105,11 @@ module Kesh
 				if !@event_handler[type]
 					@event_handler[type] = []
 				end
-				@event_handler[type] << callback
+				if type == :UserRemove
+					@event_handler[type].unshift( callback )
+				else
+					@event_handler[type] << callback
+				end
 			end
 
 			def register_text_handler(prefix, callback)
