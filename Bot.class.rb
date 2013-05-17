@@ -6,7 +6,7 @@ requireLibrary 'Mumble'
 requireLibrary 'TribesAPI'
 
 
-Player = Struct.new( :name, :level, :caps, :maps )
+Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :playerName, :level, :noCaps, :noMaps, :matchId, :roles )
 Match = Struct.new( :id, :status, :date, :teams, :players, :comment, :results )
 Result = Struct.new( :map, :teams, :scores, :comment )
 
@@ -15,16 +15,18 @@ class Bot
 	def initialize options
 		@clientcount = 0
 		@options = options
-		@connections = {}
-		@admins = {}
-		@chanRoles = {}
-		@rolesRequired = {}
-		@aliases = {}
-		@muted = {}
-		@signedUp = {}
+		@connections = Hash.new
+		# @admins = Hash.new
+		@chanRoles = Hash.new
+		@rolesRequired = Hash.new
+		# @aliases = Hash.new
+		# @muted = Hash.new
+		# @signedUp = Hash.new
 		@defaultPlayerNum = 14
-		@playerNum = {}
-		@players = {}
+		@playerNum = Hash.new
+		@players = Hash.new
+		@currMatchId = Hash.new
+		@matches = Array.new
 	end
 
 	def exit_by_user
@@ -43,15 +45,20 @@ class Bot
 		client.switch_channel @connections[ client ][ :channel ]
 	end
 
-	def on_users_changed client, message
+	def on_user_changed client, message
 
-		return if message.name.eql? @connections[ client ][ :nick ]
+		# FIXME: joining server in a monitored channel: sign-up but also "You left the PuG/mixed channels."
 
-		chanPath = client.channels[ message.channel_id ].path
-		nick = client.find_user_session( message.session ).name
+		return if client.find_user_session( message.session ).name.eql? @connections[ client ][ :nick ]
+
+		if defined?( message.channel_id )
+			chanPath = client.channels[ message.channel_id ].path
+		end
+
+		mumbleNick = client.find_user_session( message.session ).name
 
 		if @aliases[ client ]
-			nick = @aliases[ client ].has_key?( nick ) ? @aliases[ client ][ nick ] : nick
+			nick = @aliases[ client ].has_key?( mumbleNick ) ? @aliases[ client ][ mumbleNick ] : mumbleNick
 		end
 
 		return unless @chanRoles[ client ]
@@ -59,22 +66,25 @@ class Bot
 		prevRolesNeeded = check_requirements client
 		prevPlayersNeeded = prevRolesNeeded.shift
 
-		if @chanRoles[ client ].has_key? chanPath
+		if ( defined?( chanPath ) && @chanRoles[ client ].has_key?( chanPath ) )
 			# In a monitored channel
 
 			roles = @chanRoles[ client ][ chanPath ]
 
-			if @signedUp[ client ].nil?
-				@signedUp[ client ] = Hash.new
-			end
-
-			if @signedUp[ client ].has_key? nick
+			if ( @players[ client ] && @players[ client ].has_key?( message.session ) )
 				# Already signed up
 
-				if @signedUp[ client ][ nick ].eql? roles
+				player = @players[ client ][ message.session ]
+
+				if player.roles.eql? roles
 					# No change in role
+
+					return
+
 				else
 					# Role changed
+
+					player.roles = roles
 
 					@signedUp[ client ][ nick ] = roles
 
@@ -83,19 +93,20 @@ class Bot
 					if  firstRoleReq.to_i < 0
 						# Became spectator
 
-						client.send_user_message message.session, "You became a spectator." unless @muted[ client ] && @muted[ client ].has_key?( nick )
-						message_all_signups( client, "Player #{@players[ client ][ nick ].name} (level #{@players[ client ][ nick ].level}) became a spectator.", message.session )
+						messagePlayer = "You became a spectator."
+						messageAll = "Player #{player.playerName} (level: #{player.level}) became a spectator."
 
 					elsif firstRoleReq.eql? "T"
 
-						client.send_user_message message.session, "You joined team '#{roles.first}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
-						message_all_signups( client, "Player #{@players[ client ][ nick ].name} (level #{@players[ client ][ nick ].level}) joined team '#{roles.first}'.", message.session )
+						messagePlayer = "You joined team '#{roles.first}'."
+						messageAll = "Player #{player.playerName} (level: #{player.level}) joined team '#{roles.first}'."
+
 						# FIXME: picking started if enough players
 
 					else
 						
-						client.send_user_message message.session, "Your role(s) changed to '#{roles.join(' ')}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
-						message_all_signups( client, "Player #{@players[ client ][ nick ].name} (level #{@players[ client ][ nick ].level}) changed role(s) to '#{roles.join(' ')}'.", message.session )
+						messagePlayer = "Your role(s) changed to '#{roles.join(' ')}'."
+						messageAll = "Player #{player.playerName} (level: #{player.level}) changed role(s) to '#{roles.join(' ')}'."
 
 					end
 
@@ -104,47 +115,48 @@ class Bot
 			else
 				# New Signup
 
-				stats = Array.new
-				stats << "Name"
-				stats << "Level"
-
-				statsVals = get_player_stats( nick, stats )
-
-				if statsVals.nil?
-					name = nick
-					level = "unknown"
-				else
-					name = statsVals.shift
-					level = statsVals.shift
-				end
-
-				player = Player.new( name, level, [], [] )
+				playerData = get_player_data( client, message.session )
+				admin = playerData[ "admin" ]
+				aliasNick = playerData[ "aliasNick" ]
+				muted = playerData[ "muted" ]
+				elo = playerData[ "elo" ]
+				playerName = playerData[ "playerName" ]
+				level = playerData[ "level" ]
+				noCaps = playerData[ "noCaps" ]
+				noMaps = playerData[ "noMaps" ]
+				matchId = playerData[ "matchId" ]
+				player = Player.new( message.session, mumbleNick, admin, aliasNick, muted, elo, playerName, level, noCaps, noMaps, matchId, roles )
 
 				if @players[ client ].nil?
 					@players[ client ] = Hash.new
 				end
 
-				@players[ client ][ nick ] = player
+				@players[ client ][ message.session ] = player
 
+				if @signedUp[ client ].nil?
+					@signedUp[ client ] = Hash.new
+				end
 				@signedUp[ client ].merge! nick => roles
+
 				firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
 				if  firstRoleReq.to_i < 0
 					# Became spectator
 
-					client.send_user_message message.session, "You became a spectator." unless @muted[ client ] && @muted[ client ].has_key?( nick )
-					message_all_signups( client, "Player #{name} (level #{level}) became a spectator.", message.session )
+					messagePlayer = "You became a spectator."
+					messageAll = "Player #{player.playerName} (level: #{player.level}) became a spectator."
 
 				elsif firstRoleReq.eql? "T"
 
-					client.send_user_message message.session, "You joined team '#{roles.first}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
-					message_all_signups( client, "Player #{name} (level #{level}) joined team '#{roles.first}'.", message.session )
+					messagePlayer = "You joined team '#{roles.first}'."
+					messageAll = "Player #{player.playerName} (level: #{player.level}) joined team '#{roles.first}'."
+
 					# FIXME: picking started if enough players
 
 				else
 
-					client.send_user_message message.session, "You signed up with role(s) '#{roles.join(' ')}'." unless @muted[ client ] && @muted[ client ].has_key?( nick )
-					message_all_signups( client, "Player #{name} (level #{level}) signed up with role(s) '#{roles.join(' ')}'.", message.session )
+					messagePlayer = "You signed up with role(s) '#{roles.join(' ')}'."
+					messageAll = "Player #{player.playerName} (level: #{player.level}) signed up with role(s) '#{roles.join(' ')}'."
 
 				end
 				
@@ -153,15 +165,28 @@ class Bot
 		else
 			# Not in a monitored channel
 
-			return unless @signedUp[ client ]
+			return unless @players[ client ]
 
-			if @signedUp[ client ].has_key? nick
+			if @players[ client ].has_key? message.session
+
+				player = @players[ client ][ message.session ]
+
+				messagePlayer = "You left the PuG/mixed channels."
+				messageAll = "Player #{player.playerName} (level: #{player.level}) left."
+
+				@players[ client ].delete message.session
+
 				@signedUp[ client ].delete nick
-				client.send_user_message message.session, "You left the PuG/mixed channels." unless @muted[ client ] && @muted[ client ].has_key?( nick )
-				message_all_signups( client, "Player #{@players[ client ][ nick ].name} (level #{@players[ client ][ nick ].level}) left", message.session )
+
 			end
 
 		end
+
+		if defined?( chanPath ) && !( @muted[ client ] && @muted[ client ].has_key?( nick ) )
+			client.send_user_message( message.session, messagePlayer )
+		end
+
+		message_all_signups( client, messageAll, message.session )
 
 		rolesNeeded = check_requirements client
 		playersNeeded = rolesNeeded.shift
@@ -192,11 +217,11 @@ class Bot
 			h
 		end
 
-		if @signedUp[ client ]
-			@signedUp[ client ].each_pair do |nick, roles|
-				if @rolesRequired[ client ][ roles.first ].to_i >= 0
+		if @players[ client ]
+			@players[ client ].each_value do |player|
+				if @rolesRequired[ client ][ player.roles.first ].to_i >= 0
 					playersNeeded -= 1
-					roles.each do |role|
+					player.roles.each do |role|
 						rolesToFill[ role ] -= 1
 					end
 				end
@@ -241,8 +266,8 @@ class Bot
 			@connections[ client ] = server
 
 			client.register_handler :ServerSync, method( :on_connected )
-			client.register_handler :UserState, method( :on_users_changed )
-			client.register_handler :UserRemove, method( :on_users_changed )
+			client.register_handler :UserState, method( :on_user_changed )
+			client.register_handler :UserRemove, method( :on_user_changed )
 			# client.register_handler :UDPTunnel, method( :on_audio )
 			client.register_text_handler "!help", method( :cmd_help )
 			client.register_text_handler "!find", method( :cmd_find )
@@ -250,12 +275,12 @@ class Bot
 			client.register_text_handler "!test", method( :cmd_test )
 			client.register_text_handler "!info", method( :cmd_info )
 			client.register_text_handler "!admin", method( :cmd_admin )
-			client.register_text_handler "!alias", method( :cmd_alias )
 			client.register_text_handler "!mute", method( :cmd_mute )
 
-			load_admins_ini client
 			load_roles_ini client
-			load_players_ini client
+			# load_players_ini client
+			# load_matches_ini client
+			@currMatchId[ client ] = 0 # FIXME: loading of matches data
 
 			client.connect
 
@@ -408,34 +433,36 @@ class Bot
 
 	def cmd_admin client, message
 
-		if @admins[ client ].has_key? client.find_user( message.actor ).name
-
-			text = message.message
-
-			command = text.split(' ')[ 1 ]
-
-			case command
-			when "login"
-				cmd_admin_login( client, message )
-			when "setchan"
-				cmd_admin_setchan( client, message )
-			when "setrole"
-				cmd_admin_setrole( client, message )
-			when "delrole"
-				cmd_admin_delrole( client, message )
-			when "come"
-				cmd_admin_come( client, message )
-			when "playernum"
-				cmd_admin_playernum( client, message )
-			when "op"
-				cmd_admin_op( client, message )
-			else
-				client.send_user_message message.actor, "Please specify an admin command."
-			end
-
-		else
-			client.send_user_message message.actor, "No admin priviliges."
+		if !@players[ client ] || !@players[ client ].has_key?( message.actor )
+			client.send_user_message message.actor, "You need to join one of the PUG channels to use admin commands."
+			return
 		end
+
+		text = message.message
+
+		command = text.split(' ')[ 1 ]
+
+		case command
+		when "login"
+			cmd_admin_login( client, message )
+		when "setchan"
+			cmd_admin_setchan( client, message )
+		when "setrole"
+			cmd_admin_setrole( client, message )
+		when "delrole"
+			cmd_admin_delrole( client, message )
+		when "playernum"
+			cmd_admin_playernum( client, message )
+		when "alias"
+			cmd_admin_alias( client, message )
+		when "come"
+			cmd_admin_come( client, message )
+		when "op"
+			cmd_admin_op( client, message )
+		else
+			client.send_user_message message.actor, "Please specify an admin command."
+		end
+
 	end
 
 	def help_msg_admin client, message
@@ -443,34 +470,42 @@ class Bot
 
 	def cmd_admin_login client, message
 		text = message.message
-		nick = client.find_user( message.actor ).name
 		password = text.split(' ')[ 2 ]
+
+		player = @players[ client ][ message.actor ]
 
 		if password.eql? @connections[ client ][ :pass ]
 
 			client.send_user_message message.actor, "Login accepted."
 
-			if @admins[ client ]
+			if player.admin.eql? "SuperUser"
 
-				if @admins[ client ].has_key? nick
+				client.send_user_message message.actor, "Already a SuperUser."
+				return
 
-					if @admins[ client ][ nick ].eql? "SuperUser"
-						client.send_user_message message.actor, "Already a SuperUser."
-					else
-						@admins[ client ][ nick ] = "SuperUser"
-					end
-
-				else
-					@admins[ client ].merge! nick => "SuperUser"
-				end
 			else
-				@admins[ client ] = { nick => "SuperUser" }
+
+				player.admin = "SuperUser"
+
+				@players[ client ][ message.actor ] = player
+
+				if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
+					ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
+				else
+					ini = Kesh::IO::Storage::IniFile.new
+				end
+
+				sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}:admin"
+				ini.setValue( sectionName, player.mumbleNick, player.admin )
+
+				ini.writeToFile( 'players.ini' )
+
 			end
 
-			write_admins_ini client
-
 		else
+
 			client.send_user_message message.actor, "Wrong password."
+
 		end
 
 	end
@@ -479,7 +514,8 @@ class Bot
 	end
 
 	def cmd_admin_setchan client, message 
-		if @admins[ client ].has_key? client.find_user( message.actor ).name
+
+		if @players[ client ][ message.actor ].admin
 
 			text = message.message
 			chanPath = client.find_user( message.actor ).channel.path
@@ -538,8 +574,9 @@ class Bot
 	def help_msg_admin_setchan client, message
 	end
 
-	def cmd_admin_setrole client, message 
-		if @admins[ client ].has_key? client.find_user( message.actor ).name
+	def cmd_admin_setrole client, message
+
+		if @players[ client ][ message.actor ].admin
 
 			text = message.message
 			chanPath = client.find_user( message.actor ).channel.path
@@ -593,8 +630,9 @@ class Bot
 	def help_msg_admin_setrole client, message
 	end
 
-	def cmd_admin_delrole client, message 
-		if @admins[ client ].has_key? client.find_user( message.actor ).name
+	def cmd_admin_delrole client, message
+
+		if @players[ client ][ message.actor ].admin
 
 			text = message.message
 			chanPath = client.find_user( message.actor ).channel.path
@@ -627,8 +665,9 @@ class Bot
 	def help_msg_admin_delrole client, message
 	end
 
-	def cmd_admin_come client, message 
-		if @admins[ client ].has_key? client.find_user( message.actor ).name
+	def cmd_admin_come client, message
+
+		if @players[ client ][ message.actor ].admin
 
 			chanPath = client.find_user( message.actor ).channel.path
 			client.switch_channel chanPath
@@ -643,7 +682,8 @@ class Bot
 	end
 
 	def cmd_admin_playernum client, message 
-		if @admins[ client ].has_key? client.find_user( message.actor ).name
+		
+		if @players[ client ][ message.actor ].admin
 
 			newPlayerNum = message.message.split(' ')[ 2 ].to_i
 
@@ -666,109 +706,100 @@ class Bot
 	def help_msg_admin_playernum client, message
 	end
 
-	def cmd_admin_op client, message
-		nick = client.find_user( message.actor ).name
+	def cmd_admin_alias client, message
 
-		if @admins[ client ].has_key?( nick ) && @admins[ client ][ nick ].eql?( "SuperUser" )
+		if @players[ client ][ message.actor ].admin
 
-			toOp = message.message.split(' ')[ 2 ]
+			text = message.message
 
-			if password.eql? @connections[ client ][ :pass ]
+			# nick = client.find_user( message.actor ).name
+			player = @players[ client ].values.select{ |v| v.mumbleNick.downcase.eql?( text.split(' ')[ 2 ].downcase ) }.first
 
-				client.send_user_message message.actor, "Login accepted."
-
-				if @admins[ client ]
-
-					if @admins[ client ].has_key? nick
-
-						if @admins[ client ][ nick ].eql? "SuperUser"
-							client.send_user_message message.actor, "Already a SuperUser."
-						else
-							@admins[ client ][ nick ] = "SuperUser"
-						end
-
-					else
-						@admins[ client ].merge! nick => "SuperUser"
-					end
-				else
-					@admins[ client ] = { nick => "SuperUser" }
-				end
-
-				write_admins_ini client
-
-			else
-				client.send_user_message message.actor, "Wrong password."
+			if player.nil?
+				client.send_user_message message.actor, "Player #{text.split(' ')[ 2 ]} has to be in one of the PUG channels."
+				return
 			end
 
+			aliasValue = text.split(' ')[ 3 ]
+			aliasValue = aliasValue ? aliasValue : player.mumbleNick
+
+			if player.aliasNick
+
+				prevValue = player.aliasNick
+
+				if aliasValue.downcase.eql? player.mumbleNick.downcase
+					player.aliasNick = nil
+					client.send_user_message message.actor, "Alias of #{player.mumbleNick} removed."
+					client.send_user_message player.session, "Your alias has been reset to #{player.mumbleNick} by #{@players[ client ][ message.actor ].mumbleNick}."
+				else
+					player.aliasNick = aliasValue
+					client.send_user_message message.actor, "Alias of #{player.mumbleNick} set to #{aliasValue}."
+					client.send_user_message player.session, "Your alias has been set to #{aliasValue} by #{@players[ client ][ message.actor ].mumbleNick}."
+				end
+
+			else
+
+				if aliasValue.downcase.eql? player.mumbleNick.downcase
+					client.send_user_message message.actor, "Alias not set: equal to mumble username."
+					return
+				else
+					player.aliasNick = aliasValue
+					client.send_user_message message.actor, "Alias of #{player.mumbleNick} set to #{aliasValue}."
+					client.send_user_message player.session, "Your alias has been set to #{aliasValue} by #{@players[ client ][ message.actor ].mumbleNick}."
+				end
+
+			end
+
+			@players[ client ][ player.session ] = player
+
+			if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
+				ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
+			else
+				ini = Kesh::IO::Storage::IniFile.new
+			end
+
+			sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}:aliases"
+
+			if player.aliasNick
+				ini.setValue( sectionName, player.mumbleNick, player.aliasNick )
+			else
+				ini.removeValue( sectionName, player.mumbleNick )
+			end
+
+			ini.writeToFile( 'players.ini' )
+
 		else
-			client.send_user_message message.actor, "Not enough admin privileges."
+			client.send_user_message message.actor, "No admin privileges."
 		end
 
+	end
+
+	def help_msg_admin_alias client, message
+	end
+
+	def cmd_admin_op client, message
 	end
 
 	def help_msg_admin_op client, message
 	end
 
-	def cmd_alias client, message 
-		text = message.message
-		nick = client.find_user( message.actor ).name
-		aliasValue = text.split(' ')[ 1 ]
-		aliasValue = aliasValue ? aliasValue : nick
-
-		if @aliases[ client ]
-
-			if @aliases[ client ].has_key? nick
-
-				prevValue = @aliases[ client ][ nick ]
-
-				if aliasValue.eql? nick
-					@aliases[ client ].delete( nick )
-				else
-					@aliases[ client ][ nick ] = aliasValue
-				end
-
-			else
-				@aliases[ client ].merge! nick => aliasValue
-			end
-
-		else
-			@aliases[ client ] = { nick => aliasValue }
-		end
-
-		if @muted[ client ] && @muted[ client ].has_key?( prevValue ? prevValue : nick )
-			@muted[ client ].delete( prevValue ? prevValue : nick )
-			@muted[ client ].merge! aliasValue => "True"
-		end
-
-		write_players_ini client
-
-		if prevValue
-			if aliasValue.eql? nick
-				client.send_user_message message.actor, "Previous alias (#{prevValue}) of #{nick} removed."
-			else
-				client.send_user_message message.actor, "Alias of #{nick} changed from #{prevValue} to #{aliasValue}."
-			end
-		else
-			client.send_user_message message.actor, "Alias of #{nick} set to #{aliasValue}."
-		end
-
-	end
-
-	def help_msg_alias client, message
-	end
-
 	def cmd_mute client, message 
-		text = message.message
-		nick = client.find_user( message.actor ).name
 
-		if @aliases[ client ]
-			nick = @aliases[ client ].has_key?( nick ) ? @aliases[ client ][ nick ] : nick
+		text = message.message
+
+		if !@players[ client ] || !@players[ client ].has_key?( message.actor )
+			client.send_user_message message.actor, "You need to join one of the PUG channels to (un)mute."
+			return
 		end
+
+		player = @players[ client ][ message.actor ]
+
+		nick = player.aliasNick ? player.aliasNick : player.mumbleNick
 
 		muteValue = text.split(' ')[ 1 ]
 
 		if muteValue.nil? 
-			muteValue = @muted[ client ] && @muted[ client].has_key?( nick ) ? "False" : "True" 
+			muteValue = player.muted.nil? ? "True" : "False" 
 		end
 
 		muteValue.capitalize!
@@ -778,40 +809,85 @@ class Bot
 			muteValue = "True"
 		when "Off"
 			muteValue = "False"
+		else
+			if !muteValue.eql?( "True" ) && !muteValue.eql?( "False" )
+				client.send_user_message message.actor, "Unknown setting, use On/Off."
+				return
+			end
 		end
 
-		if @muted[ client ]
+		if player.muted.nil?
 
-			if @muted[ client ].has_key? nick
-
-				if muteValue.eql? "False"
-					@muted[ client ].delete( nick )
-					write_players_ini client
-					client.send_user_message message.actor, "No longer muted."
-					return
-				end
-
+			if muteValue.eql? "False"
+				client.send_user_message message.actor, "No change, still not muted."
+				return
 			else
-
-				if muteValue.eql? "True"
-					@muted[ client ].merge! nick => muteValue
-					write_players_ini client
-					client.send_user_message message.actor, "Muted."
-					return
-				end
-				
+				player.muted = "True"
+				client.send_user_message message.actor, "Muted."
 			end
 
 		else
 
-			if muteValue.eql? "True"
-				@muted[ client ] = { nick => muteValue }
-				write_players_ini client
-				client.send_user_message message.actor, "Muted."
+			if muteValue.eql? "False"
+				player.muted = nil
+				client.send_user_message message.actor, "No longer muted."
+			else
+				client.send_user_message message.actor, "Still muted."
 				return
 			end
 
 		end
+
+		@players[ client ][ message.actor ] = player
+
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
+		else
+			ini = Kesh::IO::Storage::IniFile.new
+		end
+
+		sectionName = "Muted"
+
+		if player.muted
+			ini.setValue( sectionName, player.mumbleNick, player.muted )
+		else
+			ini.removeValue( sectionName, player.mumbleNick )
+		end
+
+		ini.writeToFile( 'players.ini' )
+
+		# if @muted[ client ]
+
+		# 	if @muted[ client ].has_key? nick
+
+		# 		if muteValue.eql? "False"
+		# 			@muted[ client ].delete( nick )
+		# 			write_players_ini client
+		# 			client.send_user_message message.actor, "No longer muted."
+		# 			return
+		# 		end
+
+		# 	else
+
+		# 		if muteValue.eql? "True"
+		# 			@muted[ client ].merge! nick => muteValue
+		# 			write_players_ini client
+		# 			client.send_user_message message.actor, "Muted."
+		# 			return
+		# 		end
+				
+		# 	end
+
+		# else
+
+		# 	if muteValue.eql? "True"
+		# 		@muted[ client ] = { nick => muteValue }
+		# 		write_players_ini client
+		# 		client.send_user_message message.actor, "Muted."
+		# 		return
+		# 	end
+
+		# end
 	end
 
 	def help_msg_mute client, message
@@ -839,44 +915,44 @@ class Bot
 		return
 	end
 
-	def write_admins_ini  client
-		sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+	# def write_admins_ini  client
+	# 	sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
 
-		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/admins.ini' ) )
-			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'admins.ini' )
-			ini.removeSection( sectionName )
-		else
-			ini = Kesh::IO::Storage::IniFile.new
-		end
+	# 	if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/admins.ini' ) )
+	# 		ini = Kesh::IO::Storage::IniFile.loadFromFile( 'admins.ini' )
+	# 		ini.removeSection( sectionName )
+	# 	else
+	# 		ini = Kesh::IO::Storage::IniFile.new
+	# 	end
 
-		ini.addSection( sectionName )
+	# 	ini.addSection( sectionName )
 
-		@admins[ client ].each_pair do |nick, value|
-			ini.setValue( sectionName, nick, value )
-		end
+	# 	@admins[ client ].each_pair do |nick, value|
+	# 		ini.setValue( sectionName, nick, value )
+	# 	end
 
-		ini.writeToFile( 'admins.ini' )
-	end
+	# 	ini.writeToFile( 'admins.ini' )
+	# end
 
-	def load_admins_ini client
-		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/admins.ini' ) )
+	# def load_admins_ini client
+	# 	if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/admins.ini' ) )
 
-			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'admins.ini' )
-			sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
-			adminsSection = ini.getSection( sectionName )
+	# 		ini = Kesh::IO::Storage::IniFile.loadFromFile( 'admins.ini' )
+	# 		sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+	# 		adminsSection = ini.getSection( sectionName )
 
-			if adminsSection
-				adminsHash = Hash.new
+	# 		if adminsSection
+	# 			adminsHash = Hash.new
 
-				adminsSection.values.each do |value|
-					adminsHash[ value.name ] = value.value
-				end
+	# 			adminsSection.values.each do |value|
+	# 				adminsHash[ value.name ] = value.value
+	# 			end
 
-				@admins[ client ] = adminsHash
-			end
+	# 			@admins[ client ] = adminsHash
+	# 		end
 
-		end
-	end
+	# 	end
+	# end
 
 	def write_roles_ini client
 
@@ -956,85 +1032,134 @@ class Bot
 		end
 	end
 
-	def write_players_ini client
-		sectionNameBase = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+	# def write_players_ini client
+	# 	sectionNameBase = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
 
-		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
-			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
-		else
-			ini = Kesh::IO::Storage::IniFile.new
-		end
+	# 	if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
+	# 		ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
+	# 	else
+	# 		ini = Kesh::IO::Storage::IniFile.new
+	# 	end
 
-		sectionName = "#{sectionNameBase}:aliases"
+	# 	sectionName = "#{sectionNameBase}:aliases"
 
-		ini.removeSection( sectionName )
-		ini.addSection( sectionName )
+	# 	ini.removeSection( sectionName )
+	# 	ini.addSection( sectionName )
 
-		if @aliases[ client ]
-			@aliases[ client ].each_pair do |nick, value|
-				ini.setValue( sectionName, nick, value )
-			end
-		end
+	# 	if @aliases[ client ]
+	# 		@aliases[ client ].each_pair do |nick, value|
+	# 			ini.setValue( sectionName, nick, value )
+	# 		end
+	# 	end
 
-		sectionName = "#{sectionNameBase}:muted"
+	# 	sectionName = "#{sectionNameBase}:muted"
 
-		ini.removeSection( sectionName )
-		ini.addSection( sectionName )
+	# 	ini.removeSection( sectionName )
+	# 	ini.addSection( sectionName )
 
-		if @muted[ client ]
-			@muted[ client ].each_pair do |nick, value|
-				ini.setValue( sectionName, nick, value )
-			end
-		end
+	# 	if @muted[ client ]
+	# 		@muted[ client ].each_pair do |nick, value|
+	# 			ini.setValue( sectionName, nick, value )
+	# 		end
+	# 	end
 
-		ini.writeToFile( 'players.ini' )
-	end
+	# 	ini.writeToFile( 'players.ini' )
+	# end
 
-	def load_players_ini client
+	# def load_players_ini client
+	# 	if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
+
+	# 		ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
+
+	# 		sectionNameBase = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
+
+	# 		sectionName = "#{sectionNameBase}:aliases"
+	# 		aliasesSection = ini.getSection( sectionName )
+
+	# 		if aliasesSection
+	# 			aliasesHash = Hash.new
+
+	# 			aliasesSection.values.each do |value|
+	# 				aliasesHash[ value.name ] = value.value
+	# 			end
+
+	# 			@aliases[ client ] = aliasesHash
+	# 		end
+
+	# 		sectionName = "#{sectionNameBase}:muted"
+	# 		mutedSection = ini.getSection( sectionName )
+
+	# 		if mutedSection
+	# 			mutedHash = Hash.new
+
+	# 			mutedSection.values.each do |value|
+	# 				mutedHash[ value.name ] = value.value
+	# 			end
+
+	# 			@muted[ client ] = mutedHash
+	# 		end
+
+	# 	end
+	# end
+
+	def get_player_data client, session
+
+		mumbleNick = client.find_user_session( session ).name
+
 		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
 
 			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
 
 			sectionNameBase = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
 
+			sectionName = "#{sectionNameBase}:admin"
+			admin = ini.getValue( sectionName, mumbleNick )
+
 			sectionName = "#{sectionNameBase}:aliases"
-			aliasesSection = ini.getSection( sectionName )
+			aliasNick = ini.getValue( sectionName, mumbleNick )
 
-			if aliasesSection
-				aliasesHash = Hash.new
+			nick = aliasNick ? aliasNick : mumbleNick
 
-				aliasesSection.values.each do |value|
-					aliasesHash[ value.name ] = value.value
-				end
+			sectionName = "Muted"
+			muted = ini.getValue( sectionName, nick )
 
-				@aliases[ client ] = aliasesHash
-			end
+			sectionName = "ELO"
+			elo = ini.getValue( sectionName, nick )
 
-			sectionName = "#{sectionNameBase}:muted"
-			mutedSection = ini.getSection( sectionName )
+		else
 
-			if mutedSection
-				mutedHash = Hash.new
-
-				mutedSection.values.each do |value|
-					mutedHash[ value.name ] = value.value
-				end
-
-				@muted[ client ] = mutedHash
-			end
+			nick = mumbleNick
 
 		end
+
+		stats = Array.new
+		stats << "Name"
+		stats << "Level"
+
+		statsVals = get_player_stats( nick, stats )
+
+		if statsVals.nil?
+			playerName = nick
+			level = "unknown"
+		else
+			playerName = statsVals.shift
+			level = statsVals.shift
+		end
+
+		return { "session" => session, "mumbleNick" => mumbleNick, "admin" => admin, "aliasNick" => aliasNick, "muted" => muted, "elo" => elo, "playerName" => playerName, "level" => level }
+
 	end
 
 	def message_all_signups client, message, *exclude
-		if @signedUp[ client ]
-			@signedUp[ client ].each_key do |nick|
-				next if @muted[ client ] && @muted[ client ].has_key?( nick ) && @muted[ client ][ nick ].eql?( "True" )
-				user = client.find_user( nick )
-				next if exclude && exclude.include?( user.session )
-				client.send_user_message user.session, message
+
+		if @players[ client ]
+			@players[ client ].each_pair do |session, player|
+				next if player.muted.eql?( "True" )
+				next if exclude && exclude.include?( player.session )
+				client.send_user_message( player.session, message )
 			end
 		end
+
 	end
 
 end
