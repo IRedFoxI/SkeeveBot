@@ -6,7 +6,7 @@ requireLibrary 'Mumble'
 requireLibrary 'TribesAPI'
 
 
-Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :playerName, :level, :noCaps, :noMaps, :matchId, :roles )
+Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :playerName, :level, :noCaps, :noMaps, :matchIdx, :roles )
 Match = Struct.new( :id, :status, :date, :teams, :players, :comment, :results )
 Result = Struct.new( :map, :teams, :scores, :comment )
 
@@ -18,10 +18,12 @@ class Bot
 		@connections = Hash.new
 		@chanRoles = Hash.new
 		@rolesRequired = Hash.new
-		@defaultPlayerNum = 14
+		@defaultTeamNum = 2
+		@teamNum = Hash.new
+		@defaultPlayerNum = 7
 		@playerNum = Hash.new
 		@players = Hash.new
-		@currMatchId = Hash.new
+		@currMatchIdx = Hash.new
 		@matches = Array.new
 	end
 
@@ -93,12 +95,21 @@ class Bot
 
 						# FIXME: picking started if enough players
 
+					elsif firstRoleReq.eql? "Q"
+
+						messagePlayer = "You joined the queue."
+						messageAll = "Player #{player.playerName} (level: #{player.level}) joined the queue."
+
 					else
 						
 						messagePlayer = "Your role(s) changed to '#{roles.join(' ')}'."
 						messageAll = "Player #{player.playerName} (level: #{player.level}) changed role(s) to '#{roles.join(' ')}'."
 
+						player.matchIdx = @currMatchIdx[ client ]
+
 					end
+
+					@players[ client ][ message.session ] = player
 
 				end
 
@@ -112,16 +123,10 @@ class Bot
 				elo = playerData[ "elo" ]
 				playerName = playerData[ "playerName" ]
 				level = playerData[ "level" ]
-				noCaps = playerData[ "noCaps" ]
-				noMaps = playerData[ "noMaps" ]
-				matchId = playerData[ "matchId" ]
-				player = Player.new( message.session, mumbleNick, admin, aliasNick, muted, elo, playerName, level, noCaps, noMaps, matchId, roles )
-
-				if @players[ client ].nil?
-					@players[ client ] = Hash.new
-				end
-
-				@players[ client ][ message.session ] = player
+				noCaps = nil
+				noMaps = nil
+				matchIdx = @currMatchIdx[ client ]
+				player = Player.new( message.session, mumbleNick, admin, aliasNick, muted, elo, playerName, level, noCaps, noMaps, matchIdx, roles )
 
 				firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
@@ -138,13 +143,26 @@ class Bot
 
 					# FIXME: picking started if enough players
 
+				elsif firstRoleReq.eql? "Q"
+
+					messagePlayer = "You joined the queue."
+					messageAll = "Player #{player.playerName} (level: #{player.level}) joined the queue."
+
 				else
 
 					messagePlayer = "You signed up with role(s) '#{roles.join(' ')}'."
 					messageAll = "Player #{player.playerName} (level: #{player.level}) signed up with role(s) '#{roles.join(' ')}'."
 
+					player.matchIdx = @currMatchIdx[ client ]
+
 				end
 				
+				if @players[ client ].nil?
+					@players[ client ] = Hash.new
+				end
+
+				@players[ client ][ message.session ] = player
+
 			end
 
 		else
@@ -193,15 +211,20 @@ class Bot
 	end
 
 	def check_requirements client
-		playersNeeded = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
+
+		noTeams = @teamNum[ client ] ? @teamNum[ client ] : @defaultTeamNum
+		playersNeeded = @playerNum[ client ] ? @playerNum[ client ] * noTeams : @defaultPlayerNum * noTeams
 
 		rolesToFill = @rolesRequired[ client ].inject({}) do |h,(role, value)| 
-			h[ role ] = value.to_i
+			h[ role ] = value.to_i * noTeams
 			h
 		end
 
 		if @players[ client ]
-			@players[ client ].each_value do |player|
+
+			signups = @players[ client ].select { |session,player| player.matchIdx.eql? @currMatchIdx[ client ] }
+
+			signups.each_value do |player|
 				if @rolesRequired[ client ][ player.roles.first ].to_i >= 0
 					playersNeeded -= 1
 					player.roles.each do |role|
@@ -209,6 +232,7 @@ class Bot
 					end
 				end
 			end
+
 		end
 
 		rolesNeeded = Array.new
@@ -261,9 +285,17 @@ class Bot
 			client.register_text_handler "!mute", method( :cmd_mute )
 
 			load_roles_ini client
-			# load_players_ini client
-			# load_matches_ini client
-			@currMatchId[ client ] = 0 # FIXME: loading of matches data
+			# load_matches_ini client # FIXME: not per connection but overall
+			
+			if @matches.length > 0
+				nextId = @matches.last.id + 1
+			else
+				nextId = 0
+			end
+
+			match = Match.new( nextId )
+			@matches << match
+			@currMatchIdx[ client ] = @matches.length - 1
 
 			client.connect
 
