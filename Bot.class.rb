@@ -567,10 +567,21 @@ class Bot
 		text = message.message
 		command = text.split(' ')[ 1 ]
 
-		# FIXME: Move this to specific command functions
-		if ( !@players[ client ] || !@players[ client ].has_key?( message.actor ) ) && !command.eql( "login" )
-			client.send_user_message message.actor, "You need to join one of the PUG channels to use admin commands."
-			return
+		if !@players[ client ]
+			@players[ client ] = Hash.new
+		end
+
+		if !@players[ client ].has_key?( message.actor )
+			mumbleNick = client.find_user_session( message.actor ).name
+			playerData = get_player_data( client, message.actor )
+			admin = playerData[ "admin" ]
+			aliasNick = playerData[ "aliasNick" ]
+			muted = playerData[ "muted" ]
+			elo = playerData[ "elo" ]
+			playerName = playerData[ "playerName" ]
+			level = playerData[ "level" ]
+			player = Player.new( message.actor, mumbleNick, admin, aliasNick, muted, elo, playerName, level, nil, nil, nil, nil, nil )
+			@players[ client ][ message.actor ] = player
 		end
 
 		case command
