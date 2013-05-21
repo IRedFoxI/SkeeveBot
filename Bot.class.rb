@@ -6,7 +6,7 @@ requireLibrary 'Mumble'
 requireLibrary 'TribesAPI'
 
 
-Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :playerName, :level, :noCaps, :noMaps, :matchIdx, :roles )
+Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :playerName, :level, :noCaps, :noMaps, :match, :roles, :team )
 Match = Struct.new( :id, :status, :date, :teams, :players, :comment, :results )
 Result = Struct.new( :map, :teams, :scores, :comment )
 
@@ -23,7 +23,8 @@ class Bot
 		@defaultPlayerNum = 7
 		@playerNum = Hash.new
 		@players = Hash.new
-		@currMatchIdx = Hash.new
+		@currentMatch = Hash.new
+		@nextMatchId = 0
 		@matches = Array.new
 	end
 
@@ -60,6 +61,10 @@ class Bot
 		prevRolesNeeded = check_requirements client
 		prevPlayersNeeded = prevRolesNeeded.shift
 
+		noTeams = @teamNum[ client ] ? @teamNum[ client ] : @defaultTeamNum
+
+		match = @matches[ @currentMatch[ client ] ]
+
 		if ( defined?( chanPath ) && @chanRoles[ client ].has_key?( chanPath ) )
 			# In a monitored channel
 
@@ -70,7 +75,7 @@ class Bot
 
 				player = @players[ client ][ message.session ]
 
-				if player.roles.eql? roles
+				if player.roles.eql?( roles ) && player.team.nil?
 					# No change in role
 
 					return
@@ -78,38 +83,82 @@ class Bot
 				else
 					# Role changed
 
-					player.roles = roles
-
 					firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
 					if  firstRoleReq.to_i < 0
 						# Became spectator
 
+						player.roles = roles
+						player.team = nil
+						player.match = nil
 						messagePlayer = "You became a spectator."
 						messageAll = "Player #{player.playerName} (level: #{player.level}) became a spectator."
 
 					elsif firstRoleReq.eql? "T"
+						# Joined a team channel
 
-						messagePlayer = "You joined team '#{roles.first}'."
-						messageAll = "Player #{player.playerName} (level: #{player.level}) joined team '#{roles.first}'."
+						player.team = roles.first
+						player.match = @currentMatch[ client ]
+
+						if match.teams.include?( player.team )
+
+							match.players << player
+							messagePlayer = "You joined team '#{player.team}'."
+							messageAll = "Player #{player.playerName} (level: #{player.level}) joined team '#{player.team}'."
+
+						else
+
+							match.teams << player.team
+							match.players << player
+							messagePlayer = "You became captain of team '#{player.team}'."
+							messageAll = "Player #{player.playerName} (level: #{player.level}) became captain of team '#{player.team}'."
+							if match.teams.length >= noTeams
+								match.status = "Picking"
+								messageAll << " Picking has started!"
+							end
+
+						end
 
 						# FIXME: picking started if enough players
 
 					elsif firstRoleReq.eql? "Q"
+						# Joined a queue channel
 
+						player.roles = roles
+						player.team = nil
+						player.match = nil
 						messagePlayer = "You joined the queue."
 						messageAll = "Player #{player.playerName} (level: #{player.level}) joined the queue."
 
 					else
 						
-						messagePlayer = "Your role(s) changed to '#{roles.join(' ')}'."
-						messageAll = "Player #{player.playerName} (level: #{player.level}) changed role(s) to '#{roles.join(' ')}'."
+						player.roles = roles
+						player.team = nil
+						player.match = @currentMatch[ client ]
 
-						player.matchIdx = @currMatchIdx[ client ]
+						if match.status.eql?( "Picking" )
+							messagePlayer = "Picking has already started. Please join the queue."
+							messageAll = "Player #{player.playerName} (level: #{player.level}) jumped the queue."
+						else
+							messagePlayer = "Your role(s) changed to '#{roles.join(' ')}'."
+							messageAll = "Player #{player.playerName} (level: #{player.level}) changed role(s) to '#{roles.join(' ')}'."
+						end
 
 					end
 
-					@players[ client ][ message.session ] = player
+					# Clean up players
+					match.players.each do |player|
+						if @players[ client ][ player.session].team.nil?
+							match.players.delete( player )
+						end
+					end
+
+					# Clean up emtpy teams
+					match.teams.each do |team|
+						if match.players.select{|player| player.team.eql? team}.empty?
+							match.teams.delete( team )
+						end
+					end
 
 				end
 
@@ -123,10 +172,7 @@ class Bot
 				elo = playerData[ "elo" ]
 				playerName = playerData[ "playerName" ]
 				level = playerData[ "level" ]
-				noCaps = nil
-				noMaps = nil
-				matchIdx = @currMatchIdx[ client ]
-				player = Player.new( message.session, mumbleNick, admin, aliasNick, muted, elo, playerName, level, noCaps, noMaps, matchIdx, roles )
+				player = Player.new( message.session, mumbleNick, admin, aliasNick, muted, elo, playerName, level, nil, nil, nil, roles, nil )
 
 				firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
@@ -138,8 +184,28 @@ class Bot
 
 				elsif firstRoleReq.eql? "T"
 
-					messagePlayer = "You joined team '#{roles.first}'."
-					messageAll = "Player #{player.playerName} (level: #{player.level}) joined team '#{roles.first}'."
+					player.team = roles.first
+					player.match = @currentMatch[ client ]
+
+					if match.teams.include?( player.team )
+
+						match.players << player
+						messagePlayer = "You joined team '#{player.team}'."
+						messageAll = "Player #{player.playerName} (level: #{player.level}) joined team '#{player.team}'."
+
+					else
+
+						match.teams << player.team
+						match.players << player
+						messagePlayer = "You became captain of team '#{player.team}'."
+						messageAll = "Player #{player.playerName} (level: #{player.level}) became captain of team '#{player.team}'."
+						noTeams = @teamNum[ client ] ? @teamNum[ client ] : @defaultTeamNum
+						if match.teams.length >= noTeams
+							match.status = "Picking"
+							messageAll << " Picking has started!"
+						end
+
+					end
 
 					# FIXME: picking started if enough players
 
@@ -150,10 +216,15 @@ class Bot
 
 				else
 
-					messagePlayer = "You signed up with role(s) '#{roles.join(' ')}'."
-					messageAll = "Player #{player.playerName} (level: #{player.level}) signed up with role(s) '#{roles.join(' ')}'."
+					player.match = @currentMatch[ client ]
 
-					player.matchIdx = @currMatchIdx[ client ]
+					if match.status.eql?( "Picking" )
+						messagePlayer = "Picking has already started. Please join the queue."
+						messageAll = "Player #{player.playerName} (level: #{player.level}) jumped the queue."
+					else
+						messagePlayer = "You signed up with role(s) '#{roles.join(' ')}'."
+						messageAll = "Player #{player.playerName} (level: #{player.level}) signed up with role(s) '#{roles.join(' ')}'."
+					end
 
 				end
 				
@@ -161,25 +232,22 @@ class Bot
 					@players[ client ] = Hash.new
 				end
 
-				@players[ client ][ message.session ] = player
-
 			end
+
+			@players[ client ][ message.session ] = player
+			@matches[ @currentMatch[ client ] ] = match
 
 		else
 			# Not in a monitored channel
 
-			return unless @players[ client ]
+			return unless @players[ client ] && @players[ client ].has_key?( message.session )
 
-			if @players[ client ].has_key? message.session
+			player = @players[ client ][ message.session ]
 
-				player = @players[ client ][ message.session ]
+			messagePlayer = "You left the PuG/mixed channels."
+			messageAll = "Player #{player.playerName} (level: #{player.level}) left."
 
-				messagePlayer = "You left the PuG/mixed channels."
-				messageAll = "Player #{player.playerName} (level: #{player.level}) left."
-
-				@players[ client ].delete message.session
-
-			end
+			@players[ client ].delete message.session
 
 		end
 
@@ -187,62 +255,63 @@ class Bot
 			client.send_user_message( message.session, messagePlayer )
 		end
 
-		message_all_signups( client, messageAll, message.session )
+		message_all( client, messageAll, message.session )
 
-		rolesNeeded = check_requirements client
-		playersNeeded = rolesNeeded.shift
+		if match.status.eql?( "Picking" )
 
-		if prevPlayersNeeded >0 && playersNeeded > 0
-			return
+			teamsPicked = 0
+			playerNum = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
 
-		elsif prevPlayersNeeded <= 0 && playersNeeded > 0
-			message_all_signups( client, "No longer enough players to start." )
-
-		elsif ( prevPlayersNeeded > 0 && playersNeeded <= 0 ) || !rolesNeeded.eql?( prevRolesNeeded ) 
-
-			if rolesNeeded.empty?
-				message_all_signups( client, "Enough players and all required roles are most likely covered. Start picking!" )
-			else
-				message_all_signups( client, "Enough players but missing #{rolesNeeded.join(' and ')}" )
-			end
-			
-		end
-
-	end
-
-	def check_requirements client
-
-		noTeams = @teamNum[ client ] ? @teamNum[ client ] : @defaultTeamNum
-		playersNeeded = @playerNum[ client ] ? @playerNum[ client ] * noTeams : @defaultPlayerNum * noTeams
-
-		rolesToFill = @rolesRequired[ client ].inject({}) do |h,(role, value)| 
-			h[ role ] = value.to_i * noTeams
-			h
-		end
-
-		if @players[ client ]
-
-			signups = @players[ client ].select { |session,player| player.matchIdx.eql? @currMatchIdx[ client ] }
-
-			signups.each_value do |player|
-				if @rolesRequired[ client ][ player.roles.first ].to_i >= 0
-					playersNeeded -= 1
-					player.roles.each do |role|
-						rolesToFill[ role ] -= 1
-					end
+			match.teams.each do |team|
+				if match.players.select{ |player| player.team.eql?( team ) }.length >= playerNum
+					teamsPicked += 1
 				end
 			end
 
-		end
+			if teamsPicked >= noTeams
 
-		rolesNeeded = Array.new
-		rolesToFill.each do |role, value|
-			if value > 0
-				rolesNeeded << "#{value} #{role}"
+				@matches[ @currentMatch[ client ] ].status = "Started"
+				message_all( client, "The teams are picked, match (id: #{match.id}) started." )
+
+				# Create new match
+				previousMatch = @currentMatch[ client ]
+				create_new_match
+				@currentMatch[ client ] = @matches.length - 1
+				match = @matches[ @currentMatch[ client ] ]
+
+				# Move everyone over to the new match apart from picked players
+				@players[ client ].each_pair do |session, player|
+					if player.team.nil?
+						@players[ client ][ session ].match = @currentMatch[ client ]
+					end
+				end
+
 			end
+
 		end
 
-		return rolesNeeded.unshift( playersNeeded )
+		if match.status.eql?( "Signup" )
+
+			rolesNeeded = check_requirements client
+			playersNeeded = rolesNeeded.shift
+
+			if prevPlayersNeeded >0 && playersNeeded > 0
+				return
+
+			elsif prevPlayersNeeded <= 0 && playersNeeded > 0
+				message_all( client, "No longer enough players to start a match." )
+
+			elsif ( prevPlayersNeeded > 0 && playersNeeded <= 0 ) || !rolesNeeded.eql?( prevRolesNeeded ) 
+
+				if rolesNeeded.empty?
+					message_all( client, "Enough players and all required roles are most likely covered. Start picking!" )
+				else
+					message_all( client, "Enough players but missing #{rolesNeeded.join(' and ')}" )
+				end
+				
+			end
+
+		end
 
 	end
 
@@ -286,16 +355,9 @@ class Bot
 
 			load_roles_ini client
 			# load_matches_ini client # FIXME: not per connection but overall
-			
-			if @matches.length > 0
-				nextId = @matches.last.id + 1
-			else
-				nextId = 0
-			end
 
-			match = Match.new( nextId )
-			@matches << match
-			@currMatchIdx[ client ] = @matches.length - 1
+			create_new_match
+			@currentMatch[ client ] = @matches.length - 1
 
 			client.connect
 
@@ -307,6 +369,55 @@ class Bot
 	end
 
 	private
+
+	def create_new_match
+		id = @nextMatchId
+		@nextMatchId += 1
+		status = "Signup"
+		date = ""
+		teams = Array.new
+		players = Array.new
+		comment= ""
+		result = Array.new
+		match = Match.new( id, status, date, teams, players, comment )
+		@matches << match
+	end
+
+	def check_requirements client
+
+		noTeams = @teamNum[ client ] ? @teamNum[ client ] : @defaultTeamNum
+		playersNeeded = @playerNum[ client ] ? @playerNum[ client ] * noTeams : @defaultPlayerNum * noTeams
+
+		rolesToFill = @rolesRequired[ client ].inject({}) do |h,(role, value)| 
+			h[ role ] = value.to_i * noTeams
+			h
+		end
+
+		if @players[ client ]
+
+			signups = @players[ client ].select { |session,player| player.match.eql? @currentMatch[ client ] }
+
+			signups.each_value do |player|
+				if @rolesRequired[ client ][ player.roles.first ].to_i >= 0
+					playersNeeded -= 1
+					player.roles.each do |role|
+						rolesToFill[ role ] -= 1
+					end
+				end
+			end
+
+		end
+
+		rolesNeeded = Array.new
+		rolesToFill.each do |role, value|
+			if value > 0
+				rolesNeeded << "#{value} #{role}"
+			end
+		end
+
+		return rolesNeeded.unshift( playersNeeded )
+
+	end
 
 	def cmd_help client, message
 		text = message.message
@@ -437,11 +548,11 @@ class Bot
 
 	def help_msg_info client, message
 			client.send_user_message message.actor, "Syntax !info"
-			client.send_user_message message.actor, "Returns your level and last login time based on your mumble nick"
+			client.send_user_message message.actor, "Returns your playername and level based on your mumble nick"
 			client.send_user_message message.actor, "Syntax !info \"stat\""
 			client.send_user_message message.actor, "As above but also shows your \"stat\""
 			client.send_user_message message.actor, "Syntax !info \"tribes_nick\""
-			client.send_user_message message.actor, "Returns \"tribes_nick\"'s level and last login time"
+			client.send_user_message message.actor, "Returns \"tribes_nick\"'s your playername and level"
 			client.send_user_message message.actor, "Syntax !info \"tribes_nick\" \"stat\""
 			client.send_user_message message.actor, "As above but also shows \"tribes_nick\"'s \"stat\""
 			client.send_user_message message.actor, "\"stat\" can be a space delimited list of these stats:"
@@ -453,14 +564,14 @@ class Bot
 
 	def cmd_admin client, message
 
-		if !@players[ client ] || !@players[ client ].has_key?( message.actor )
+		text = message.message
+		command = text.split(' ')[ 1 ]
+
+		# FIXME: Move this to specific command functions
+		if ( !@players[ client ] || !@players[ client ].has_key?( message.actor ) ) && !command.eql( "login" )
 			client.send_user_message message.actor, "You need to join one of the PUG channels to use admin commands."
 			return
 		end
-
-		text = message.message
-
-		command = text.split(' ')[ 1 ]
 
 		case command
 		when "login"
@@ -1069,7 +1180,7 @@ class Bot
 
 	end
 
-	def message_all_signups client, message, *exclude
+	def message_all client, message, *exclude
 
 		if @players[ client ]
 			@players[ client ].each_pair do |session, player|
