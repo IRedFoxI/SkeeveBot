@@ -421,7 +421,6 @@ class Bot
 
 	def cmd_help client, message
 		text = message.message
-
 		command = text.split(' ')[ 1 ]
 
 		case command
@@ -431,6 +430,8 @@ class Bot
 			help_msg_goto( client, message )
 		when "info"
 			help_msg_info( client, message )
+		when "mute"
+			help_msg_mute( client, message )
 		when "admin"
 			help_msg_admin( client, message )
 		else
@@ -439,14 +440,16 @@ class Bot
 			client.send_user_message message.actor, "!find \"mumble_nick\" - find which channel someone is in"
 			client.send_user_message message.actor, "!goto \"mumble_command\" - move yourself to someone's channel"
 			client.send_user_message message.actor, "!info \"tribes_nick\" \"stat\" - detailed stats on player"
+			client.send_user_message message.actor, "!mute - mute the bots spam messages"
+			client.send_user_message message.actor, "!admin \"command\" - admin commands"
 		end
 	end
 
 	def cmd_find client, message
 		text = message.message
-
 		nick = text.split(' ')[ 1 ]
 		user = client.find_user nick
+		
 		if user
 			client.send_user_message message.actor, "User '#{user.name}' is in Channel '#{user.channel.path}'"
 		else
@@ -455,13 +458,12 @@ class Bot
 	end
 
 	def help_msg_find client, message
-			client.send_user_message message.actor, "Syntax: !find \"mumble_nick\""
-			client.send_user_message message.actor, "Returns \"mumble_nick\"'s channel"
+		client.send_user_message message.actor, "Syntax: !find \"mumble_nick\""
+		client.send_user_message message.actor, "Returns \"mumble_nick\"'s channel"
 	end
 
 	def cmd_goto client, message
 		text = message.message
-
 		nick = text.split(' ')[ 1 ]
 		target = client.find_user nick
 		source = client.find_user message.actor
@@ -469,9 +471,9 @@ class Bot
 	end
 
 	def help_msg_goto client, message
-			client.send_user_message message.actor, "Syntax: !goto \"mumble_nick\""
-			client.send_user_message message.actor, "The bot tries to move you to \"mumble_nick\"'s"
-			client.send_user_message message.actor, "Fails if the bot doesn't have sufficient rights"
+		client.send_user_message message.actor, "Syntax: !goto \"mumble_nick\""
+		client.send_user_message message.actor, "The bot tries to move you to \"mumble_nick\"'s"
+		client.send_user_message message.actor, "Fails if the bot doesn't have sufficient rights"
 	end
 
 	def cmd_test client, message
@@ -482,8 +484,16 @@ class Bot
 
 	def cmd_info client, message
 
-		if @players[ client ] && @players[ client ].has_key?( message.actor ) && @players[ client ][ message.actor ].aliasNick
-			ownNick = @players[ client ][ message.actor ].aliasNick
+		if @players[ client ]
+			if @players[ client ][ message.actor ]
+				if @players[ client ][ message.actor ].aliasNick
+					ownNick = @players[ client ][ message.actor ].aliasNick
+				else
+					ownNick = client.find_user( message.actor ).name
+				end
+			else
+				ownNick = client.find_user( message.actor ).name
+			end
 		else
 			ownNick = client.find_user( message.actor ).name
 		end
@@ -547,19 +557,19 @@ class Bot
 	end
 
 	def help_msg_info client, message
-			client.send_user_message message.actor, "Syntax !info"
-			client.send_user_message message.actor, "Returns your playername and level based on your mumble nick"
-			client.send_user_message message.actor, "Syntax !info \"stat\""
-			client.send_user_message message.actor, "As above but also shows your \"stat\""
-			client.send_user_message message.actor, "Syntax !info \"tribes_nick\""
-			client.send_user_message message.actor, "Returns \"tribes_nick\"'s your playername and level"
-			client.send_user_message message.actor, "Syntax !info \"tribes_nick\" \"stat\""
-			client.send_user_message message.actor, "As above but also shows \"tribes_nick\"'s \"stat\""
-			client.send_user_message message.actor, "\"stat\" can be a space delimited list of these stats:"
-			stats = get_player_stats "SomeFakePlayerName"
-			stats.each do |stat|
-				client.send_user_message message.actor, stat unless stat.eql? "ret_msg"
-			end
+		client.send_user_message message.actor, "Syntax !info"
+		client.send_user_message message.actor, "Returns your playername and level based on your mumble nick"
+		client.send_user_message message.actor, "Syntax !info \"stat\""
+		client.send_user_message message.actor, "As above but also shows your \"stat\""
+		client.send_user_message message.actor, "Syntax !info \"tribes_nick\""
+		client.send_user_message message.actor, "Returns \"tribes_nick\"'s your playername and level"
+		client.send_user_message message.actor, "Syntax !info \"tribes_nick\" \"stat\""
+		client.send_user_message message.actor, "As above but also shows \"tribes_nick\"'s \"stat\""
+		client.send_user_message message.actor, "\"stat\" can be a space delimited list of these stats:"
+		stats = get_player_stats "SomeFakePlayerName"
+		stats.each do |stat|
+			client.send_user_message message.actor, stat unless stat.eql? "ret_msg"
+		end
 	end
 
 	def cmd_admin client, message
@@ -608,6 +618,37 @@ class Bot
 	end
 
 	def help_msg_admin client, message
+		text = message.message
+		command = text.split(' ')[ 2 ]
+		case command
+		when "login"
+			help_msg_admin_login( client, message )
+		when "setchan"
+			help_msg_admin_setchan( client, message )
+		when "setrole"
+			help_msg_admin_setrole( client, message )
+		when "delrole"
+			help_msg_admin_delrole( client, message )
+		when "playernum"
+			help_msg_admin_playernum( client, message )
+		when "alias"
+			help_msg_admin_alias( client, message )
+		when "come"
+			help_msg_admin_come( client, message )
+		when "op"
+			help_msg_admin_op( client, message )
+		else
+			client.send_user_message message.actor, "The following admin commands are available:"
+			client.send_user_message message.actor, "!help admin \"command\" - detailed help on the admin command"
+			client.send_user_message message.actor, "!admin login \"password\" - login as SuperUser"
+			client.send_user_message message.actor, "!admin setchan \"role\" - set a channel's role"
+			client.send_user_message message.actor, "!admin setrole \"role\" \"parameter\" - set a role"
+			client.send_user_message message.actor, "!admin delrole \"role\" - delete a role"
+			client.send_user_message message.actor, "!admin playernum \"number\" - set the required number of players per team"
+			client.send_user_message message.actor, "!admin alias \"player\" \"alias\" - set a player's alias"
+			client.send_user_message message.actor, "!admin come - make the bot move to your channel"
+			client.send_user_message message.actor, "!admin op \"player\" - make \"player\" an admin"
+		end
 	end
 
 	def cmd_admin_login client, message
@@ -653,6 +694,8 @@ class Bot
 	end
 
 	def help_msg_admin_login client, message
+		client.send_user_message message.actor, "Syntax: !admin login \"password\""
+		client.send_user_message message.actor, "Logs you in to the bot as a SuperUser"
 	end
 
 	def cmd_admin_setchan client, message 
@@ -714,6 +757,9 @@ class Bot
 	end
 
 	def help_msg_admin_setchan client, message
+		client.send_user_message message.actor, "Syntax: !admin setchan \"role\""
+		client.send_user_message message.actor, "Sets the channel you are in to \"role\""
+		client.send_user_message message.actor, "You can set multiple roles by separating them with a space"
 	end
 
 	def cmd_admin_setrole client, message
@@ -737,8 +783,8 @@ class Bot
 
 			required.upcase!
 
-			if required.to_i.to_s != required && required != "T"
-				client.send_user_message message.actor, "Argument must be numeric or 'T'."
+			if required.to_i.to_s != required && ( required != "T" || required != "Q" )
+				client.send_user_message message.actor, "Argument must be numeric, 'T' or 'Q'."
 				return
 			end
 
@@ -770,6 +816,13 @@ class Bot
 	end
 
 	def help_msg_admin_setrole client, message
+		client.send_user_message message.actor, "Syntax: !admin setrole \"role\" \"requirement\""
+		client.send_user_message message.actor, "Create a new role with or sets an existing role to \"requirement\""
+		client.send_user_message message.actor, "The \"requirement\" is:"
+		client.send_user_message message.actor, "- the number of players with that role required per team"
+		client.send_user_message message.actor, "- '-1' if the channel holds spectators"
+		client.send_user_message message.actor, "- 'T' if the channel is a team channel"
+		client.send_user_message message.actor, "- 'Q' if the channel is a queuing channel"
 	end
 
 	def cmd_admin_delrole client, message
@@ -805,6 +858,8 @@ class Bot
 	end
 
 	def help_msg_admin_delrole client, message
+		client.send_user_message message.actor, "Syntax: !admin delrole \"role\""
+		client.send_user_message message.actor, "Removes an existing role"
 	end
 
 	def cmd_admin_come client, message
@@ -821,6 +876,8 @@ class Bot
 	end
 
 	def help_msg_admin_come client, message
+		client.send_user_message message.actor, "Syntax: !admin come"
+		client.send_user_message message.actor, "Makes the bot join the channel you are in"
 	end
 
 	def cmd_admin_playernum client, message 
@@ -846,6 +903,8 @@ class Bot
 	end
 
 	def help_msg_admin_playernum client, message
+		client.send_user_message message.actor, "Syntax: !admin playernum \"number\""
+		client.send_user_message message.actor, "Sets the required number of players per team"
 	end
 
 	def cmd_admin_alias client, message
@@ -916,6 +975,8 @@ class Bot
 	end
 
 	def help_msg_admin_alias client, message
+		client.send_user_message message.actor, "Syntax: !admin alias \"mumble_nick\" \"alias\""
+		client.send_user_message message.actor, "Sets \"mumble_nick\"'s alias to \"alias\""
 	end
 
 	def cmd_admin_op client, message
@@ -963,6 +1024,8 @@ class Bot
 	end
 
 	def help_msg_admin_op client, message
+		client.send_user_message message.actor, "Syntax: !admin op \"mumble_nick\""
+		client.send_user_message message.actor, "Makes \"mumble_nick\" an admin if you are a SuperUser"
 	end
 
 	def cmd_mute client, message 
@@ -1041,6 +1104,8 @@ class Bot
 	end
 
 	def help_msg_mute client, message
+		client.send_user_message message.actor, "Syntax: !mute on/off"
+		client.send_user_message message.actor, "Mute or unmutes the bot's spam messages"
 	end
 
 	def get_player_stats nick, *stats
