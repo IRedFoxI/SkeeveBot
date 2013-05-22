@@ -950,6 +950,10 @@ class Bot
 
 			end
 
+			playerData = get_player_data( client, player.session)
+			playerName = playerData[ "playerName" ]
+			level = playerData[ "level" ]
+
 			@players[ client ][ player.session ] = player
 
 			if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
