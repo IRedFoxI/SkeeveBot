@@ -148,7 +148,7 @@ class Bot
 
 					# Clean up players
 					match.players.each do |player|
-						if @players[ client ][ player.session].team.nil?
+						if @players[ client ][ player.session] && @players[ client ][ player.session].team.nil?
 							match.players.delete( player )
 						end
 					end
