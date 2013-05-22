@@ -39,3 +39,7 @@ The following admin commands are available:
 	!admin alias "player" "alias" - set a player's alias
 	!admin come - make the bot move to your channel
 	!admin op "player" - make "player" an admin
+
+### Thanks ###
+
+Big thank you to Lumberjack for the IRC library and general Ruby help and [FreeApophis](https://github.com/FreeApophis) for the mumble library.
