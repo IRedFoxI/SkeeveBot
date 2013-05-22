@@ -97,6 +97,11 @@ class Bot
 					elsif firstRoleReq.eql? "T"
 						# Joined a team channel
 
+						if player.team.eql?( roles.first )
+							# Just joined a different channel of the same team
+							return
+						end
+
 						player.team = roles.first
 						player.match = @currentMatch[ client ]
 
@@ -118,8 +123,6 @@ class Bot
 							end
 
 						end
-
-						# FIXME: picking started if enough players
 
 					elsif firstRoleReq.eql? "Q"
 						# Joined a queue channel
@@ -206,8 +209,6 @@ class Bot
 						end
 
 					end
-
-					# FIXME: picking started if enough players
 
 				elsif firstRoleReq.eql? "Q"
 
