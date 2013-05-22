@@ -310,7 +310,7 @@ module Kesh
 				begin
 					type_string = @ssl_socket.read(6)
 				rescue 
-					IOError => e
+					# Lost connection, recover
 					return
 				end
 				return nil if type_string.nil?
