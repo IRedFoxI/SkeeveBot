@@ -612,6 +612,8 @@ class Bot
 			cmd_admin_come( client, message )
 		when "op"
 			cmd_admin_op( client, message )
+		when "debug"
+			cmd_admin_debug( client, message )			
 		else
 			client.send_user_message message.actor, "Please specify an admin command."
 		end
@@ -1061,6 +1063,23 @@ class Bot
 	def help_msg_admin_op client, message
 		client.send_user_message message.actor, "Syntax: !admin op \"mumble_nick\""
 		client.send_user_message message.actor, "Makes \"mumble_nick\" an admin if you are a SuperUser"
+	end
+
+	def cmd_admin_debug client, message
+		if @players[ nick ]
+			@players[ nick ].each_pair do |session, player|
+				client.send_user_message message.actor, "Session: #{player.session}, mumbleNick: #{player.mumbleNick}, aliasNick: #{aliasNick}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
+			end
+		else
+			client.send_user_message message.actor, "No players registered"
+		end
+		if @matches
+			@matches.each do |match|
+				client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}, players: #{match.players}"
+			end
+		else
+			client.send_user_message message.actor, "No matches registered - this is not good!"
+		end
 	end
 
 	def cmd_mute client, message 
