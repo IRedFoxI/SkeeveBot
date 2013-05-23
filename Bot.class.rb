@@ -252,11 +252,11 @@ class Bot
 
 		end
 
-		if defined?( chanPath ) && !player.muted
+		if defined?( chanPath ) && player.muted < 2
 			client.send_user_message( message.session, messagePlayer )
 		end
 
-		message_all( client, messageAll, message.session )
+		message_all( client, messageAll, 1, message.session )
 
 		if match.status.eql?( "Picking" )
 
@@ -272,7 +272,7 @@ class Bot
 			if teamsPicked >= noTeams
 
 				@matches[ @currentMatch[ client ] ].status = "Started"
-				message_all( client, "The teams are picked, match (id: #{match.id}) started." )
+				message_all( client, 2, "The teams are picked, match (id: #{match.id}) started." )
 
 				# Create new match
 				previousMatch = @currentMatch[ client ]
@@ -300,14 +300,14 @@ class Bot
 				return
 
 			elsif prevPlayersNeeded <= 0 && playersNeeded > 0
-				message_all( client, "No longer enough players to start a match." )
+				message_all( client, 2, "No longer enough players to start a match." )
 
 			elsif ( prevPlayersNeeded > 0 && playersNeeded <= 0 ) || !rolesNeeded.eql?( prevRolesNeeded ) 
 
 				if rolesNeeded.empty?
-					message_all( client, "Enough players and all required roles are most likely covered. Start picking!" )
+					message_all( client, 2, "Enough players and all required roles are most likely covered. Start picking!" )
 				else
-					message_all( client, "Enough players but missing #{rolesNeeded.join(' and ')}" )
+					message_all( client, 2, "Enough players but missing #{rolesNeeded.join(' and ')}" )
 				end
 				
 			end
@@ -924,9 +924,18 @@ class Bot
 			aliasValue = text.split(' ')[ 3 ]
 			aliasValue = aliasValue ? aliasValue : player.mumbleNick
 
-			if player.aliasNick
+			statsVals = get_player_stats( aliasValue, "Name" )
 
-				prevValue = player.aliasNick
+			if statsVals.nil?
+				client.send_user_message message.actor, "Player #{aliasValue} has not been found in the TribesAPI, alias not set."
+				return
+			end
+
+			aliasValue = statsVals.shift
+
+			oldPlayer = player
+
+			if player.aliasNick
 
 				if aliasValue.downcase.eql? player.mumbleNick.downcase
 					player.aliasNick = nil
@@ -957,6 +966,13 @@ class Bot
 
 			@players[ client ][ player.session ] = player
 
+			if player.match
+				if @matches[ player.match ].players.include?( oldPlayer )
+					@matches[ player.match ].players.delete( oldPlayer )
+					matches[ player.match ].players << player
+				end
+			end
+
 			if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
 				ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
 			else
@@ -969,6 +985,20 @@ class Bot
 				ini.setValue( sectionName, player.mumbleNick, player.aliasNick )
 			else
 				ini.removeValue( sectionName, player.mumbleNick )
+			end
+
+			sectionName = "Muted"
+
+			if !player.muted.eql( 1 )
+				ini.removeValue( sectionName, oldPlayer.aliasNick ? oldPlayer.aliasNick : oldPlayer.mumbleNick )
+				ini.setValue( sectionName, player.aliasNick ? player.aliasNick : player.mumbleNick, player.muted.to_s )
+			end
+
+			sectionName = "ELO"
+
+			if !player.elo.nil? && !player.elo.eql?( 1000 )
+				ini.removeValue( sectionName, oldPlayer.aliasNick ? oldPlayer.aliasNick : oldPlayer.mumbleNick )
+				ini.setValue( sectionName, player.aliasNick ? player.aliasNick : player.mumbleNick, player.elo.to_s )
 			end
 
 			ini.writeToFile( 'players.ini' )
@@ -1038,7 +1068,7 @@ class Bot
 		text = message.message
 
 		if !@players[ client ] || !@players[ client ].has_key?( message.actor )
-			client.send_user_message message.actor, "You need to join one of the PUG channels to (un)mute."
+			client.send_user_message message.actor, "You need to join one of the PUG channels set the mute level."
 			return
 		end
 
@@ -1048,44 +1078,23 @@ class Bot
 
 		muteValue = text.split(' ')[ 1 ]
 
-		if muteValue.nil? 
-			muteValue = player.muted.nil? ? "True" : "False" 
-		end
-
-		muteValue.capitalize!
-
-		case muteValue
-		when "On"
-			muteValue = "True"
-		when "Off"
-			muteValue = "False"
-		else
-			if !muteValue.eql?( "True" ) && !muteValue.eql?( "False" )
-				client.send_user_message message.actor, "Unknown setting, use On/Off."
+		if muteValue 
+			if muteValue.to_i.to_s != muteValue
+				client.send_user_message message.actor, "The mute level has to be numeric: 0(off), 1(default) or 2(all muted)."
 				return
+			else
+				muteValue = muteValue.to_i
+			end
+		else
+			muteValue = player.muted + 1
+			if muteValue > 2
+				muteValue = 0
 			end
 		end
 
-		if player.muted.nil?
-
-			if muteValue.eql? "False"
-				client.send_user_message message.actor, "No change, still not muted."
-				return
-			else
-				player.muted = "True"
-				client.send_user_message message.actor, "Muted."
-			end
-
-		else
-
-			if muteValue.eql? "False"
-				player.muted = nil
-				client.send_user_message message.actor, "No longer muted."
-			else
-				client.send_user_message message.actor, "Still muted."
-				return
-			end
-
+		if muteValue.eql( player.muted )
+			client.send_user_message message.actor, "No change in mute level."
+			return
 		end
 
 		@players[ client ][ message.actor ] = player
@@ -1098,10 +1107,10 @@ class Bot
 
 		sectionName = "Muted"
 
-		if player.muted
-			ini.setValue( sectionName, player.mumbleNick, player.muted )
-		else
+		if player.muted.eql( 1 )
 			ini.removeValue( sectionName, player.mumbleNick )
+		else
+			ini.setValue( sectionName, player.mumbleNick, player.muted.to_s )
 		end
 
 		ini.writeToFile( 'players.ini' )
@@ -1233,6 +1242,11 @@ class Bot
 
 			sectionName = "Muted"
 			muted = ini.getValue( sectionName, nick )
+			if muted
+				muted = muted.to_i
+			else
+				muted = 1
+			end
 
 			sectionName = "ELO"
 			elo = ini.getValue( sectionName, nick )
@@ -1261,11 +1275,11 @@ class Bot
 
 	end
 
-	def message_all client, message, *exclude
+	def message_all client, message, importance, *exclude
 
 		if @players[ client ]
 			@players[ client ].each_pair do |session, player|
-				next if player.muted.eql?( "True" )
+				next if player.muted >= importance
 				next if exclude && exclude.include?( player.session )
 				client.send_user_message( player.session, message )
 			end
