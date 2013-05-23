@@ -23,7 +23,7 @@ The following commands are available:
 	!find "mumble_nick" - find which channel someone is in
 	!goto "mumble_command" - move yourself to someone's channel
 	!info "tribes_nick" "stat" - detailed stats on player
-	!mute on/off- mute the bots spam messages
+	!mute 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)
 	!admin "command" - admin commands
 
 ### Admin Commands ###
