@@ -110,7 +110,6 @@ class Bot
 			# load_matches_ini client # FIXME: not per connection but overall
 
 			create_new_match( client )
-			# @currentMatch[ client ] = @matches.length - 1
 
 			client.connect
 
@@ -134,8 +133,7 @@ class Bot
 
 		noTeams = @teamNum[ client ] ? @teamNum[ client ] : @defaultTeamNum
 
-		index = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
-		match = @matches[ index ]
+		match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
 
 		if defined?( chanPath )
 			chanPath = chanPath.first
@@ -325,7 +323,7 @@ class Bot
 			end
 
 			@players[ client ][ mumbleNick ] = player
-			index = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
+			index = @matches.index{ |m| m.id.eql?( @currentMatch[ client ] ) }
 			@matches[ index ] = match
 
 		else
@@ -361,16 +359,14 @@ class Bot
 
 			if teamsPicked >= noTeams
 
-				index = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
+				index = @matches.index{ |m| m.id.eql?( @currentMatch[ client ] ) }
 				@matches[ index ].status = "Started"
 				message_all( client, "The teams are picked, match (id: #{match.id}) started.", 2 )
 
 				# Create new match
 				previousMatch = @currentMatch[ client ]
 				create_new_match( client )
-				# @currentMatch[ client ] = @matches.length - 1
-				index = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
-				match = @matches[ index ]
+				match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
 
 				# Move everyone over to the new match apart from picked players
 				@players[ client ].each_pair do |mumbleNick, player|
@@ -1024,7 +1020,7 @@ class Bot
 			@players[ client ][ player.mumbleNick ] = player
 
 			if player.match
-				index = @matches.select{ |m| m.id.eql?( player.match ) }.first
+				index = @matches.index{ |m| m.id.eql?( player.match ) }
 				if @matches[ index ].players.include?( oldPlayer )
 					@matches[ index ].players.delete( oldPlayer )
 					@matches[ index ].players << player
@@ -1183,7 +1179,7 @@ class Bot
 		player.muted = muteValue
 
 		if player.match
-			index = @matches.select{ |m| m.id.eql?( player.match ) }.first
+			index = @matches.index{ |m| m.id.eql?( player.match ) }
 			if @matches[ index ].players.include?( oldPlayer )
 				@matches[ index ].players.delete( oldPlayer )
 				@matches[ index ].players << player
