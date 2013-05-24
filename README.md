@@ -3,15 +3,16 @@ SkeeveBot
 
 ### Installation ###
 
-You need to install
+You need to install they protobuf gem:
 
 	sudo gem install ruby_protobuf
 
-You need to copy config.rb.example and adapt it to your liking
+You need to copy config.rb.example and adapt it to your liking:
 	
 	cp config.rb.example config.rb
+	vim config.rb
 
-Run the bot with
+Then you can run the bot with:
 
 	./run_bot.rb
 
