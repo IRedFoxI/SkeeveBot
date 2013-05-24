@@ -85,12 +85,12 @@ class Bot
 		end
 
 		if ( defined?( chanPath ) && @chanRoles[ client ].has_key?( chanPath ) )
-			puts "In a monitored channel" # In a monitored channel
+			# In a monitored channel
 
 			roles = @chanRoles[ client ][ chanPath ]
 
 			if ( @players[ client ] && @players[ client ].has_key?( mumbleNick ) )
-				puts "Already signed up" # Already signed up
+				# Already signed up
 
 				player = @players[ client ][ mumbleNick ]
 
@@ -119,6 +119,19 @@ class Bot
 						if player.team.eql?( roles.first )
 							# Just joined a different channel of the same team
 							return
+						end
+
+						if player.match != @currentMatch[ client ]
+							# Switched team in a running game
+							return
+						end
+
+						if player.team
+							# Switched teams during signup or picking
+							match.players.delete( player )
+							if match.players.select{ |pl| pl.team.eql?( player.team ) }.empty?
+								match.teams.delete( player.team )
+							end
 						end
 
 						player.team = roles.first
@@ -185,7 +198,7 @@ class Bot
 				end
 
 			else
-				puts "New Signup"# New Signup
+				# New Signup
 
 				playerData = get_player_data( client, mumbleNick )
 				admin = playerData[ "admin" ]
@@ -258,7 +271,7 @@ class Bot
 			@matches[ @currentMatch[ client ] ] = match
 
 		else
-			puts "Not in a monitored channel" # Not in a monitored channel
+			# Not in a monitored channel
 
 			return unless @players[ client ] && @players[ client ].has_key?( mumbleNick )
 
@@ -291,7 +304,7 @@ class Bot
 			if teamsPicked >= noTeams
 
 				@matches[ @currentMatch[ client ] ].status = "Started"
-				message_all( client, 2, "The teams are picked, match (id: #{match.id}) started." )
+				message_all( client, "The teams are picked, match (id: #{match.id}) started.", 2 )
 
 				# Create new match
 				previousMatch = @currentMatch[ client ]
@@ -319,14 +332,14 @@ class Bot
 				return
 
 			elsif prevPlayersNeeded <= 0 && playersNeeded > 0
-				message_all( client, 2, "No longer enough players to start a match." )
+				message_all( client, "No longer enough players to start a match.", 2 )
 
 			elsif ( prevPlayersNeeded > 0 && playersNeeded <= 0 ) || !rolesNeeded.eql?( prevRolesNeeded ) 
 
 				if rolesNeeded.empty?
-					message_all( client, 2, "Enough players and all required roles are most likely covered. Start picking!" )
+					message_all( client, "Enough players and all required roles are most likely covered. Start picking!", 2 )
 				else
-					message_all( client, 2, "Enough players but missing #{rolesNeeded.join(' and ')}" )
+					message_all( client, "Enough players but missing #{rolesNeeded.join(' and ')}", 2 )
 				end
 				
 			end
@@ -962,7 +975,7 @@ class Bot
 			aliasValue = text.split(' ')[ 3 ]
 			aliasValue = aliasValue ? aliasValue : player.mumbleNick
 
-			statsVals = get_player_stats( aliasValue, "Name" )
+			statsVals = get_player_stats( aliasValue, [ "Name" ] )
 
 			if statsVals.nil?
 				client.send_user_message message.actor, "Player #{aliasValue} has not been found in the TribesAPI, alias not set."
@@ -1027,7 +1040,7 @@ class Bot
 
 			sectionName = "Muted"
 
-			if !player.muted.eql( 1 )
+			if !player.muted.eql?( 1 )
 				ini.removeValue( sectionName, oldPlayer.aliasNick ? oldPlayer.aliasNick : oldPlayer.mumbleNick )
 				ini.setValue( sectionName, player.aliasNick ? player.aliasNick : player.mumbleNick, player.muted.to_s )
 			end
@@ -1150,9 +1163,19 @@ class Bot
 			end
 		end
 
-		if muteValue.eql( player.muted )
+		if muteValue.eql?( player.muted )
 			client.send_user_message message.actor, "No change in mute level."
 			return
+		end
+
+		oldPlayer = player
+		player.muted = muteValue
+
+		if player.match
+			if @matches[ player.match ].players.include?( oldPlayer )
+				@matches[ player.match ].players.delete( oldPlayer )
+				matches[ player.match ].players << player
+			end
 		end
 
 		@players[ client ][ mumbleNick ] = player
@@ -1165,13 +1188,15 @@ class Bot
 
 		sectionName = "Muted"
 
-		if player.muted.eql( 1 )
+		if player.muted.eql?( 1 )
 			ini.removeValue( sectionName, player.mumbleNick )
 		else
 			ini.setValue( sectionName, player.mumbleNick, player.muted.to_s )
 		end
 
 		ini.writeToFile( 'players.ini' )
+
+		client.send_user_message message.actor, "Mute level set to #{player.muted.to_s}."
 
 	end
 
