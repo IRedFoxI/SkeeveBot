@@ -68,6 +68,61 @@ class Bot
 		change_user( client, session )
 	end
 
+	# def on_audio client, message
+	# 	packet = message.packet.bytes.to_a
+
+	# 	index = 0
+	# 	tt = Kesh::Mumble::Tools.decode_type_target( packet[ index ] )
+
+	# 	index = 1
+	# 	vi1 = Kesh::Mumble::Tools.decode_varint packet, index
+	# 	index = vi1[ :new_index ]
+	# 	session = vi1[ :result ]
+
+	# 	vi2 = Kesh::Mumble::Tools.decode_varint packet, index
+	# 	index = vi2[ :new_index ]
+	# 	sequence = vi2[ :result ]
+
+	# 	data = packet[ index..-1 ]
+	# end
+
+	def run servers
+		servers.each do |server|
+
+			@clientcount += 1
+
+			client = Kesh::Mumble::MumbleClient.new( server[:host], server[:port], server[:nick], @options )
+			@connections[ client ] = server
+
+			client.register_handler :ServerSync, method( :on_connected )
+			client.register_handler :UserState, method( :on_user_state )
+			client.register_handler :UserRemove, method( :on_user_remove )
+			# client.register_handler :UDPTunnel, method( :on_audio )
+			client.register_text_handler "!help", method( :cmd_help )
+			client.register_text_handler "!find", method( :cmd_find )
+			client.register_text_handler "!goto", method( :cmd_goto )
+			client.register_text_handler "!test", method( :cmd_test )
+			client.register_text_handler "!info", method( :cmd_info )
+			client.register_text_handler "!admin", method( :cmd_admin )
+			client.register_text_handler "!mute", method( :cmd_mute )
+
+			load_roles_ini client
+			# load_matches_ini client # FIXME: not per connection but overall
+
+			create_new_match( client )
+			# @currentMatch[ client ] = @matches.length - 1
+
+			client.connect
+
+		end
+
+		while connected? do
+			sleep 0.2
+		end
+	end
+
+	private
+
 	def change_user client, session, *chanPath
 
 		return unless @chanRoles[ client ]
@@ -79,7 +134,8 @@ class Bot
 
 		noTeams = @teamNum[ client ] ? @teamNum[ client ] : @defaultTeamNum
 
-		match = @matches[ @currentMatch[ client ] ]
+		index = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
+		match = @matches[ index ]
 
 		if defined?( chanPath )
 			chanPath = chanPath.first
@@ -269,7 +325,8 @@ class Bot
 			end
 
 			@players[ client ][ mumbleNick ] = player
-			@matches[ @currentMatch[ client ] ] = match
+			index = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
+			@matches[ index ] = match
 
 		else
 			# Not in a monitored channel
@@ -304,14 +361,16 @@ class Bot
 
 			if teamsPicked >= noTeams
 
-				@matches[ @currentMatch[ client ] ].status = "Started"
+				index = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
+				@matches[ index ].status = "Started"
 				message_all( client, "The teams are picked, match (id: #{match.id}) started.", 2 )
 
 				# Create new match
 				previousMatch = @currentMatch[ client ]
-				create_new_match
-				@currentMatch[ client ] = @matches.length - 1
-				match = @matches[ @currentMatch[ client ] ]
+				create_new_match( client )
+				# @currentMatch[ client ] = @matches.length - 1
+				index = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
+				match = @matches[ index ]
 
 				# Move everyone over to the new match apart from picked players
 				@players[ client ].each_pair do |mumbleNick, player|
@@ -349,62 +408,7 @@ class Bot
 
 	end
 
-	# def on_audio client, message
-	# 	packet = message.packet.bytes.to_a
-
-	# 	index = 0
-	# 	tt = Kesh::Mumble::Tools.decode_type_target( packet[ index ] )
-
-	# 	index = 1
-	# 	vi1 = Kesh::Mumble::Tools.decode_varint packet, index
-	# 	index = vi1[ :new_index ]
-	# 	session = vi1[ :result ]
-
-	# 	vi2 = Kesh::Mumble::Tools.decode_varint packet, index
-	# 	index = vi2[ :new_index ]
-	# 	sequence = vi2[ :result ]
-
-	# 	data = packet[ index..-1 ]
-	# end
-
-	def run servers
-		servers.each do |server|
-
-			@clientcount += 1
-
-			client = Kesh::Mumble::MumbleClient.new( server[:host], server[:port], server[:nick], @options )
-			@connections[ client ] = server
-
-			client.register_handler :ServerSync, method( :on_connected )
-			client.register_handler :UserState, method( :on_user_state )
-			client.register_handler :UserRemove, method( :on_user_remove )
-			# client.register_handler :UDPTunnel, method( :on_audio )
-			client.register_text_handler "!help", method( :cmd_help )
-			client.register_text_handler "!find", method( :cmd_find )
-			client.register_text_handler "!goto", method( :cmd_goto )
-			client.register_text_handler "!test", method( :cmd_test )
-			client.register_text_handler "!info", method( :cmd_info )
-			client.register_text_handler "!admin", method( :cmd_admin )
-			client.register_text_handler "!mute", method( :cmd_mute )
-
-			load_roles_ini client
-			# load_matches_ini client # FIXME: not per connection but overall
-
-			create_new_match
-			@currentMatch[ client ] = @matches.length - 1
-
-			client.connect
-
-		end
-
-		while connected? do
-			sleep 0.2
-		end
-	end
-
-	private
-
-	def create_new_match
+	def create_new_match client
 		id = @nextMatchId
 		@nextMatchId += 1
 		status = "Signup"
@@ -415,6 +419,7 @@ class Bot
 		result = Array.new
 		match = Match.new( id, status, date, teams, players, comment )
 		@matches << match
+		@currentMatch[ client ] = id
 	end
 
 	def check_requirements client
@@ -1019,9 +1024,10 @@ class Bot
 			@players[ client ][ player.mumbleNick ] = player
 
 			if player.match
-				if @matches[ player.match ].players.include?( oldPlayer )
-					@matches[ player.match ].players.delete( oldPlayer )
-					matches[ player.match ].players << player
+				index = @matches.select{ |m| m.id.eql?( player.match ) }.first
+				if @matches[ index ].players.include?( oldPlayer )
+					@matches[ index ].players.delete( oldPlayer )
+					@matches[ index ].players << player
 				end
 			end
 
@@ -1177,9 +1183,10 @@ class Bot
 		player.muted = muteValue
 
 		if player.match
-			if @matches[ player.match ].players.include?( oldPlayer )
-				@matches[ player.match ].players.delete( oldPlayer )
-				matches[ player.match ].players << player
+			index = @matches.select{ |m| m.id.eql?( player.match ) }.first
+			if @matches[ index ].players.include?( oldPlayer )
+				@matches[ index ].players.delete( oldPlayer )
+				@matches[ index ].players << player
 			end
 		end
 
