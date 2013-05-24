@@ -1066,9 +1066,9 @@ class Bot
 	end
 
 	def cmd_admin_debug client, message
-		if @players[ nick ]
-			@players[ nick ].each_pair do |session, player|
-				client.send_user_message message.actor, "Session: #{player.session}, mumbleNick: #{player.mumbleNick}, aliasNick: #{aliasNick}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
+		if @players[ client ]
+			@players[ client ].each_pair do |session, player|
+				client.send_user_message message.actor, "Session: #{player.session}, mumbleNick: #{player.mumbleNick}, aliasNick: #{player.aliasNick}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 			end
 		else
 			client.send_user_message message.actor, "No players registered"
