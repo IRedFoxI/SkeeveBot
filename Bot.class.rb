@@ -26,6 +26,7 @@ class Bot
 		@currentMatch = Hash.new
 		@nextMatchId = 0
 		@matches = Array.new
+		@defaultMute = 2
 	end
 
 	def exit_by_user
@@ -1040,7 +1041,7 @@ class Bot
 
 			sectionName = "Muted"
 
-			if !player.muted.eql?( 1 )
+			if !player.muted.eql?( @defaultMute )
 				ini.removeValue( sectionName, oldPlayer.aliasNick ? oldPlayer.aliasNick : oldPlayer.mumbleNick )
 				ini.setValue( sectionName, player.aliasNick ? player.aliasNick : player.mumbleNick, player.muted.to_s )
 			end
@@ -1188,7 +1189,7 @@ class Bot
 
 		sectionName = "Muted"
 
-		if player.muted.eql?( 1 )
+		if player.muted.eql?( @defaultMute )
 			ini.removeValue( sectionName, player.mumbleNick )
 		else
 			ini.setValue( sectionName, player.mumbleNick, player.muted.to_s )
@@ -1328,7 +1329,7 @@ class Bot
 			if muted
 				muted = muted.to_i
 			else
-				muted = 1
+				muted = @defaultMute
 			end
 
 			sectionName = "ELO"
