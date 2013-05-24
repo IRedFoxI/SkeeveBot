@@ -473,7 +473,7 @@ class Bot
 			client.send_user_message message.actor, "The following commands are available:"
 			client.send_user_message message.actor, "!help \"command\" - detailed help on the command"
 			client.send_user_message message.actor, "!find \"mumble_nick\" - find which channel someone is in"
-			client.send_user_message message.actor, "!goto \"mumble_command\" - move yourself to someone's channel"
+			client.send_user_message message.actor, "!goto \"mumble_nick\" - move yourself to someone's channel"
 			client.send_user_message message.actor, "!info \"tribes_nick\" \"stat\" - detailed stats on player"
 			client.send_user_message message.actor, "!mute - mute the bots spam messages"
 			client.send_user_message message.actor, "!admin \"command\" - admin commands"
