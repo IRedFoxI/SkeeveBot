@@ -1127,7 +1127,11 @@ class Bot
 		end
 		if @matches
 			@matches.each do |match|
-				client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}, players: #{match.players}"
+				players = []
+				match.players.each do |player|
+					players << "#{player.playerName}(#{player.team})"
+				end
+				client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}, players: #{players.join(', ')}"
 			end
 		else
 			client.send_user_message message.actor, "No matches registered - this is not good!"
@@ -1190,9 +1194,9 @@ class Bot
 		sectionName = "Muted"
 
 		if player.muted.eql?( @defaultMute )
-			ini.removeValue( sectionName, player.mumbleNick )
+			ini.removeValue( sectionName, nick )
 		else
-			ini.setValue( sectionName, player.mumbleNick, player.muted.to_s )
+			ini.setValue( sectionName, nick, player.muted.to_s )
 		end
 
 		ini.writeToFile( 'players.ini' )
