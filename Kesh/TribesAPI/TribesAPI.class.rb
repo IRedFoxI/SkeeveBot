@@ -4,18 +4,6 @@ require 'digest/md5'
 require 'json'
 require 'net/http'
 
-class Array
-	def depth
-		map { |element| element.depth + 1 }.max
-	end
-end
-
-class Object
-	def depth
-		0
-	end
-end
-
 module Kesh
 	module TribesAPI
 
