@@ -105,6 +105,7 @@ class Bot
 			client.register_text_handler "!info", method( :cmd_info )
 			client.register_text_handler "!admin", method( :cmd_admin )
 			client.register_text_handler "!mute", method( :cmd_mute )
+			client.register_text_handler "!debug", method( :cmd_debug )
 
 			load_roles_ini client
 			# load_matches_ini client # FIXME: not per connection but overall
@@ -179,6 +180,16 @@ class Bot
 						if player.match != @currentMatch[ client ]
 							# Switched team in a running game
 							return
+						end
+
+						# Player returning to a running game
+						@matches.each do |match|
+							next unless match.status = "Started"
+							if match.players.select{ |pl| pl.mumbleNick.eql?( mumbleNick ) }.first
+								@players[ client ][ mumbleNick ].team = roles.first
+								@players[ client ][ mumbleNick ].match = match.id
+								return
+							end
 						end
 
 						if player.team
@@ -273,6 +284,17 @@ class Bot
 					messageAll = "Player #{player.playerName} (level: #{player.level}) became a spectator."
 
 				elsif firstRoleReq.eql? "T"
+
+					# Player returning to a running game
+					@matches.each do |match|
+						next unless match.status = "Started"
+						if match.players.select{ |pl| pl.mumbleNick.eql?( mumbleNick ) }.first
+							player.team = roles.first
+							player.match = match.id
+							@players[ client ][ mumbleNick ] = player
+							return
+						end
+					end
 
 					player.team = roles.first
 					player.match = @currentMatch[ client ]
@@ -649,8 +671,6 @@ class Bot
 			cmd_admin_come( client, message )
 		when "op"
 			cmd_admin_op( client, message )
-		when "debug"
-			cmd_admin_debug( client, message )			
 		else
 			client.send_user_message message.actor, "Please specify an admin command."
 		end
@@ -829,7 +849,7 @@ class Bot
 
 			required.upcase!
 
-			if required.to_i.to_s != required && ( required != "T" || required != "Q" )
+			if required.to_i.to_s != required && required != "T" && required != "Q"
 				client.send_user_message message.actor, "Argument must be numeric, 'T' or 'Q'."
 				return
 			end
@@ -1119,7 +1139,7 @@ class Bot
 		client.send_user_message message.actor, "Makes \"mumble_nick\" an admin if you are a SuperUser"
 	end
 
-	def cmd_admin_debug client, message
+	def cmd_debug client, message
 		if @players[ client ]
 			@players[ client ].each_pair do |session, player|
 				client.send_user_message message.actor, "Session: #{player.session}, mumbleNick: #{player.mumbleNick}, aliasNick: #{player.aliasNick}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
@@ -1131,7 +1151,7 @@ class Bot
 			@matches.each do |match|
 				players = []
 				match.players.each do |player|
-					players << "#{player.playerName}(#{player.team})"
+					players << "#{player.playerName}(#{player.match},#{player.team},#{player.roles.join('/')})"
 				end
 				client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}, players: #{players.join(', ')}"
 			end
