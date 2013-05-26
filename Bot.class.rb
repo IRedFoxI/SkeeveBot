@@ -1033,7 +1033,7 @@ class Bot
 			aliasValue = text.split(' ')[ 3 ]
 			aliasValue = aliasValue ? aliasValue : player.mumbleNick
 
-			statsVals = get_player_stats( aliasValue, [ "Name" ] )
+			statsVals = get_player_stats( aliasValue, [ "Name", "Level" ] )
 
 			if statsVals.nil?
 				client.send_user_message message.actor, "Player #{aliasValue} has not been found in the TribesAPI, alias not set."
@@ -1041,6 +1041,7 @@ class Bot
 			end
 
 			aliasValue = statsVals.shift
+			level = statsVals.shift
 
 			oldPlayerName = player.playerName
 
@@ -1069,9 +1070,8 @@ class Bot
 
 			end
 
-			playerData = get_player_data( client, player.mumbleNick)
-			player.playerName = playerData[ "playerName" ]
-			player.level = playerData[ "level" ]
+			player.playerName = aliasValue
+			player.level = level
 
 			@players[ client ][ player.mumbleNick ] = player
 
