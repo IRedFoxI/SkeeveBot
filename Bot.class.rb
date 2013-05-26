@@ -556,19 +556,10 @@ class Bot
 	def cmd_info client, message
 
 		mumbleNick = client.find_user( message.actor ).name
+		ownNick = mumbleNick
 
-		if @players[ client ]
-			if @players[ client ][ mumbleNick ]
-				if @players[ client ][ mumbleNick ].aliasNick
-					ownNick = @players[ client ][ mumbleNick ].aliasNick
-				else
-					ownNick = mumbleNick
-				end
-			else
-				ownNick = mumbleNick
-			end
-		else
-			ownNick = mumbleNick
+		if @players[ client ] && @players[ client ].has_key?( mumbleNick ) && @players[ client ][ mumbleNick ].aliasNick
+			ownNick = @players[ client ][ mumbleNick ].aliasNick
 		end
 
 		text = message.message
@@ -593,14 +584,16 @@ class Bot
 
 		statsVals = get_player_stats( nick, stats )
 
-		if ( statsVals.nil? && nick != own_nick )
+		if ( statsVals.nil? && nick != ownNick )
 
 			stats.insert( 2, nick.split('_').map!( &:capitalize ).join('_') )
-			statsVals = get_player_stats( own_nick, stats )
+			statsVals = get_player_stats( ownNick, stats )
 
 			if statsVals.nil?
-				client.send_user_message message.actor, "Player #{own_nick} not found."
+				client.send_user_message message.actor, "Player #{nick} not found. Also didn't find #{ownNick}."
 				return
+			else
+				client.send_user_message message.actor, "Player #{nick} not found. Trying #{ownNick} and looking for stat #{nick}."
 			end
 
 		end
