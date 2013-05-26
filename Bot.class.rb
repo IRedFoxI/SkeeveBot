@@ -241,8 +241,8 @@ class Bot
 
 					# Clean up players
 					match.players.each_key do |plName|
-						mNick = @players[ client ].select{ |m, p| p.playerName.eql?( plName ) }.keys.first
-						if mNick && @players[ client ][ mNick ].team.nil?
+						muNick = @players[ client ].select{ |m, p| p.playerName.eql?( plName ) }.keys.first
+						if muNick && @players[ client ][ muNick ].team.nil?
 							match.players.delete( plName )
 						end
 					end
@@ -400,7 +400,7 @@ class Bot
 			playersNeeded = rolesNeeded.shift
 
 			if prevPlayersNeeded >0 && playersNeeded > 0
-				return
+				# Nothing
 
 			elsif prevPlayersNeeded <= 0 && playersNeeded > 0
 				message_all( client, "No longer enough players to start a match.", 2 )
@@ -414,6 +414,26 @@ class Bot
 				end
 				
 			end
+
+		end
+
+		@matches.each do |ma|
+
+			next unless ma.status.eql?( "Started" )
+
+			stillPlaying = 0
+
+			ma.players.each_key do |plName|
+				muNick = @players[ client ].select{ |m, p| p.playerName.eql?( plName ) }.keys.first
+				if muNick && !@players[ client ][ muNick ].team.nil?
+					stillPlaying += 1
+				end
+			end
+
+			next if stillPlaying > ma.players.keys.length / 2
+
+			index = @matches.index{ |m| m.id.eql?( ma.id ) }
+			@matches[ index ].status = "Pending"
 
 		end
 
