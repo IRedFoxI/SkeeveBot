@@ -177,26 +177,18 @@ class Bot
 							return
 						end
 
-						if player.match != @currentMatch[ client ]
+						if !player.match.nil? && player.match != @currentMatch[ client ]
 							# Switched team in a running game
 							return
 						end
 
 						# Player returning to a running game
 						@matches.each do |match|
-							next unless match.status = "Started"
-							if match.players.select{ |pl| pl.mumbleNick.eql?( mumbleNick ) }.first
+							next unless match.status.eql?( "Started" )
+							if match.players.has_key?( player.playerName )
 								@players[ client ][ mumbleNick ].team = roles.first
 								@players[ client ][ mumbleNick ].match = match.id
 								return
-							end
-						end
-
-						if player.team
-							# Switched teams during signup or picking
-							match.players.delete( player )
-							if match.players.select{ |pl| pl.team.eql?( player.team ) }.empty?
-								match.teams.delete( player.team )
 							end
 						end
 
@@ -205,14 +197,14 @@ class Bot
 
 						if match.teams.include?( player.team )
 
-							match.players << player
+							match.players[ player.playerName ] = player.team
 							messagePlayer = "You joined team '#{player.team}'."
 							messageAll = "Player #{player.playerName} (level: #{player.level}) joined team '#{player.team}'."
 
 						else
 
 							match.teams << player.team
-							match.players << player
+							match.players[ player.playerName ] = player.team
 							messagePlayer = "You became captain of team '#{player.team}'."
 							messageAll = "Player #{player.playerName} (level: #{player.level}) became captain of team '#{player.team}'."
 							if match.teams.length >= noTeams
@@ -248,15 +240,16 @@ class Bot
 					end
 
 					# Clean up players
-					match.players.each do |player|
-						if @players[ client ][ player.mumbleNick ] && @players[ client ][ player.mumbleNick ].team.nil?
-							match.players.delete( player )
+					match.players.each_key do |plName|
+						mNick = @players[ client ].select{ |m, p| p.playerName.eql?( plName ) }.keys.first
+						if mNick && @players[ client ][ mNick ].team.nil?
+							match.players.delete( plName )
 						end
 					end
 
 					# Clean up emtpy teams
 					match.teams.each do |team|
-						if match.players.select{|player| player.team.eql? team}.empty?
+						if !match.players.has_value?( team )
 							match.teams.delete( team )
 						end
 					end
@@ -287,8 +280,8 @@ class Bot
 
 					# Player returning to a running game
 					@matches.each do |match|
-						next unless match.status = "Started"
-						if match.players.select{ |pl| pl.mumbleNick.eql?( mumbleNick ) }.first
+						next unless match.status.eql?( "Started" )
+						if match.players.has_key?( player.playerName )
 							player.team = roles.first
 							player.match = match.id
 							@players[ client ][ mumbleNick ] = player
@@ -301,14 +294,14 @@ class Bot
 
 					if match.teams.include?( player.team )
 
-						match.players << player
+						match.players[ player.playerName ] = player.team
 						messagePlayer = "You joined team '#{player.team}'."
 						messageAll = "Player #{player.playerName} (level: #{player.level}) joined team '#{player.team}'."
 
 					else
 
 						match.teams << player.team
-						match.players << player
+						match.players[ player.playerName ] = player.team
 						messagePlayer = "You became captain of team '#{player.team}'."
 						messageAll = "Player #{player.playerName} (level: #{player.level}) became captain of team '#{player.team}'."
 						noTeams = @teamNum[ client ] ? @teamNum[ client ] : @defaultTeamNum
@@ -374,7 +367,7 @@ class Bot
 			playerNum = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
 
 			match.teams.each do |team|
-				if match.players.select{ |player| player.team.eql?( team ) }.length >= playerNum
+				if match.players.select{ |pN, t| t.eql?( team ) }.length >= playerNum
 					teamsPicked += 1
 				end
 			end
@@ -432,7 +425,7 @@ class Bot
 		status = "Signup"
 		date = ""
 		teams = Array.new
-		players = Array.new
+		players = Hash.new
 		comment= ""
 		result = Array.new
 		match = Match.new( id, status, date, teams, players, comment )
@@ -1006,7 +999,7 @@ class Bot
 
 			aliasValue = statsVals.shift
 
-			oldPlayer = player
+			oldPlayerName = player.playerName
 
 			if player.aliasNick
 
@@ -1034,16 +1027,16 @@ class Bot
 			end
 
 			playerData = get_player_data( client, player.mumbleNick)
-			playerName = playerData[ "playerName" ]
-			level = playerData[ "level" ]
+			player.playerName = playerData[ "playerName" ]
+			player.level = playerData[ "level" ]
 
 			@players[ client ][ player.mumbleNick ] = player
 
 			if player.match
 				index = @matches.index{ |m| m.id.eql?( player.match ) }
-				if @matches[ index ].players.include?( oldPlayer )
-					@matches[ index ].players.delete( oldPlayer )
-					@matches[ index ].players << player
+				if @matches[ index ].players.has_key?( oldPlayerName )
+					@matches[ index ].players[ player.playerName ] = @matches[ index ].players[ oldPlayerName ]
+					@matches[ index ].players.delete( oldPlayerName )
 				end
 			end
 
@@ -1142,7 +1135,7 @@ class Bot
 	def cmd_debug client, message
 		if @players[ client ]
 			@players[ client ].each_pair do |session, player|
-				client.send_user_message message.actor, "Session: #{player.session}, mumbleNick: #{player.mumbleNick}, aliasNick: #{player.aliasNick}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
+				client.send_user_message message.actor, "Session: #{player.session}, mumbleNick: #{player.mumbleNick}, aliasNick: #{player.aliasNick}, playerName: #{player.playerName}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 			end
 		else
 			client.send_user_message message.actor, "No players registered"
@@ -1150,8 +1143,8 @@ class Bot
 		if @matches
 			@matches.each do |match|
 				players = []
-				match.players.each do |player|
-					players << "#{player.playerName}(#{player.match},#{player.team},#{player.roles.join('/')})"
+				match.players.each_pair do |playerName, team|
+					players << "#{playerName}(#{team})"
 				end
 				client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}, players: #{players.join(', ')}"
 			end
@@ -1195,16 +1188,7 @@ class Bot
 			return
 		end
 
-		oldPlayer = player
 		player.muted = muteValue
-
-		if player.match
-			index = @matches.index{ |m| m.id.eql?( player.match ) }
-			if @matches[ index ].players.include?( oldPlayer )
-				@matches[ index ].players.delete( oldPlayer )
-				@matches[ index ].players << player
-			end
-		end
 
 		@players[ client ][ mumbleNick ] = player
 
