@@ -306,7 +306,7 @@ class Bot
 					# Sub entering running game
 					channel = client.find_channel( chanPath )
 					channel.localusers.each do |user|
-						if @players[ client ].has_key( user.name )
+						if @players[ client ].has_key?( user.name )
 							id = @players[ client ][ user.name ].match
 							if id != @currentMatch[ client ]
 								player.team = roles.first
