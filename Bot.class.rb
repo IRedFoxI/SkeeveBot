@@ -105,6 +105,7 @@ class Bot
 			client.register_text_handler "!info", method( :cmd_info )
 			client.register_text_handler "!admin", method( :cmd_admin )
 			client.register_text_handler "!mute", method( :cmd_mute )
+			client.register_text_handler "!result", method( :cmd_result )
 			client.register_text_handler "!debug", method( :cmd_debug )
 
 			load_roles_ini client
@@ -448,7 +449,7 @@ class Bot
 		players = Hash.new
 		comment= ""
 		result = Array.new
-		match = Match.new( id, status, date, teams, players, comment )
+		match = Match.new( id, status, date, teams, players, comment,result )
 		@matches << match
 		@currentMatch[ client ] = id
 	end
@@ -1166,7 +1167,14 @@ class Bot
 				match.players.each_pair do |playerName, team|
 					players << "#{playerName}(#{team})"
 				end
-				client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}, players: #{players.join(', ')}"
+				results = ""
+				if match.results.length > 0
+					results << ", results:"
+					match.results.each do |res|
+						results << " #{res.scores.join('-')}"
+					end
+				end
+			client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}, players: #{players.join(', ')}#{results}"
 			end
 		else
 			client.send_user_message message.actor, "No matches registered - this is not good!"
@@ -1234,7 +1242,65 @@ class Bot
 
 	def help_msg_mute client, message
 		client.send_user_message message.actor, "Syntax: !mute on/off"
-		client.send_user_message message.actor, "Mute or unmutes the bot's spam messages"
+		client.send_user_message message.actor, "Mute the bots spam messages from 0 (no mute) to 2 (all muted)"
+	end
+
+	def cmd_result client, message
+		text = message.message
+		if text.split(' ').length == 1
+			client.send_user_message message.actor, "You need to enter at least one score."
+		end
+		mumbleNick = client.find_user_session( message.actor ).name
+
+		if !@players[ client ] || !@players[ client ].has_key?( mumbleNick )
+			client.send_user_message message.actor, "You need to join one of the PUG channels set a result."
+			return
+		end
+
+		player = @players[ client ][ mumbleNick ]
+
+		match = @matches.select{ |m| m.status.eql?( "Pending" ) && m.players.has_key?( player.playerName ) }.first
+
+		if match.nil?
+			match = @matches.select{ |m| m.status.eql?( "Started" ) && m.players.has_key?( player.playerName ) }.first
+		end
+
+		if match
+
+			scores = text.split(' ')[ 1..-1 ]
+			ownTeam = match.players[ player.playerName ]
+
+			scores.each do |score|
+				ownScore = score.split('-')[0]
+				otherScore = score.split('-')[1]
+				result = Result.new
+				result.teams = match.teams
+				result.scores = Array.new
+				if result.teams[0].eql?( ownTeam )
+					result.scores << ownScore
+					result.scores << otherScore
+				else
+					result.scores << otherScore
+					result.scores << ownScore
+				end
+				match.results << result
+			end
+
+			match.status = "Finished"
+			index = @matches.index{ |m| m.id.eql?( match.id ) }
+			@matches[ index ] = match
+
+		else
+
+			client.send_user_message message.actor, "No match found. Maybe the match has already been reported."
+
+		end
+
+	end
+
+	def help_msg_result client, message
+		client.send_user_message message.actor, "Syntax: !result \"scores\""
+		client.send_user_message message.actor, "\"scores\" are the scores for all maps in form \"ourcaps\"-\"theircaps\" separated by a space"
 	end
 
 	def get_player_stats nick, *stats
