@@ -306,14 +306,16 @@ class Bot
 					# Sub entering running game
 					channel = client.find_channel( chanPath )
 					channel.localusers.each do |user|
-						id = @players[ client ][ user.name ].match
-						if id != @currentMatch[ client ]
-							player.team = roles.first
-							player.match = id
-							@players[ client ][ mumbleNick ] = player
-							index = @matches.index{ |m| m.id.eql?( id ) }
-							@matches[ index ].players[ mumbleNick ] = roles.first
-							return
+						if @players[ client ].has_key( user.name )
+							id = @players[ client ][ user.name ].match
+							if id != @currentMatch[ client ]
+								player.team = roles.first
+								player.match = id
+								@players[ client ][ mumbleNick ] = player
+								index = @matches.index{ |m| m.id.eql?( id ) }
+								@matches[ index ].players[ mumbleNick ] = roles.first
+								return
+							end
 						end
 					end
 
