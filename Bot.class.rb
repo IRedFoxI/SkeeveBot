@@ -193,6 +193,19 @@ class Bot
 							end
 						end
 
+						# Sub entering running game
+						channel = client.find_channel( chanPath )
+						channel.localusers.each do |user|
+							id = @players[ client ][ user.name ].match
+							if id != @currentMatch[ client ]
+								@players[ client ][ mumbleNick ].team = roles.first
+								@players[ client ][ mumbleNick ].match = id
+								index = @matches.index{ |m| m.id.eql?( id ) }
+								@matches[ index ].players[ mumbleNick ] = roles.first
+								return
+							end
+						end
+
 						player.team = roles.first
 						player.match = @currentMatch[ client ]
 
@@ -286,6 +299,20 @@ class Bot
 							player.team = roles.first
 							player.match = match.id
 							@players[ client ][ mumbleNick ] = player
+							return
+						end
+					end
+
+					# Sub entering running game
+					channel = client.find_channel( chanPath )
+					channel.localusers.each do |user|
+						id = @players[ client ][ user.name ].match
+						if id != @currentMatch[ client ]
+							player.team = roles.first
+							player.match = id
+							@players[ client ][ mumbleNick ] = player
+							index = @matches.index{ |m| m.id.eql?( id ) }
+							@matches[ index ].players[ mumbleNick ] = roles.first
 							return
 						end
 					end
@@ -1149,7 +1176,7 @@ class Bot
 	def cmd_debug client, message
 		if @players[ client ]
 			@players[ client ].each_pair do |session, player|
-				client.send_user_message message.actor, "Session: #{player.session}, mumbleNick: #{player.mumbleNick}, aliasNick: #{player.aliasNick}, playerName: #{player.playerName}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
+				client.send_user_message message.actor, "Player: #{player.playerName}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 			end
 		else
 			client.send_user_message message.actor, "No players registered"
