@@ -1178,7 +1178,7 @@ class Bot
 	def cmd_debug client, message
 		if @players[ client ]
 			@players[ client ].each_pair do |session, player|
-				client.send_user_message message.actor, "Player: #{player.playerName}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
+				client.send_user_message message.actor, "Player: #{player.playerName}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 			end
 		else
 			client.send_user_message message.actor, "No players registered"
