@@ -1,3 +1,4 @@
+require 'time'
 # require 'speech'
 # require 'celt-ruby'
 
@@ -27,6 +28,8 @@ class Bot
 		@nextMatchId = 0
 		@matches = Array.new
 		@defaultMute = 2
+
+		load_matches_ini
 	end
 
 	def exit_by_user
@@ -109,7 +112,6 @@ class Bot
 			client.register_text_handler "!debug", method( :cmd_debug )
 
 			load_roles_ini client
-			# load_matches_ini client # FIXME: not per connection but overall
 
 			create_new_match( client )
 
@@ -150,6 +152,7 @@ class Bot
 				# Already signed up
 
 				player = @players[ client ][ mumbleNick ]
+				oldMatchId = player.match
 
 				if player.roles.eql?( roles ) && player.team.nil?
 					# No change in role
@@ -196,6 +199,7 @@ class Bot
 						# Sub entering running game
 						channel = client.find_channel( chanPath )
 						channel.localusers.each do |user|
+							next if user.name.eql?( mumbleNick )
 							id = @players[ client ][ user.name ].match
 							if id != @currentMatch[ client ]
 								@players[ client ][ mumbleNick ].team = roles.first
@@ -268,10 +272,19 @@ class Bot
 						end
 					end
 
+					# If leaving a match, check if it is over
+					if !oldMatchId.nil? && !oldMatchId.eql?( player.match )
+						check_match_over( client, oldMatchId )
+					end
+
 				end
 
 			else
 				# New Signup
+
+				if @players[ client ].nil?
+					@players[ client ] = Hash.new
+				end
 
 				playerData = get_player_data( client, mumbleNick )
 				admin = playerData[ "admin" ]
@@ -306,7 +319,8 @@ class Bot
 					# Sub entering running game
 					channel = client.find_channel( chanPath )
 					channel.localusers.each do |user|
-						if @players[ client ].has_key?( user.name )
+						if @players[ client ] && @players[ client ].has_key?( user.name )
+							next if user.name.eql?( mumbleNick )
 							id = @players[ client ][ user.name ].match
 							if id != @currentMatch[ client ]
 								player.team = roles.first
@@ -378,6 +392,11 @@ class Bot
 
 			player = @players[ client ][ mumbleNick ]
 
+			# If leaving a match, check if it is over
+			if !player.match.nil?
+				check_match_over( client, player.match )
+			end
+
 			messagePlayer = "You left the PuG/mixed channels."
 			messageAll = "Player #{player.playerName} (level: #{player.level}) left."
 
@@ -406,6 +425,7 @@ class Bot
 
 				index = @matches.index{ |m| m.id.eql?( @currentMatch[ client ] ) }
 				@matches[ index ].status = "Started"
+				@matches[ index ].date = Time.now
 				message_all( client, "The teams are picked, match (id: #{match.id}) started.", 2 )
 
 				# Create new match
@@ -419,6 +439,8 @@ class Bot
 						@players[ client ][ mumbleNick ].match = @currentMatch[ client ]
 					end
 				end
+
+				write_matches_ini
 
 			end
 
@@ -447,25 +469,29 @@ class Bot
 
 		end
 
-		@matches.each do |ma|
+	end
 
-			next unless ma.status.eql?( "Started" )
+	def check_match_over client, matchId
 
-			stillPlaying = 0
+		return if matchId.nil?
 
-			ma.players.each_key do |plName|
-				muNick = @players[ client ].select{ |m, p| p.playerName.eql?( plName ) }.keys.first
-				if muNick && !@players[ client ][ muNick ].team.nil?
-					stillPlaying += 1
-				end
+		index = @matches.index{ |m| m.id.eql?( matchId ) }
+		match = @matches[ index ]
+
+		return unless match.status.eql?( "Started" )
+
+		stillPlaying = 0
+
+		match.players.each_key do |plName|
+			player = @players[ client ].select{ |m, p| p.playerName.eql?( plName ) }.values.first
+			if player && player.match.eql?( matchId )
+				stillPlaying += 1
 			end
-
-			next if stillPlaying > ma.players.keys.length / 2
-
-			index = @matches.index{ |m| m.id.eql?( ma.id ) }
-			@matches[ index ].status = "Pending"
-
 		end
+
+		return if stillPlaying > match.players.keys.length / 2
+
+		@matches[ index ].status = "Pending"
 
 	end
 
@@ -473,7 +499,7 @@ class Bot
 		id = @nextMatchId
 		@nextMatchId += 1
 		status = "Signup"
-		date = ""
+		date = nil
 		teams = Array.new
 		players = Hash.new
 		comment= ""
@@ -1312,6 +1338,8 @@ class Bot
 			index = @matches.index{ |m| m.id.eql?( match.id ) }
 			@matches[ index ] = match
 
+			write_matches_ini
+
 		else
 
 			client.send_user_message message.actor, "No match found. Maybe the match has already been reported."
@@ -1423,6 +1451,139 @@ class Bot
 			end
 
 		end
+	end
+
+	def write_matches_ini
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/matches.ini' ) )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'matches.ini' )
+			FileUtils.cp( 'matches.ini', 'matches.bak' )
+		else
+			ini = Kesh::IO::Storage::IniFile.new
+		end
+
+		@matches.each do |match|
+
+			next if ( match.status.eql?( "Signup") || match.status.eql?( "Picking") )
+
+			sectionName = "#{match.id}"
+			ini.removeSection( sectionName )
+
+			ini.setValue( sectionName, "Status", match.status )
+			if match.date
+				ini.setValue( sectionName, "Date", match.date.utc.to_s )
+			end
+			ini.setValue( sectionName, "Teams", match.teams.join( " " ) )
+
+			match.teams.each do |team|
+				playerNames = match.players.select{ |pN, t| t.eql?( team ) }.keys
+				ini.setValue( sectionName, "#{team}", playerNames.join( " " ) )
+			end
+
+			ini.setValue( sectionName, "Comment", match.comment )
+			ini.setValue( sectionName, "ResultCount", match.results.length.to_s )
+
+			match.results.each_index do |r|
+				result = match.results[ r ]
+				ini.setValue( sectionName, "Result#{r.to_s}Map", "#{result.map}")
+				result.teams.each_index do |t|
+					ini.setValue( sectionName, "Result#{r.to_s}#{result.teams[ t ]}", "#{result.scores[ t ]}")
+				end
+				ini.setValue( sectionName, "Result#{r.to_s}Comment", "#{result.comment}")
+			end
+
+		end
+
+		ini.writeToFile( 'matches.ini' )
+	end
+
+	def load_matches_ini
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/matches.ini' ) )
+
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'matches.ini' )
+
+			ini.sections.each do |section|
+
+				id = section.name
+
+				if ( id[ /^\d+$/ ] == nil )
+					puts "Invalid ID: " + id.to_s
+					raise SyntaxError
+				end
+
+				idInt = id.to_i
+				@nextMatchId = ( idInt + 1 ) if ( idInt >= @nextMatchId )
+
+				status = section.getValue( "Status" )
+				next unless ( status.eql?( "Started" ) || status.eql?( "Pending" ) )
+
+				date = Time.parse( section.getValue( "Date" ) )
+
+				# if ( date == nil )
+				# 	puts "Invalid Date: " + section.getValue( 'Date' ).to_s
+				# 	raise SyntaxError
+				# end
+
+				players = Hash.new
+
+				teams = section.getValue( "Teams" )
+
+				if teams.nil?
+					teams = Array.new
+				else
+					teams = teams.split( ' ' )
+
+					teams.each do |team|
+
+						playerNames = section.getValue( "#{team}" )
+
+						if !playerNames.nil?
+							playerNames = playerNames.split( ' ' )
+							playerNames.each do |pN|
+								players[ pN ] = team
+							end
+						end
+
+					end
+
+				end
+
+				comment = section.getValue( "Comment" )
+				resultCount = section.getValue( "ResultCount" )
+
+				if ( resultCount[ /^\d+$/ ] == nil )
+					puts "Invalid Result Count: " + resultCount.to_s
+					raise SyntaxError
+				end
+
+				results = Array.new
+
+				rCount = resultCount.to_i
+				rIndex = 0
+
+				while ( rIndex < rCount )
+
+					rMap = section.getValue( "Result#{rIndex}Map")
+					rTeams = teams
+					rScores = Array.new
+
+					match.teams.each do |team|
+						rScores << section.getValue( "Result#{rIndex}#{team}" ).to_i
+					end
+
+					rComment = section.getValue( "Result#{rIndex}Comment")
+
+					results << Result.new( rMap, rTeams, rScores, rComment )
+
+					rIndex = rIndex + 1
+
+				end
+
+				@matches << Match.new( idInt, status, date, teams, players, comment, results )
+
+			end
+
+		end
+
 	end
 
 	def get_player_data client, mumbleNick
