@@ -1208,6 +1208,9 @@ class Bot
 
 				ini.writeToFile( 'players.ini' )
 
+				client.send_user_message message.actor, "Player #{player.mumbleNick} made an admin."
+				client.send_user_message player.session, "You have been made an admin by #{mumbleNick}."
+
 			end
 
 
