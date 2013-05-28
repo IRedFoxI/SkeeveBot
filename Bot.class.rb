@@ -203,7 +203,7 @@ class Bot
 							if @players[ client ] && @players[ client ].has_key?( user.name )
 								next if user.name.eql?( mumbleNick )
 								id = @players[ client ][ user.name ].match
-								if id != @currentMatch[ client ]
+								if !id.nil? && id != @currentMatch[ client ]
 									@players[ client ][ mumbleNick ].team = roles.first
 									@players[ client ][ mumbleNick ].match = id
 									index = @matches.index{ |m| m.id.eql?( id ) }
@@ -326,7 +326,7 @@ class Bot
 						if @players[ client ] && @players[ client ].has_key?( user.name )
 							next if user.name.eql?( mumbleNick )
 							id = @players[ client ][ user.name ].match
-							if id != @currentMatch[ client ]
+							if !id.nil? && id != @currentMatch[ client ]
 								player.team = roles.first
 								player.match = id
 								@players[ client ][ mumbleNick ] = player
