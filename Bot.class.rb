@@ -1504,15 +1504,14 @@ class Bot
 		text = message.message
 		matchId = text.split(' ')[ 1 ]
 
-		if matchId.to_i.to_s != matchId
-			client.send_user_message message.actor, "The match id has to be numerical."
-			return
-		end
-		matchId = matchId.to_i
-
 		if matchId.nil?
 			selection = @matches
 		else
+			if matchId.to_i.to_s != matchId
+				client.send_user_message message.actor, "The match id has to be numerical."
+				return
+			end
+			matchId = matchId.to_i
 			selection = @matches.select{ |m| m.id.eql?( matchId ) }
 		end
 
