@@ -1501,6 +1501,7 @@ class Bot
 	end
 
 	def cmd_list client, message
+		text = message.message
 		matchId = text.split(' ')[ 1 ]
 
 		if matchId.to_i.to_s != matchId
