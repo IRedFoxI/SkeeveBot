@@ -25,6 +25,8 @@ The following commands are available:
 	!goto "mumble_nick" - move yourself to someone's channel
 	!info "tribes_nick" "stat" - detailed stats on player
 	!mute 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)
+	!result "scores" - report the results of your last PUG
+	!list - shows the latest matches
 	!admin "command" - admin commands
 
 ### Admin Commands ###
@@ -40,6 +42,8 @@ The following admin commands are available:
 	!admin alias "player" "alias" - set a player's alias
 	!admin come - make the bot move to your channel
 	!admin op "player" - make "player" an admin
+	!admin result "match_id" "scores"- set the result of a match"
+	!admin delete "match_id" - delete a match"
 
 ### Thanks ###
 

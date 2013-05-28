@@ -109,6 +109,7 @@ class Bot
 			client.register_text_handler "!admin", method( :cmd_admin )
 			client.register_text_handler "!mute", method( :cmd_mute )
 			client.register_text_handler "!result", method( :cmd_result )
+			client.register_text_handler "!list", method( :cmd_list )
 			client.register_text_handler "!debug", method( :cmd_debug )
 
 			load_roles_ini client
@@ -199,14 +200,16 @@ class Bot
 						# Sub entering running game
 						channel = client.find_channel( chanPath )
 						channel.localusers.each do |user|
-							next if user.name.eql?( mumbleNick )
-							id = @players[ client ][ user.name ].match
-							if id != @currentMatch[ client ]
-								@players[ client ][ mumbleNick ].team = roles.first
-								@players[ client ][ mumbleNick ].match = id
-								index = @matches.index{ |m| m.id.eql?( id ) }
-								@matches[ index ].players[ mumbleNick ] = roles.first
-								return
+							if @players[ client ] && @players[ client ].has_key?( user.name )
+								next if user.name.eql?( mumbleNick )
+								id = @players[ client ][ user.name ].match
+								if id != @currentMatch[ client ]
+									@players[ client ][ mumbleNick ].team = roles.first
+									@players[ client ][ mumbleNick ].match = id
+									index = @matches.index{ |m| m.id.eql?( id ) }
+									@matches[ index ].players[ mumbleNick ] = roles.first
+									return
+								end
 							end
 						end
 
@@ -222,6 +225,7 @@ class Bot
 						else
 
 							match.teams << player.team
+							match.teams = match.teams.sort
 							match.players[ player.playerName ] = player.team
 							messagePlayer = "You became captain of team '#{player.team}'."
 							messageAll = "Player #{player.playerName} (level: #{player.level}) became captain of team '#{player.team}'."
@@ -345,6 +349,7 @@ class Bot
 					else
 
 						match.teams << player.team
+						match.teams = match.teams.sort
 						match.players[ player.playerName ] = player.team
 						messagePlayer = "You became captain of team '#{player.team}'."
 						messageAll = "Player #{player.playerName} (level: #{player.level}) became captain of team '#{player.team}'."
@@ -558,6 +563,10 @@ class Bot
 			help_msg_info( client, message )
 		when "mute"
 			help_msg_mute( client, message )
+		when "result"
+			help_msg_result( client, message )
+		when "list"
+			help_msg_list( client, message )
 		when "admin"
 			help_msg_admin( client, message )
 		else
@@ -566,7 +575,9 @@ class Bot
 			client.send_user_message message.actor, "!find \"mumble_nick\" - find which channel someone is in"
 			client.send_user_message message.actor, "!goto \"mumble_nick\" - move yourself to someone's channel"
 			client.send_user_message message.actor, "!info \"tribes_nick\" \"stat\" - detailed stats on player"
-			client.send_user_message message.actor, "!mute - mute the bots spam messages"
+			client.send_user_message message.actor, "!mute - 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)"
+			client.send_user_message message.actor, "!result \"scores\"- sets the result of your last match"
+			client.send_user_message message.actor, "!list - shows the latest matches"
 			client.send_user_message message.actor, "!admin \"command\" - admin commands"
 		end
 	end
@@ -733,6 +744,10 @@ class Bot
 			cmd_admin_come( client, message )
 		when "op"
 			cmd_admin_op( client, message )
+		when "result"
+			cmd_admin_result( client, message )
+		when "delete"
+			cmd_admin_delete( client, message )
 		else
 			client.send_user_message message.actor, "Please specify an admin command."
 		end
@@ -759,6 +774,10 @@ class Bot
 			help_msg_admin_come( client, message )
 		when "op"
 			help_msg_admin_op( client, message )
+		when "result"
+			help_msg_admin_result( client, message )
+		when "delete"
+			help_msg_admin_delete( client, message )
 		else
 			client.send_user_message message.actor, "The following admin commands are available:"
 			client.send_user_message message.actor, "!help admin \"command\" - detailed help on the admin command"
@@ -770,6 +789,8 @@ class Bot
 			client.send_user_message message.actor, "!admin alias \"player\" \"alias\" - set a player's alias"
 			client.send_user_message message.actor, "!admin come - make the bot move to your channel"
 			client.send_user_message message.actor, "!admin op \"player\" - make \"player\" an admin"
+			client.send_user_message message.actor, "!admin result \"match_id\" \"scores\"- set the result of a match"
+			client.send_user_message message.actor, "!admin delete \"match_id\" - delete a match"
 		end
 	end
 
@@ -1297,6 +1318,7 @@ class Bot
 		text = message.message
 		if text.split(' ').length == 1
 			client.send_user_message message.actor, "You need to enter at least one score."
+			return
 		end
 		mumbleNick = client.find_user_session( message.actor ).name
 
@@ -1350,7 +1372,172 @@ class Bot
 
 	def help_msg_result client, message
 		client.send_user_message message.actor, "Syntax: !result \"scores\""
-		client.send_user_message message.actor, "\"scores\" are the scores for all maps in form \"ourcaps\"-\"theircaps\" separated by a space"
+		client.send_user_message message.actor, "\"scores\" are the scores for all maps in form \"ourcaps\"-\"theircaps\" separated by a space."
+	end
+
+	def cmd_admin_result client, message
+		text = message.message
+		matchId = text.split(' ')[ 2 ]
+		scores = text.split(' ')[ 3..-1 ]
+
+		if matchId.nil?
+			client.send_user_message message.actor, "You need to enter a match id and at least one score."
+			return
+		elsif scores.nil?
+			client.send_user_message message.actor, "You need to enter at least one score."
+			return
+		end
+
+		if matchId.to_i.to_s != matchId
+			client.send_user_message message.actor, "The match id has to be numerical."
+			return
+		end
+		matchId = matchId.to_i
+
+		mumbleNick = client.find_user_session( message.actor ).name
+
+		if @players[ client ][ mumbleNick ].admin
+
+			match = @matches.select{ |m| m.id.eql?( matchId ) }.first
+
+			if match
+
+				firstTeam = match.teams[ 0 ]
+
+				scores.each do |score|
+					firstScore = score.split('-')[0]
+					secondScore = score.split('-')[1]
+					result = Result.new
+					result.teams = match.teams
+					result.scores = Array.new
+					if result.teams[0].eql?( ownTeam )
+						result.scores << firstScore
+						result.scores << secondScore
+					else
+						result.scores << secondScore
+						result.scores << firstScore
+					end
+					match.results << result
+				end
+
+				match.status = "Finished"
+				index = @matches.index{ |m| m.id.eql?( match.id ) }
+				@matches[ index ] = match
+
+				write_matches_ini
+
+			else
+
+				client.send_user_message message.actor, "No match with id \"#{matchId}\" found."
+
+			end
+
+		else
+			client.send_user_message message.actor, "No admin privileges."
+		end
+
+	end
+
+	def help_msg_admin_result client, message
+		client.send_user_message message.actor, "Syntax: !admin result \"match_id\" \"scores\""
+		client.send_user_message message.actor, "Sets the \"scores\" of \"match_id\" for all maps in form \"ourcaps\"-\"theircaps\" separated by a space."
+	end
+
+	def cmd_admin_delete client, message
+		text = message.message
+		matchId = text.split(' ')[ 2 ]
+
+		if matchId.nil?
+			client.send_user_message message.actor, "You need to enter a match id."
+			return
+		end
+
+		if matchId.to_i.to_s != matchId
+			client.send_user_message message.actor, "The match id has to be numerical."
+			return
+		end
+		matchId = matchId.to_i
+
+		mumbleNick = client.find_user_session( message.actor ).name
+
+		if @players[ client ][ mumbleNick ].admin
+
+			index = @matches.index{ |m| m.id.eql?( match.id ) }
+			match = @matches[ index ]
+
+			if match
+
+				if match.status.eql?( "Signup" ) 
+					client.send_user_message message.actor, "Can't delete the current signup match."
+					return
+				end
+
+				@players[ client ].select{ |mN, pl| pl.match.eql?( matchId ) }.each_key do |mN|
+					@players[ client ][ mN ].match = @currentMatch[ client ]
+				end
+				
+				match.status = "Deleted"
+				@matches[ index ] = match
+
+				write_matches_ini
+
+				@matches.delete_at( index )
+
+			else
+
+				client.send_user_message message.actor, "No match with id \"#{matchId}\" found."
+
+			end
+
+		else
+			client.send_user_message message.actor, "No admin privileges."
+		end
+
+	end
+
+	def help_msg_admin_delete client, message
+		client.send_user_message message.actor, "Syntax: !admin delete \"match_id\""
+		client.send_user_message message.actor, "Delete match with id \"match_id\"."
+	end
+
+	def cmd_list client, message
+		matchId = text.split(' ')[ 1 ]
+
+		if matchId.to_i.to_s != matchId
+			client.send_user_message message.actor, "The match id has to be numerical."
+			return
+		end
+		matchId = matchId.to_i
+
+		if matchId.nil?
+			selection = @matches
+		else
+			selection = @matches.select{ |m| m.id.eql?( matchId ) }
+		end
+
+		if selection
+			selection.each do |match|
+				players = []
+				match.players.each_pair do |playerName, team|
+					players << "#{playerName}(#{team})"
+				end
+				results = ""
+				if match.results.length > 0
+					results << ", results:"
+					match.results.each do |res|
+						results << " #{res.scores.join('-')}"
+					end
+				end
+			client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}, players: #{players.join(', ')}#{results}"
+			end
+		else
+			client.send_user_message message.actor, "No match found."
+		end
+	end
+
+	def help_msg_list client, message
+		client.send_user_message message.actor, "Syntax: !list"
+		client.send_user_message message.actor, "Shows all registered matches"
 	end
 
 	def get_player_stats nick, *stats
