@@ -255,11 +255,12 @@ class Bot
 					else
 						# Joined one of the roles channels
 						
+						jumpingQueue = !player.match.eql?( @currentMatch[ client ] )
 						player.roles = roles
 						player.team = nil
 						player.match = @currentMatch[ client ]
 
-						if match.status.eql?( "Picking" ) && !@moveQueue[ client ]
+						if match.status.eql?( "Picking" ) && !@moveQueue[ client ] && jumpingQueue
 							messagePlayer = "Picking has already started. Please join the queue."
 							messageAll = "Player #{player.playerName} (level: #{player.level}) jumped the queue."
 						else
@@ -382,12 +383,11 @@ class Bot
 				else
 					#Joined one of the roles channels
 
-					jumpingQueue = !player.match.eql?( @currentMatch[ client ] )
 					player.roles = roles
 					player.team = nil
 					player.match = @currentMatch[ client ]
 
-					if match.status.eql?( "Picking" ) && !@moveQueue[ client ] && jumpingQueue
+					if match.status.eql?( "Picking" ) && !@moveQueue[ client ]
 						messagePlayer = "Picking has already started. Please join the queue."
 						messageAll = "Player #{player.playerName} (level: #{player.level}) jumped the queue."
 					else
