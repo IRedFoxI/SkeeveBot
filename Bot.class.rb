@@ -1178,7 +1178,7 @@ class Bot
 			sectionName = "Muted"
 
 			if !player.muted.eql?( @defaultMute )
-				ini.removeValue( sectionName, oldPlayer.aliasNick ? oldPlayer.aliasNick : oldPlayer.mumbleNick )
+				ini.removeValue( sectionName, oldPlayerName )
 				ini.setValue( sectionName, player.aliasNick ? player.aliasNick : player.mumbleNick, player.muted.to_s )
 			end
 
