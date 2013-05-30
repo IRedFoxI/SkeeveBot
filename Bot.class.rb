@@ -28,6 +28,7 @@ class Bot
 		@nextMatchId = 0
 		@matches = Array.new
 		@defaultMute = 2
+		@moveQueue = Hash.new
 
 		load_matches_ini
 	end
@@ -236,6 +237,12 @@ class Bot
 
 						end
 
+						if !@moveQueue[ client ] && match.status.eql?( "Picking" )
+							if @players[ client ].select{ |mN, pl| pl.match.eql?( match.id ) && pl.team.nil? }.length == 0
+								@moveQueue[ client ] = true
+							end
+						end
+
 					elsif firstRoleReq.eql? "Q"
 						# Joined a queue channel
 
@@ -246,12 +253,13 @@ class Bot
 						messageAll = "Player #{player.playerName} (level: #{player.level}) joined the queue."
 
 					else
+						# Joined one of the roles channels
 						
 						player.roles = roles
 						player.team = nil
 						player.match = @currentMatch[ client ]
 
-						if match.status.eql?( "Picking" )
+						if match.status.eql?( "Picking" ) && !@moveQueue[ client ]
 							messagePlayer = "Picking has already started. Please join the queue."
 							messageAll = "Player #{player.playerName} (level: #{player.level}) jumped the queue."
 						else
@@ -343,7 +351,7 @@ class Bot
 					if match.teams.include?( player.team )
 
 						match.players[ player.playerName ] = player.team
-						messagePlayer = "You joined team '#{player.team}'."
+						messagePlayer = "You joined team '#{player.team}'. You should probably join one of the roles channels first."
 						messageAll = "Player #{player.playerName} (level: #{player.level}) joined team '#{player.team}'."
 
 					else
@@ -351,7 +359,7 @@ class Bot
 						match.teams << player.team
 						match.teams = match.teams.sort
 						match.players[ player.playerName ] = player.team
-						messagePlayer = "You became captain of team '#{player.team}'."
+						messagePlayer = "You became captain of team '#{player.team}'. You should probably join one of the roles channels first."
 						messageAll = "Player #{player.playerName} (level: #{player.level}) became captain of team '#{player.team}'."
 						noTeams = @teamNum[ client ] ? @teamNum[ client ] : @defaultTeamNum
 						if match.teams.length >= noTeams
@@ -362,15 +370,23 @@ class Bot
 					end
 
 				elsif firstRoleReq.eql? "Q"
+					# Joined a queue channel
 
+
+					player.roles = roles
+					player.team = nil
+					player.match = nil
 					messagePlayer = "You joined the queue."
 					messageAll = "Player #{player.playerName} (level: #{player.level}) joined the queue."
 
 				else
+					#Joined one of the roles channels
 
+					player.roles = roles
+					player.team = nil
 					player.match = @currentMatch[ client ]
 
-					if match.status.eql?( "Picking" )
+					if match.status.eql?( "Picking" ) && !@moveQueue[ client ]
 						messagePlayer = "Picking has already started. Please join the queue."
 						messageAll = "Player #{player.playerName} (level: #{player.level}) jumped the queue."
 					else
@@ -384,6 +400,8 @@ class Bot
 					@players[ client ] = Hash.new
 				end
 
+				messagePlayer << " Message me \"!help\" for an overview of commands. Mute me with \"!mute\""
+
 			end
 
 			@players[ client ][ mumbleNick ] = player
@@ -396,16 +414,25 @@ class Bot
 			return unless @players[ client ] && @players[ client ].has_key?( mumbleNick )
 
 			player = @players[ client ][ mumbleNick ]
+			id = player.match
+
+			match.players.delete( player.playerName )
+			@players[ client ].delete( mumbleNick )
+
+			# Clean up emtpy teams
+			match.teams.each do |team|
+				if !match.players.has_value?( team )
+					match.teams.delete( team )
+				end
+			end
 
 			# If leaving a match, check if it is over
-			if !player.match.nil?
-				check_match_over( client, player.match )
+			if !id.nil?
+				check_match_over( client, id )
 			end
 
 			messagePlayer = "You left the PuG/mixed channels."
 			messageAll = "Player #{player.playerName} (level: #{player.level}) left."
-
-			@players[ client ].delete( mumbleNick )
 
 		end
 
@@ -413,7 +440,7 @@ class Bot
 			client.send_user_message( player.session, messagePlayer )
 		end
 
-		message_all( client, messageAll, 1, player.session )
+		message_all( client, messageAll, [ nil, @currentMatch[ client ] ], 1, player.session )
 
 		if match.status.eql?( "Picking" )
 
@@ -431,10 +458,10 @@ class Bot
 				index = @matches.index{ |m| m.id.eql?( @currentMatch[ client ] ) }
 				@matches[ index ].status = "Started"
 				@matches[ index ].date = Time.now
-				message_all( client, "The teams are picked, match (id: #{match.id}) started.", 2 )
+				message_all( client, "The teams are picked, match (id: #{match.id}) started.", [ nil, @currentMatch[ client ] ], 2 )
 
 				# Create new match
-				previousMatch = @currentMatch[ client ]
+				# previousMatch = @currentMatch[ client ]
 				create_new_match( client )
 				match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
 
@@ -457,17 +484,17 @@ class Bot
 			playersNeeded = rolesNeeded.shift
 
 			if prevPlayersNeeded >0 && playersNeeded > 0
-				# Nothing
+				# Still needing more players
 
 			elsif prevPlayersNeeded <= 0 && playersNeeded > 0
-				message_all( client, "No longer enough players to start a match.", 2 )
+				message_all( client, "No longer enough players to start a match.", [ nil, @currentMatch[ client ] ], 2 )
 
 			elsif ( prevPlayersNeeded > 0 && playersNeeded <= 0 ) || !rolesNeeded.eql?( prevRolesNeeded ) 
 
 				if rolesNeeded.empty?
-					message_all( client, "Enough players and all required roles are most likely covered. Start picking!", 2 )
+					message_all( client, "Enough players and all required roles are most likely covered. Start picking!", [ nil, @currentMatch[ client ] ], 2 )
 				else
-					message_all( client, "Enough players but missing #{rolesNeeded.join(' and ')}", 2 )
+					message_all( client, "Enough players but missing #{rolesNeeded.join(' and ')}", [ nil, @currentMatch[ client ] ], 2 )
 				end
 				
 			end
@@ -498,6 +525,8 @@ class Bot
 
 		@matches[ index ].status = "Pending"
 
+		message_all( client, "Your match (id: #{match.id}) seems to be over. Please report the result (message me \"!help result\" for help).", [ matchId ], 2 )
+
 	end
 
 	def create_new_match client
@@ -509,9 +538,10 @@ class Bot
 		players = Hash.new
 		comment= ""
 		result = Array.new
-		match = Match.new( id, status, date, teams, players, comment,result )
+		match = Match.new( id, status, date, teams, players, comment, result )
 		@matches << match
 		@currentMatch[ client ] = id
+		@moveQueue[ client ] = false
 	end
 
 	def check_requirements client
@@ -1359,11 +1389,21 @@ class Bot
 				match.results << result
 			end
 
-			match.status = "Finished"
+			match.status = "Finished" 
 			index = @matches.index{ |m| m.id.eql?( match.id ) }
 			@matches[ index ] = match
 
 			write_matches_ini
+
+			resultStr = ""
+			if match.results.length > 0
+				match.results.each do |res|
+					resultStr << " #{res.scores.join('-')}"
+				end
+			end
+
+			client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
+			message_all( client, "#{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", match.id, 2, message.actor )
 
 		else
 
@@ -1413,7 +1453,7 @@ class Bot
 					result = Result.new
 					result.teams = match.teams
 					result.scores = Array.new
-					if result.teams[0].eql?( ownTeam )
+					if result.teams[0].eql?( firstTeam )
 						result.scores << firstScore
 						result.scores << secondScore
 					else
@@ -1428,6 +1468,15 @@ class Bot
 				@matches[ index ] = match
 
 				write_matches_ini
+
+				resultStr = ""
+				if match.results.length > 0
+					match.results.each do |res|
+						resultStr << " #{res.scores.join('-')}"
+					end
+				end
+
+				client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
 
 			else
 
@@ -1465,7 +1514,7 @@ class Bot
 
 		if @players[ client ][ mumbleNick ].admin
 
-			index = @matches.index{ |m| m.id.eql?( match.id ) }
+			index = @matches.index{ |m| m.id.eql?( matchId ) }
 			match = @matches[ index ]
 
 			if match
@@ -1485,6 +1534,8 @@ class Bot
 				write_matches_ini
 
 				@matches.delete_at( index )
+
+				client.send_user_message message.actor, "The match (id: #{match.id}) has been deleted."
 
 			else
 
@@ -1829,14 +1880,49 @@ class Bot
 
 	end
 
-	def message_all client, message, importance, *exclude
+	def message_all client, message, matchIds, importance, *exclude
 
-		if @players[ client ]
-			@players[ client ].each_pair do |mumbleNick, player|
-				next if player.muted >= importance
-				next if exclude && exclude.include?( player.session )
-				client.send_user_message( player.session, message )
+		return unless @players[ client ]
+
+		targets = Array.new
+
+		matchIds.each do |id|
+
+			if id.nil?
+
+				@players[ client ].each_value do |pl|
+					next unless pl.match.nil?
+					next if pl.muted >= importance
+					next if targets.include?( pl.session )
+					next if exclude && exclude.include?( pl.session )
+					targets << pl.session 
+				end
+
+			else
+
+				match = @matches.select{ |m| m.id.eql?( id ) }.first
+				match.players.keys.each do |playerName|
+					pl = @players[ client ].select{ |mN, pl| pl.playerName.eql?( playerName ) }.values.first
+					next if pl.nil?
+					next if pl.muted >= importance
+					next if targets.include?( pl.session )
+					next if exclude && exclude.include?( pl.session )
+					targets << pl.session 
+				end
+				@players[ client ].each_value do |pl|
+					next unless pl.match.eql?( id )
+					next if pl.muted >= importance
+					next if targets.include?( pl.session )
+					next if exclude && exclude.include?( pl.session )
+					targets << pl.session 
+				end
+
 			end
+
+		end
+
+		targets.each do |t|
+			client.send_user_message( t, message )
 		end
 
 	end
