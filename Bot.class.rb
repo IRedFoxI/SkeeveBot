@@ -1119,6 +1119,12 @@ class Bot
 			end
 
 			aliasValue = statsVals.shift
+
+			if aliasValue.nil?
+				client.send_user_message message.actor, "Something went wrong connecting to the TribesAPI, alias not set."
+				return
+			end
+
 			level = statsVals.shift
 
 			oldPlayerName = player.playerName
@@ -1599,6 +1605,8 @@ class Bot
 		if nick != "SomeFakePlayerName"
 			query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
 			result = query.send_method( "getplayer", nick )
+
+			puts result
 
 			stats = stats.first
 
