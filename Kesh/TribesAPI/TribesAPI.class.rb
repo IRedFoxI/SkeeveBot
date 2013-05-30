@@ -14,7 +14,7 @@ module Kesh
 				@devId = devId
 				@authKey = authKey
 				result = send_method( "createsession" )
-				raise SessionError, 'Session not approved' unless result[ "ret_msg" ] = "Approved"
+				raise SessionError, 'Session not approved' unless result[ "ret_msg" ].eql?( "Approved" )
 				@sessionId = result[ "session_id" ]
 			end
 
