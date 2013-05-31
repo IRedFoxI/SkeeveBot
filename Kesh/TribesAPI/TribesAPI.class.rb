@@ -7,12 +7,24 @@ require 'net/http'
 module Kesh
 	module TribesAPI
 
+		class SessionError < Exception
+		end
+
+		class QueryError < Exception
+		end
+
+		class ParseError < Exception
+		end
+
 		class TribesAPI
+
+			attr_reader :sessionId
 
 			def initialize base_url, devId, authKey
 				@base_url = base_url
 				@devId = devId
 				@authKey = authKey
+				@sessionId = nil
 
 				create_session
 			end
@@ -35,13 +47,19 @@ module Kesh
 					url = "#{@base_url}#{method}Json/#{@devId}/#{signature}/#{@sessionId}/#{timestamp}"
 				end
 
+				url << "/" if method.eql?( "getdataused" )
+
 				resp = Net::HTTP.get_response( URI.parse( url ) )
 				data = resp.body
+
 				result = JSON.parse( data )
 
-				result = result.kind_of?( Array ) ? result.first : result
-
-				raise QueryError unless result[ "ret_msg" ].nil?
+				case method
+				when "createsession"
+					raise SessionError unless result[ "ret_msg" ].eql?( "Approved" )
+				else
+					raise QueryError unless result.first[ "ret_msg" ].nil?
+				end
 
 				return result
 
@@ -51,38 +69,30 @@ module Kesh
 			end
 
 			def create_session
-				signature = create_signature "createsession"
-				timestamp = Time.now.utc.strftime( "%Y%m%d%H%M%S" ).to_i
-
-				url = "#{@base_url}createsessionJson/#{@devId}/#{signature}/#{@sessionId}/#{timestamp}"
-
-				resp = Net::HTTP.get_response( URI.parse( url ) )
-				data = resp.body
-				result = JSON.parse( data )
-
-				raise SessionError unless result[ "ret_msg" ].eql?( "Approved" )
-
+				result = send_method( "createsession" )
 				@sessionId = result[ "session_id" ]
+			rescue
+				@sessionId = nil
 			end
 
 			def get_player nick
-				result = send_method( "getplayer", nick )
+				result = send_method( "getplayer", nick ).first
 				return result
 
-			rescue TribesAPI::QueryError
+			rescue Kesh::TribesAPI::QueryError
+				@sessionId = nil
 				create_session
-				result = send_method( "getplayer", nick )
+				if @sessionId.nil?
+					return nil
+				end
+
+				result = send_method( "getplayer", nick ).first
 				return result
 
-			rescue TribesAPI::ParseError
-				return nil
-
-			rescue TribesAPI::SessionError
+			rescue Kesh::TribesAPI::ParseError
 				return nil
 
 			end
-
-
 
 		end
 	end

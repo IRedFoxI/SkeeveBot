@@ -29,6 +29,7 @@ class Bot
 		@matches = Array.new
 		@defaultMute = 2
 		@moveQueue = Hash.new
+		@query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
 
 		load_matches_ini
 	end
@@ -1612,8 +1613,8 @@ class Bot
 
 	def get_player_stats nick, *stats
 		if nick != "SomeFakePlayerName"
-			query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
-			result = query.send_method( "getplayer", nick )
+
+			result = @query.get_player( nick )
 
 			stats = stats.first
 
@@ -1622,11 +1623,14 @@ class Bot
 				statsVals << result[ stat ]
 			end
 			return statsVals
+
 		else
-			query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
-			result = query.send_method( "getplayer", "Player" )
+
+			result = @query.get_player( "Player" )
+
 			stats = result.keys
 			return stats
+			
 		end
 
 	rescue
