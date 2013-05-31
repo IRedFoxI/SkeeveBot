@@ -191,7 +191,7 @@ class Bot
 						# Player returning to a running game
 						@matches.each do |match|
 							next unless match.status.eql?( "Started" )
-							if match.players.has_key?( player.playerName )
+							if match.players.select{ |pN, t| pN.downcase.eql?( player.playerName.downcase ) }.length > 0
 								@players[ client ][ mumbleNick ].team = roles.first
 								@players[ client ][ mumbleNick ].match = match.id
 								return
@@ -272,7 +272,7 @@ class Bot
 
 					# Clean up players
 					match.players.each_key do |plName|
-						muNick = @players[ client ].select{ |m, p| p.playerName.eql?( plName ) }.keys.first
+						muNick = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( plName.downcase ) }.keys.first
 						if muNick && @players[ client ][ muNick ].team.nil?
 							match.players.delete( plName )
 						end
@@ -321,7 +321,7 @@ class Bot
 					# Player returning to a running game
 					@matches.each do |match|
 						next unless match.status.eql?( "Started" )
-						if match.players.has_key?( player.playerName )
+						if match.players.select{ |pN, t| pN.downcase.eql?( player.playerName.downcase ) }.length > 0
 							player.team = roles.first
 							player.match = match.id
 							@players[ client ][ mumbleNick ] = player
@@ -468,7 +468,7 @@ class Bot
 
 				# Move everyone over to the new match apart from picked players
 				@players[ client ].each_pair do |mumbleNick, player|
-					if player.team.nil?
+					if player.team.nil? && !player.match.nil?
 						@players[ client ][ mumbleNick ].match = @currentMatch[ client ]
 					end
 				end
@@ -516,7 +516,7 @@ class Bot
 		stillPlaying = 0
 
 		match.players.each_key do |plName|
-			player = @players[ client ].select{ |m, p| p.playerName.eql?( plName ) }.values.first
+			player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( plName.downcase ) }.values.first
 			if player && player.match.eql?( matchId )
 				stillPlaying += 1
 			end
@@ -1114,17 +1114,11 @@ class Bot
 			statsVals = get_player_stats( aliasValue, [ "Name", "Level" ] )
 
 			if statsVals.nil?
-				client.send_user_message message.actor, "Player #{aliasValue} has not been found in the TribesAPI, alias not set."
+				client.send_user_message message.actor, "Player not found or unable to connect to TribesAPI, alias not set."
 				return
 			end
 
 			aliasValue = statsVals.shift
-
-			if aliasValue.nil?
-				client.send_user_message message.actor, "Something went wrong connecting to the TribesAPI, alias not set."
-				return
-			end
-
 			level = statsVals.shift
 
 			oldPlayerName = player.playerName
@@ -1159,13 +1153,14 @@ class Bot
 
 			@players[ client ][ player.mumbleNick ] = player
 
-			if player.match
-				index = @matches.index{ |m| m.id.eql?( player.match ) }
-				if @matches[ index ].players.has_key?( oldPlayerName )
-					@matches[ index ].players[ player.playerName ] = @matches[ index ].players[ oldPlayerName ]
-					@matches[ index ].players.delete( oldPlayerName )
-				end
+			@matches.each_index do |i|
+				pName = @matches[ i ].players.select{ |pN, t| pN.downcase.eql?( oldPlayerName.downcase ) }.keys.first
+				next if pName.nil?
+				@matches[ i ].players[ player.playerName ] = @matches[ i ].players[ pName ]
+				@matches[ i ].players.delete( pName )
 			end
+
+			write_matches_ini
 
 			if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
 				ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
@@ -1369,16 +1364,16 @@ class Bot
 
 		player = @players[ client ][ mumbleNick ]
 
-		match = @matches.select{ |m| m.status.eql?( "Pending" ) && m.players.has_key?( player.playerName ) }.first
+		match = @matches.select{ |m| m.status.eql?( "Pending" ) && m.players.select{ |pN, t| pN.downcase.eql?( player.playerName.downcase ) }.length > 0 }.first
 
 		if match.nil?
-			match = @matches.select{ |m| m.status.eql?( "Started" ) && m.players.has_key?( player.playerName ) }.first
+			match = @matches.select{ |m| m.status.eql?( "Started" ) && m.players.select{ |pN, t| pN.downcase.eql?( player.playerName.downcase ) }.length > 0 }.first
 		end
 
 		if match
 
 			scores = text.split(' ')[ 1..-1 ]
-			ownTeam = match.players[ player.playerName ]
+			ownTeam = match.players.select{ |pN, t| pN.downcase.eql?( player.playerName.downcase ) }.values.first
 
 			scores.each do |score|
 				ownScore = score.split('-')[0]
@@ -1578,18 +1573,25 @@ class Bot
 
 		if selection
 			selection.each do |match|
-				players = []
-				match.players.each_pair do |playerName, team|
-					players << "#{playerName}(#{team})"
+				playerStr = []
+				match.teams.each do |team|
+					players = match.players.select{ |pN, t| t.eql?( team ) }.keys
+					playerStr << "#{players.join(', ')} (#{team})"
 				end
-				results = ""
+				teamStr = ""
+				if playerStr.length > 0
+					teamStr << ", teams: #{playerStr.join( ' ')}"
+				end
+
+				resultStr = ""
 				if match.results.length > 0
-					results << ", results:"
+					resultStr << ", results:"
 					match.results.each do |res|
-						results << " #{res.scores.join('-')}"
+						resultStr << " #{res.scores.join('-')}"
 					end
 				end
-			client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}, players: #{players.join(', ')}#{results}"
+
+				client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}#{teamStr}#{resultStr}"
 			end
 		else
 			client.send_user_message message.actor, "No match found."
@@ -1606,8 +1608,6 @@ class Bot
 			query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
 			result = query.send_method( "getplayer", nick )
 
-			puts result
-
 			stats = stats.first
 
 			statsVals = Array.new
@@ -1621,8 +1621,10 @@ class Bot
 			stats = result.keys
 			return stats
 		end
+
 	rescue
-		return
+		return nil
+
 	end
 
 	def write_roles_ini client
@@ -1764,7 +1766,7 @@ class Bot
 				@nextMatchId = ( idInt + 1 ) if ( idInt >= @nextMatchId )
 
 				status = section.getValue( "Status" )
-				next unless ( status.eql?( "Started" ) || status.eql?( "Pending" ) )
+				next unless ( status.eql?( "Started" ) || status.eql?( "Pending" ) || status.eql?( "Finished" ) )
 
 				date = Time.parse( section.getValue( "Date" ) )
 
@@ -1816,7 +1818,7 @@ class Bot
 					rTeams = teams
 					rScores = Array.new
 
-					match.teams.each do |team|
+					teams.each do |team|
 						rScores << section.getValue( "Result#{rIndex}#{team}" ).to_i
 					end
 
@@ -1911,7 +1913,7 @@ class Bot
 
 				match = @matches.select{ |m| m.id.eql?( id ) }.first
 				match.players.keys.each do |playerName|
-					pl = @players[ client ].select{ |mN, pl| pl.playerName.eql?( playerName ) }.values.first
+					pl = @players[ client ].select{ |mN, pl| pl.playerName.downcase.eql?( playerName.downcase ) }.values.first
 					next if pl.nil?
 					next if pl.muted >= importance
 					next if targets.include?( pl.session )
