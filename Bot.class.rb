@@ -1267,18 +1267,25 @@ class Bot
 		end
 		if @matches
 			@matches.each do |match|
-				players = []
-				match.players.each_pair do |playerName, team|
-					players << "#{playerName}(#{team})"
+				playerStr = []
+				match.teams.each do |team|
+					players = match.players.select{ |pN, t| t.eql?( team ) }.keys
+					playerStr << "#{players.join(', ')} (#{team})"
 				end
-				results = ""
+				teamStr = ""
+				if playerStr.length > 0
+					teamStr << ", teams: #{playerStr.join( ' ')}"
+				end
+
+				resultStr = ""
 				if match.results.length > 0
-					results << ", results:"
+					resultStr << ", results:"
 					match.results.each do |res|
-						results << " #{res.scores.join('-')}"
+						resultStr << " #{res.scores.join('-')}"
 					end
 				end
-			client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}, players: #{players.join(', ')}#{results}"
+
+				client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}#{teamStr}#{resultStr}"
 			end
 		else
 			client.send_user_message message.actor, "No matches registered - this is not good!"
