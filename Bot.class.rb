@@ -27,7 +27,7 @@ class Bot
 		@currentMatch = Hash.new
 		@nextMatchId = 0
 		@matches = Array.new
-		@defaultMute = 2
+		@defaultMute = 1
 		@moveQueue = Hash.new
 		@query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
 
@@ -1630,7 +1630,7 @@ class Bot
 
 			stats = result.keys
 			return stats
-			
+
 		end
 
 	rescue
