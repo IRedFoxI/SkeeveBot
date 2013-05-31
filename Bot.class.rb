@@ -1259,6 +1259,16 @@ class Bot
 	end
 
 	def cmd_debug client, message
+
+		result = @query.get_data_used
+		actSessions = result[ "Active_Sessions" ]
+		concSessions = result[ "Concurrent_Sessions" ]
+		todaySessions = result[ "Total_Sessions_Today" ]
+		capSessions = result[ "Session_Cap" ]
+		todayRequests = result[ "Total_Requests_Today" ]
+		capRequests = result[ "Request_Limit_Daily" ]
+		client.send_user_message message.actor, "TribesAPI: #{actSessions}/#{concSessions}(Cur. Sessions), #{todaySessions}/#{capSessions} (Tot. Sessions), #{todayRequests}/#{capRequests} (Tot. Requests)"
+
 		if @players[ client ]
 			@players[ client ].each_pair do |session, player|
 				client.send_user_message message.actor, "Player: #{player.playerName}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
@@ -1266,8 +1276,11 @@ class Bot
 		else
 			client.send_user_message message.actor, "No players registered"
 		end
+
 		if @matches
+
 			@matches.each do |match|
+
 				playerStr = []
 				match.teams.each do |team|
 					players = match.players.select{ |pN, t| t.eql?( team ) }.keys
@@ -1287,10 +1300,15 @@ class Bot
 				end
 
 				client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}#{teamStr}#{resultStr}"
+
 			end
+
 		else
+
 			client.send_user_message message.actor, "No matches registered - this is not good!"
+
 		end
+
 	end
 
 	def cmd_mute client, message 
