@@ -29,6 +29,133 @@ module Kesh
 				create_session
 			end
 
+			def get_player nick
+
+				create_session if @sessionId.nil?
+				
+				result = send_method( "getplayer", nick ).first
+				return result
+
+			rescue Kesh::TribesAPI::SessionError
+				@sessionId = nil
+				create_session
+				if @sessionId.nil?
+					return nil
+				end
+
+				result = send_method( "getplayer", nick ).first
+				return result
+
+			rescue Kesh::TribesAPI::QueryError
+				return nil
+
+			rescue Kesh::TribesAPI::ParseError
+				return nil
+
+			end
+
+			def get_match_history nick
+
+				create_session if @sessionId.nil?
+				
+				result = send_method( "getmatchhistory", nick )
+				return result
+
+			rescue Kesh::TribesAPI::SessionError
+				@sessionId = nil
+				create_session
+				if @sessionId.nil?
+					return nil
+				end
+
+				result = send_method( "getmatchhistory", nick )
+				return result
+
+			rescue Kesh::TribesAPI::QueryError
+				return nil
+
+			rescue Kesh::TribesAPI::ParseError
+				return nil
+
+			end
+
+			def get_time_played nick
+
+				create_session if @sessionId.nil?
+				
+				result = send_method( "gettimeplayed", nick )
+				return result
+
+			rescue Kesh::TribesAPI::SessionError
+				@sessionId = nil
+				create_session
+				if @sessionId.nil?
+					return nil
+				end
+
+				result = send_method( "gettimeplayed", nick )
+				return result
+
+			rescue Kesh::TribesAPI::QueryError
+				return nil
+
+			rescue Kesh::TribesAPI::ParseError
+				return nil
+
+			end
+
+			def get_match_stats matchId
+
+				create_session if @sessionId.nil?
+				
+				result = send_method( "getmatchstats", matchId )
+				return result
+
+			rescue Kesh::TribesAPI::SessionError
+				@sessionId = nil
+				create_session
+				if @sessionId.nil?
+					return nil
+				end
+
+				result = send_method( "getmatchstats", matchId )
+				return result
+
+			rescue Kesh::TribesAPI::QueryError
+				return nil
+
+			rescue Kesh::TribesAPI::ParseError
+				return nil
+
+			end		
+
+			def get_data_used
+
+				create_session if @sessionId.nil?
+
+				result = send_method( "getdataused" ).first
+				return result
+
+			rescue Kesh::TribesAPI::SessionError
+				@sessionId = nil
+				create_session
+				if @sessionId.nil?
+					return nil
+				end
+
+				result = send_method( "getdataused" ).first
+				return result
+
+			rescue Kesh::TribesAPI::QueryError
+				return nil
+
+			rescue Kesh::TribesAPI::ParseError
+				return nil
+
+			end	
+
+			private			
+
 			def create_signature method
 				timestamp = Time.now.utc.strftime( "%Y%m%d%H%M%S" ).to_i
 				signature = Digest::MD5.hexdigest( "#{@devId}#{method}#{@authKey}#{timestamp}" )
@@ -58,7 +185,10 @@ module Kesh
 				when "createsession"
 					raise SessionError unless result[ "ret_msg" ].eql?( "Approved" )
 				else
-					raise QueryError unless result.first[ "ret_msg" ].nil?
+					result.each do |r|
+						raise SessionError if r[ "ret_msg" ].eql?( "Failed to validate SessionId." )
+						raise QueryError unless r[ "ret_msg" ].nil?
+					end
 				end
 
 				return result
@@ -73,25 +203,6 @@ module Kesh
 				@sessionId = result[ "session_id" ]
 			rescue
 				@sessionId = nil
-			end
-
-			def get_player nick
-				result = send_method( "getplayer", nick ).first
-				return result
-
-			rescue Kesh::TribesAPI::QueryError
-				@sessionId = nil
-				create_session
-				if @sessionId.nil?
-					return nil
-				end
-
-				result = send_method( "getplayer", nick ).first
-				return result
-
-			rescue Kesh::TribesAPI::ParseError
-				return nil
-
 			end
 
 		end
