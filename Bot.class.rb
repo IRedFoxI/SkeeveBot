@@ -1559,9 +1559,20 @@ class Bot
 				match.status = "Deleted"
 				@matches[ index ] = match
 
-				write_matches_ini
+				if match.id.eql?( @currentMatch[ client ] )
 
-				@matches.delete_at( index )
+					create_new_match( client )
+
+					# Move everyone over to the new match apart from picked players
+					@players[ client ].each_pair do |mN, pl|
+						if pl.team.nil? && !pl.match.nil?
+							@players[ client ][ mN ].match = @currentMatch[ client ]
+						end
+					end
+
+				end
+
+				write_matches_ini
 
 				client.send_user_message message.actor, "The match (id: #{match.id}) has been deleted."
 
