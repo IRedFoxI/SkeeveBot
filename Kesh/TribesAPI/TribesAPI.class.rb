@@ -13,9 +13,8 @@ module Kesh
 				@base_url = base_url
 				@devId = devId
 				@authKey = authKey
-				result = send_method( "createsession" )
-				raise SessionError, 'Session not approved' unless result[ "ret_msg" ].eql?( "Approved" )
-				@sessionId = result[ "session_id" ]
+
+				create_session
 			end
 
 			def create_signature method
@@ -40,11 +39,50 @@ module Kesh
 				data = resp.body
 				result = JSON.parse( data )
 
-				return result.kind_of?( Array ) ? result[ 0 ] : result
+				result = result.kind_of?( Array ) ? result.first : result
+
+				raise QueryError unless result[ "ret_msg" ].nil?
+
+				return result
 
 			rescue JSON::ParserError
-				raise ParseError, 'Error parsing response'
+				raise ParseError
+
 			end
+
+			def create_session
+				signature = create_signature "createsession"
+				timestamp = Time.now.utc.strftime( "%Y%m%d%H%M%S" ).to_i
+
+				url = "#{@base_url}createsessionJson/#{@devId}/#{signature}/#{@sessionId}/#{timestamp}"
+
+				resp = Net::HTTP.get_response( URI.parse( url ) )
+				data = resp.body
+				result = JSON.parse( data )
+
+				raise SessionError unless result[ "ret_msg" ].eql?( "Approved" )
+
+				@sessionId = result[ "session_id" ]
+			end
+
+			def get_player nick
+				result = send_method( "getplayer", nick )
+				return result
+
+			rescue TribesAPI::QueryError
+				create_session
+				result = send_method( "getplayer", nick )
+				return result
+
+			rescue TribesAPI::ParseError
+				return nil
+
+			rescue TribesAPI::SessionError
+				return nil
+
+			end
+
+
 
 		end
 	end
