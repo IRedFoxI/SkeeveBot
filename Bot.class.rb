@@ -402,7 +402,9 @@ class Bot
 					@players[ client ] = Hash.new
 				end
 
-				messagePlayer << " Message me \"!help\" for an overview of commands. Mute me with \"!mute\""
+				if player.muted < 2
+					client.send_user_message( player.session, "Welcome to the PUG channels. Message me \"!help\" for an overview of commands. Mute me with \"!mute\"" )
+				end
 
 			end
 
@@ -438,7 +440,7 @@ class Bot
 
 		end
 
-		if defined?( chanPath ) && player.muted < 2
+		if defined?( chanPath ) && player.muted < 1
 			client.send_user_message( player.session, messagePlayer )
 		end
 
