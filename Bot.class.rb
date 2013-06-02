@@ -1034,7 +1034,7 @@ class Bot
 
 			@rolesRequired[ client ].delete rolesRequired
 
-			write_roles_ini
+			write_roles_ini client
 
 			client.send_user_message message.actor, "Role deleted ('#{role}')."
 
