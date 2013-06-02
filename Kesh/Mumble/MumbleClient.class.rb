@@ -113,8 +113,8 @@ module Kesh
 			end
 
 			def register_text_handler(prefix, callback)
-				if !@text_handler[prefix]
-					@text_handler[prefix] = callback
+				if !@text_handler[prefix.downcase]
+					@text_handler[prefix.downcase] = callback
 				else
 					$stderr.puts "Callback for Textmessage #{prefix} is already registered."
 				end
@@ -217,7 +217,7 @@ module Kesh
 
 			def handle_text_message(client, message)
 				text = message.message.to_s
-				prefix = text.split(" ").first
+				prefix = text.split(" ").first.downcase
 				handler = @text_handler[prefix]
 
 				if handler

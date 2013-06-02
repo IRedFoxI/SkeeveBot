@@ -586,7 +586,7 @@ class Bot
 
 	def cmd_help client, message
 		text = message.message
-		command = text.split(' ')[ 1 ]
+		command = text.split(' ')[ 1 ].downcase
 
 		case command
 		when "find"
@@ -741,7 +741,7 @@ class Bot
 	def cmd_admin client, message
 
 		text = message.message
-		command = text.split(' ')[ 1 ]
+		command = text.split(' ')[ 1 ].downcase
 
 		if !@players[ client ]
 			@players[ client ] = Hash.new
@@ -790,7 +790,7 @@ class Bot
 
 	def help_msg_admin client, message
 		text = message.message
-		command = text.split(' ')[ 2 ]
+		command = text.split(' ')[ 2 ].downcase
 		case command
 		when "login"
 			help_msg_admin_login( client, message )
@@ -1373,7 +1373,7 @@ class Bot
 	end
 
 	def help_msg_mute client, message
-		client.send_user_message message.actor, "Syntax: !mute on/off"
+		client.send_user_message message.actor, "Syntax: !mute 0/1/2"
 		client.send_user_message message.actor, "Mute the bots spam messages from 0 (no mute) to 2 (all muted)"
 	end
 
