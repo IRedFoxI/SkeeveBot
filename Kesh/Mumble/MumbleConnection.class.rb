@@ -307,12 +307,7 @@ module Kesh
 			end
 
 			def mumble_read()
-				begin
-					type_string = @ssl_socket.read(6)
-				rescue 
-					# Lost connection, recover
-					return
-				end
+				type_string = @ssl_socket.read(6)
 				return nil if type_string.nil?
 
 				type, size = type_string.unpack('nN')
