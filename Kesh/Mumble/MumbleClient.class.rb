@@ -139,7 +139,11 @@ module Kesh
 			end
 
 			def find_user user
-				users = @users.values.select{ |u| (u.name == user) || (u.session == user) }
+				if user.is_a?( Fixnum )
+					users = @users.values.select{ |u| u.session == user }
+				elsif
+					users = @users.values.select{ |u| u.name.downcase == user.downcase }
+				end
 				return users.first
 			end
 
