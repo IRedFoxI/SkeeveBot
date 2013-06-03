@@ -20,3 +20,9 @@ tmp
 .yardoc
 _yardoc
 doc/
+
+
+config.rb
+SkeeveBot.iml
+SkeeveBot.ipr
+SkeeveBot.iws
