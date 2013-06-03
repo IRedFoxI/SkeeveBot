@@ -53,7 +53,7 @@ class Bot
 
 	def on_user_state client, message
 		# Check whether it is the bot itself
-		return if client.find_user_session( message.session ).name.eql? @connections[ client ][ :nick ]
+		return if client.find_user( message.session ).name.eql? @connections[ client ][ :nick ]
 
 		# Check if there is a channel change
 		return unless message.instance_variable_get( "@values").has_key?( :channel_id )
@@ -66,7 +66,7 @@ class Bot
 
 	def on_user_remove client, message
 		# Check whether it is the bot itself
-		return if client.find_user_session( message.session ).name.eql? @connections[ client ][ :nick ]
+		return if client.find_user( message.session ).name.eql? @connections[ client ][ :nick ]
 
 		session = message.session
 
@@ -133,7 +133,7 @@ class Bot
 
 		return unless @chanRoles[ client ]
 
-		mumbleNick = client.find_user_session( session ).name
+		mumbleNick = client.find_user( session ).name
 
 		prevRolesNeeded = check_requirements client
 		prevPlayersNeeded = prevRolesNeeded.shift
@@ -747,7 +747,7 @@ class Bot
 			@players[ client ] = Hash.new
 		end
 
-		mumbleNick = client.find_user_session( message.actor ).name
+		mumbleNick = client.find_user( message.actor ).name
 
 		if !@players[ client ].has_key?( mumbleNick )
 			playerData = get_player_data( client, mumbleNick )
@@ -832,7 +832,7 @@ class Bot
 		text = message.message
 		password = text.split(' ')[ 2 ]
 
-		mumbleNick = client.find_user_session( message.actor ).name
+		mumbleNick = client.find_user( message.actor ).name
 
 		player = @players[ client ][ mumbleNick ]
 
@@ -879,7 +879,7 @@ class Bot
 
 	def cmd_admin_setchan client, message 
 
-		mumbleNick = client.find_user_session( message.actor ).name
+		mumbleNick = client.find_user( message.actor ).name
 
 		if @players[ client ][ mumbleNick ].admin
 
@@ -945,7 +945,7 @@ class Bot
 
 	def cmd_admin_setrole client, message
 
-		mumbleNick = client.find_user_session( message.actor ).name
+		mumbleNick = client.find_user( message.actor ).name
 
 		if @players[ client ][ mumbleNick ].admin
 
@@ -1010,7 +1010,7 @@ class Bot
 
 	def cmd_admin_delrole client, message
 
-		mumbleNick = client.find_user_session( message.actor ).name
+		mumbleNick = client.find_user( message.actor ).name
 
 		if @players[ client ][ mumbleNick ].admin
 
@@ -1049,7 +1049,7 @@ class Bot
 
 	def cmd_admin_come client, message
 
-		mumbleNick = client.find_user_session( message.actor ).name
+		mumbleNick = client.find_user( message.actor ).name
 
 		if @players[ client ][ mumbleNick ].admin
 
@@ -1069,7 +1069,7 @@ class Bot
 
 	def cmd_admin_playernum client, message 
 
-		mumbleNick = client.find_user_session( message.actor ).name
+		mumbleNick = client.find_user( message.actor ).name
 		
 		if @players[ client ][ mumbleNick ].admin
 
@@ -1098,7 +1098,7 @@ class Bot
 
 	def cmd_admin_alias client, message
 
-		mumbleNick = client.find_user_session( message.actor ).name
+		mumbleNick = client.find_user( message.actor ).name
 
 		if @players[ client ][ mumbleNick ].admin
 
@@ -1208,7 +1208,7 @@ class Bot
 
 	def cmd_admin_op client, message
 
-		mumbleNick = client.find_user_session( message.actor ).name
+		mumbleNick = client.find_user( message.actor ).name
 
 		if @players[ client ][ mumbleNick ].admin
 	
@@ -1316,7 +1316,7 @@ class Bot
 	def cmd_mute client, message 
 
 		text = message.message
-		mumbleNick = client.find_user_session( message.actor ).name
+		mumbleNick = client.find_user( message.actor ).name
 
 		if !@players[ client ] || !@players[ client ].has_key?( mumbleNick )
 			client.send_user_message message.actor, "You need to join one of the PUG channels set the mute level."
@@ -1383,7 +1383,7 @@ class Bot
 			client.send_user_message message.actor, "You need to enter at least one score."
 			return
 		end
-		mumbleNick = client.find_user_session( message.actor ).name
+		mumbleNick = client.find_user( message.actor ).name
 
 		if !@players[ client ] || !@players[ client ].has_key?( mumbleNick )
 			client.send_user_message message.actor, "You need to join one of the PUG channels set a result."
@@ -1467,7 +1467,7 @@ class Bot
 		end
 		matchId = matchId.to_i
 
-		mumbleNick = client.find_user_session( message.actor ).name
+		mumbleNick = client.find_user( message.actor ).name
 
 		if @players[ client ][ mumbleNick ].admin
 
@@ -1540,7 +1540,7 @@ class Bot
 		end
 		matchId = matchId.to_i
 
-		mumbleNick = client.find_user_session( message.actor ).name
+		mumbleNick = client.find_user( message.actor ).name
 
 		if @players[ client ][ mumbleNick ].admin
 

@@ -105,7 +105,7 @@ module Kesh
 				if !@event_handler[type]
 					@event_handler[type] = []
 				end
-				if type == :UserRemove
+				if type == :UserRemove || type == :ChannelRemove
 					@event_handler[type].unshift( callback )
 				else
 					@event_handler[type] << callback
@@ -140,11 +140,6 @@ module Kesh
 
 			def find_user user
 				users = @users.values.select{ |u| (u.name == user) || (u.session == user) }
-				return users.first
-			end
-
-			def find_user_session session
-				users = @users.values.select{ |u| (u.session == session) }
 				return users.first
 			end
 
@@ -228,6 +223,7 @@ module Kesh
 
 			def unhandled(client, message)
 				log "*** unhandled ***"
+				log message.class
 				log message.inspect
 			end
 
