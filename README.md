@@ -21,11 +21,11 @@ Then you can run the bot with:
 The following commands are available:
 
 	!help "command" - detailed help on the command
-	!find "mumble_nick" - find which channel someone is in
+	!find "nick" - find which channel someone is in (mumble or tribes nick)
 	!goto "mumble_nick" - move yourself to someone's channel
-	!info "tribes_nick" "stat" - detailed stats on player
+	!info "nick" "stat" - detailed stats on player
 	!mute 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)
-	!result "scores" - report the results of your last PUG
+	!result "scores" - report the results of your last PUG ("yourcaps"-"theircaps" for each map)
 	!list - shows the latest matches
 	!admin "command" - admin commands
 
