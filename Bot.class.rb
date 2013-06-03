@@ -66,7 +66,9 @@ class Bot
 
 	def on_user_remove client, message
 		# Check whether it is the bot itself
-		return if client.find_user( message.session ).name.eql? @connections[ client ][ :nick ]
+		user = client.find_user( message.session )
+		return if user.nil?
+		return if user.name.eql? @connections[ client ][ :nick ]
 
 		session = message.session
 
