@@ -1982,4 +1982,16 @@ class Bot
 
 	end
 
+	def cleanup_players client
+		disappeared = [] 
+		@players[ client ].each_key do mumbleNick
+			if client.find_user( mumbleNick ).nil?
+				disappeared << mumbleNick
+			end
+		end
+		disappeared.each do |mumbleNick|
+			@players[ client ].delete( mumbleNick )
+		end
+	end
+
 end
