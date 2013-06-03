@@ -216,12 +216,15 @@ module Kesh
 
 			def handle_text_message(client, message)
 				text = message.message.to_s
-				prefix = text.split(" ").first.downcase
+				prefix = text.split(" ").first
+				prefix.downcase! unless prefix.nil?
 				handler = @text_handler[prefix]
 
 				if handler
 					log "handle '#{prefix}' with #{handler.name}" if @options[:debug]
 					handler.call(self, message)
+				else
+					client.send_user_message message.actor, "Unknown command '#{prefix}'!"
 				end
 			end
 
