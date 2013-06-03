@@ -588,7 +588,8 @@ class Bot
 
 	def cmd_help client, message
 		text = message.message
-		command = text.split(' ')[ 1 ].downcase
+		command = text.split(' ')[ 1 ]
+		command.downcase! unless command.nil?
 
 		case command
 		when "find"
@@ -789,7 +790,8 @@ class Bot
 	def cmd_admin client, message
 
 		text = message.message
-		command = text.split(' ')[ 1 ].downcase
+		command = text.split(' ')[ 1 ]
+		command.downcase! unless command.nil?
 
 		if !@players[ client ]
 			@players[ client ] = Hash.new
@@ -838,7 +840,8 @@ class Bot
 
 	def help_msg_admin client, message
 		text = message.message
-		command = text.split(' ')[ 2 ].downcase
+		command = text.split(' ')[ 2 ]
+		command.downcase! unless command.nil?
 		case command
 		when "login"
 			help_msg_admin_login( client, message )
