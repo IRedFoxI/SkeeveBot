@@ -115,15 +115,17 @@ module Kesh
 				def writeToFile( filename )
 					stream = FileStream.new( filename, "wb" )
 					serialise( stream )
-					stream.close()
+				ensure
+					stream.close() unless stream.nil?
 				end
 				
 				
 				def IniFile.loadFromFile( filename )
 					stream = FileStream.new( filename, "rb" )
 					ini = IniFile.deserialise( stream )
-					stream.close()
 					return ini
+				ensure
+					stream.close() unless stream.nil?
 				end
 				
 			end
