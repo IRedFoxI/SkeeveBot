@@ -621,10 +621,56 @@ class Bot
 	def cmd_find client, message
 		text = message.message
 		nick = text.split(' ')[ 1 ]
-		user = client.find_user nick
+
+		playerName = nil
+
+		user = client.find_user( nick )
+
+		if user.nil?
+
+			if @players[ client ]
+				player = @players[ client ].select{ |mN, pl| pl.playerName.downcase.eql?( nick.downcase ) }.values.first
+			end
+
+			if player.nil? 
+
+				if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
+					ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
+
+					sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}:aliases"
+					section = ini.getSection( sectionName )
+
+					found = false
+					client.users.values.each do |u|
+						break if found
+						if section.hasValue?( u.name )
+							playerName = section.getValue( u.name )
+							if playerName.downcase.eql?( nick.downcase )
+								user = u
+								found = true
+								puts playerName
+							end
+						end
+					end
+				end
+
+			elsif
+
+				user = client.find_user( player.mumbleNick )
+				playerName = player.playerName
+
+			end
+
+		end
+
+		puts playerName
 		
 		if user
-			client.send_user_message message.actor, "User '#{user.name}' is in Channel '#{user.channel.path}'"
+			if playerName.nil?
+				client.send_user_message message.actor, "Player '#{user.name}' is in channel '#{user.channel.path}'"
+			else
+				client.send_user_message message.actor, "Player '#{playerName}' found using name '#{user.name}' in channel '#{user.channel.path}'"
+			end
 		else
 			client.send_user_message message.actor, "There is no user '#{nick}' on the Server"
 		end
