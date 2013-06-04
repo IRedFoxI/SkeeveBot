@@ -41,8 +41,24 @@
         <h1>
 <a name="skeevebot" class="anchor" href="#skeevebot"><span class="octicon octicon-link"></span></a>SkeeveBot</h1>
 
-<h3>
-<a name="commands" class="anchor" href="#commands"><span class="octicon octicon-link"></span></a>Commands</h3>
+<h2>
+<a name="it-is-spamming-me-text-messages-make-it-stop" class="anchor" href="#it-is-spamming-me-text-messages-make-it-stop"><span class="octicon octicon-link"></span></a>It is spamming me text messages, make it stop!</h2>
+
+<p>Send the bot this text message:  </p>
+
+<pre><code>!mute
+</code></pre>
+
+<h2>
+<a name="outline" class="anchor" href="#outline"><span class="octicon octicon-link"></span></a>Outline</h2>
+
+<p>The goal is to create a mumble bot that keeps track of Pick-Up Games
+organised on the different Tribes Ascend community mumble servers. 
+Based on the outcome of the games it will calculate players (ELO based)
+ratings and help captains pick teams (or suggest entire lineups).</p>
+
+<h2>
+<a name="commands" class="anchor" href="#commands"><span class="octicon octicon-link"></span></a>Commands</h2>
 
 <p>The following commands are available:</p>
 
@@ -53,11 +69,83 @@
 !mute 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)
 !result "scores" - report the results of your last PUG ("yourcaps"-"theircaps" for each map)
 !list - shows the latest matches
-!admin "command" - admin commands
 </code></pre>
 
+<h2>
+<a name="command-details" class="anchor" href="#command-details"><span class="octicon octicon-link"></span></a>Command details</h2>
+
 <h3>
-<a name="admin-commands" class="anchor" href="#admin-commands"><span class="octicon octicon-link"></span></a>Admin Commands</h3>
+<a name="find" class="anchor" href="#find"><span class="octicon octicon-link"></span></a>!find</h3>
+
+<pre><code>!find "nick"
+</code></pre>
+
+<p>Returns "nick"'s channel. "nick" can be a mumble nick or a player name.</p>
+
+<h3>
+<a name="goto" class="anchor" href="#goto"><span class="octicon octicon-link"></span></a>!goto</h3>
+
+<pre><code>!goto "mumble_nick"
+</code></pre>
+
+<p>The bot tries to move you to "mumble_nick"'s. Fails if the bot doesn't have sufficient rights.</p>
+
+<h3>
+<a name="info" class="anchor" href="#info"><span class="octicon octicon-link"></span></a>!info</h3>
+
+<pre><code>!info  
+</code></pre>
+
+<p>Returns your tag, playername and level based on your mumble nick or alias, if set.  </p>
+
+<pre><code>!info "stat"  
+</code></pre>
+
+<p>As above but also shows specific statistcs "stat"  </p>
+
+<pre><code>!info "nick"  
+</code></pre>
+
+<p>Returns "nick"'s tag, playername and level, seaching for the alias if set.  </p>
+
+<pre><code>!info "nick" "stat"  
+</code></pre>
+
+<p>As above but also shows additional statistics "stat"  </p>
+
+<p>For all above "stat" can be a space delimited case-insensitive list of statistics that are supported by the TribesAPI.  </p>
+
+<pre><code>!help info  
+</code></pre>
+
+<p>Returns a list of available statistics</p>
+
+<h3>
+<a name="mute" class="anchor" href="#mute"><span class="octicon octicon-link"></span></a>!mute</h3>
+
+<pre><code>!mute 0/1/2
+</code></pre>
+
+<p>Mute the bot's spam messages from 0 (no mute) to 2 (all muted)</p>
+
+<h3>
+<a name="result" class="anchor" href="#result"><span class="octicon octicon-link"></span></a>!result</h3>
+
+<pre><code>!result "scores"
+</code></pre>
+
+<p>Report the results of a game with "scores" the scores for all maps in form "yourcaps"-"theircaps" separated by a space.</p>
+
+<h3>
+<a name="list" class="anchor" href="#list"><span class="octicon octicon-link"></span></a>!list</h3>
+
+<pre><code>!list
+</code></pre>
+
+<p>Shows the latest matches that have been registered on the bot.</p>
+
+<h2>
+<a name="admin-commands" class="anchor" href="#admin-commands"><span class="octicon octicon-link"></span></a>Admin Commands</h2>
 
 <p>The following admin commands are available:</p>
 
@@ -73,10 +161,44 @@
 !admin result "match_id" "scores"- set the result of a match"
 !admin delete "match_id" - delete a match"
 </code></pre>
+
+<h2>
+<a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h2>
+
+<p>You need to install they protobuf gem:</p>
+
+<pre><code>sudo gem install ruby_protobuf
+</code></pre>
+
+<p>You need to copy config.rb.example and adapt it to your liking:</p>
+
+<pre><code>cp config.rb.example config.rb
+vim config.rb
+</code></pre>
+
+<p>Then you can run the bot with:</p>
+
+<pre><code>./run_bot.rb
+</code></pre>
+
+<h2>
+<a name="thanks" class="anchor" href="#thanks"><span class="octicon octicon-link"></span></a>Thanks</h2>
+
+<p>Big thank you to <a href="https://github.com/Orvid">Orvid</a> for helping, Lumberjack for the IRC library and general Ruby help and <a href="https://github.com/FreeApophis">FreeApophis</a> for the mumble library.</p>
       </section>
 
     </div>
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
-    
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-41464546-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
   </body>
 </html>
