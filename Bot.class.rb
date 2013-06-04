@@ -43,7 +43,11 @@ class Bot
 	end
 
 	def connected?
-		return true
+		connected = false
+		@connections.each_key do |client|
+			connected = connected || client.connected?
+		end
+		return connected
 	end
 
 	def on_connected client, message
@@ -588,35 +592,47 @@ class Bot
 
 	def cmd_help client, message
 		text = message.message
-		command = text.split(' ')[ 1 ].downcase
+		command = text.split(' ')[ 1 ]
 
-		case command
-		when "find"
-			help_msg_find( client, message )
-		when "goto"
-			help_msg_goto( client, message )
-		when "info"
-			help_msg_info( client, message )
-		when "mute"
-			help_msg_mute( client, message )
-		when "result"
-			help_msg_result( client, message )
-		when "list"
-			help_msg_list( client, message )
-		when "admin"
-			help_msg_admin( client, message )
-		else
-			client.send_user_message message.actor, "The following commands are available:"
-			client.send_user_message message.actor, "!help \"command\" - detailed help on the command"
-			client.send_user_message message.actor, "!find \"mumble_nick\" - find which channel someone is in"
-			client.send_user_message message.actor, "!goto \"mumble_nick\" - move yourself to someone's channel"
-			client.send_user_message message.actor, "!info \"tribes_nick\" \"stat\" - detailed stats on player"
-			client.send_user_message message.actor, "!mute - 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)"
-			client.send_user_message message.actor, "!result \"scores\"- sets the result of your last match"
-			client.send_user_message message.actor, "!list - shows the latest matches"
-			client.send_user_message message.actor, "!admin \"command\" - admin commands"
+		unless command.nil?
+
+			case command.downcase
+			when "find"
+				help_msg_find( client, message )
+				return
+			when "goto"
+				help_msg_goto( client, message )
+				return
+			when "info"
+				help_msg_info( client, message )
+				return
+			when "mute"
+				help_msg_mute( client, message )
+				return
+			when "result"
+				help_msg_result( client, message )
+				return
+			when "list"
+				help_msg_list( client, message )
+				return
+			when "admin"
+				help_msg_admin( client, message )
+				return
+			else
+				client.send_user_message message.actor, "Unknown command '#{command}'"
+			end
+
 		end
-	end
+
+		client.send_user_message message.actor, "The following commands are available:"
+		client.send_user_message message.actor, "!help \"command\" - detailed help on the command"
+		client.send_user_message message.actor, "!find \"mumble_nick\" - find which channel someone is in"
+		client.send_user_message message.actor, "!goto \"mumble_nick\" - move yourself to someone's channel"
+		client.send_user_message message.actor, "!info \"tribes_nick\" \"stat\" - detailed stats on player"
+		client.send_user_message message.actor, "!mute - 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)"
+		client.send_user_message message.actor, "!result \"scores\"- sets the result of your last match"
+		client.send_user_message message.actor, "!list - shows the latest matches"
+		client.send_user_message message.actor, "!admin \"command\" - admin commands"	end
 
 	def cmd_find client, message
 		text = message.message
@@ -789,7 +805,7 @@ class Bot
 	def cmd_admin client, message
 
 		text = message.message
-		command = text.split(' ')[ 1 ].downcase
+		command = text.split(' ')[ 1 ]
 
 		if !@players[ client ]
 			@players[ client ] = Hash.new
@@ -809,71 +825,97 @@ class Bot
 			@players[ client ][ mumbleNick ] = player
 		end
 
-		case command
-		when "login"
-			cmd_admin_login( client, message )
-		when "setchan"
-			cmd_admin_setchan( client, message )
-		when "setrole"
-			cmd_admin_setrole( client, message )
-		when "delrole"
-			cmd_admin_delrole( client, message )
-		when "playernum"
-			cmd_admin_playernum( client, message )
-		when "alias"
-			cmd_admin_alias( client, message )
-		when "come"
-			cmd_admin_come( client, message )
-		when "op"
-			cmd_admin_op( client, message )
-		when "result"
-			cmd_admin_result( client, message )
-		when "delete"
-			cmd_admin_delete( client, message )
-		else
+		if command.nil?
+
 			client.send_user_message message.actor, "Please specify an admin command."
+
+		elsif
+
+			case command.downcase
+			when "login"
+				cmd_admin_login( client, message )
+			when "setchan"
+				cmd_admin_setchan( client, message )
+			when "setrole"
+				cmd_admin_setrole( client, message )
+			when "delrole"
+				cmd_admin_delrole( client, message )
+			when "playernum"
+				cmd_admin_playernum( client, message )
+			when "alias"
+				cmd_admin_alias( client, message )
+			when "come"
+				cmd_admin_come( client, message )
+			when "op"
+				cmd_admin_op( client, message )
+			when "result"
+				cmd_admin_result( client, message )
+			when "delete"
+				cmd_admin_delete( client, message )
+			else
+				client.send_user_message message.actor, "Unknown admin command '#{command}'."
+			end
+
 		end
 
 	end
 
 	def help_msg_admin client, message
 		text = message.message
-		command = text.split(' ')[ 2 ].downcase
-		case command
-		when "login"
-			help_msg_admin_login( client, message )
-		when "setchan"
-			help_msg_admin_setchan( client, message )
-		when "setrole"
-			help_msg_admin_setrole( client, message )
-		when "delrole"
-			help_msg_admin_delrole( client, message )
-		when "playernum"
-			help_msg_admin_playernum( client, message )
-		when "alias"
-			help_msg_admin_alias( client, message )
-		when "come"
-			help_msg_admin_come( client, message )
-		when "op"
-			help_msg_admin_op( client, message )
-		when "result"
-			help_msg_admin_result( client, message )
-		when "delete"
-			help_msg_admin_delete( client, message )
-		else
-			client.send_user_message message.actor, "The following admin commands are available:"
-			client.send_user_message message.actor, "!help admin \"command\" - detailed help on the admin command"
-			client.send_user_message message.actor, "!admin login \"password\" - login as SuperUser"
-			client.send_user_message message.actor, "!admin setchan \"role\" - set a channel's role"
-			client.send_user_message message.actor, "!admin setrole \"role\" \"parameter\" - set a role"
-			client.send_user_message message.actor, "!admin delrole \"role\" - delete a role"
-			client.send_user_message message.actor, "!admin playernum \"number\" - set the required number of players per team"
-			client.send_user_message message.actor, "!admin alias \"player\" \"alias\" - set a player's alias"
-			client.send_user_message message.actor, "!admin come - make the bot move to your channel"
-			client.send_user_message message.actor, "!admin op \"player\" - make \"player\" an admin"
-			client.send_user_message message.actor, "!admin result \"match_id\" \"scores\"- set the result of a match"
-			client.send_user_message message.actor, "!admin delete \"match_id\" - delete a match"
+		command = text.split(' ')[ 2 ]
+
+		unless command.nil?
+
+			case command.downcase
+			when "login"
+				help_msg_admin_login( client, message )
+				return
+			when "setchan"
+				help_msg_admin_setchan( client, message )
+				return
+			when "setrole"
+				help_msg_admin_setrole( client, message )
+				return
+			when "delrole"
+				help_msg_admin_delrole( client, message )
+				return
+			when "playernum"
+				help_msg_admin_playernum( client, message )
+				return
+			when "alias"
+				help_msg_admin_alias( client, message )
+				return
+			when "come"
+				help_msg_admin_come( client, message )
+				return
+			when "op"
+				help_msg_admin_op( client, message )
+				return
+			when "result"
+				help_msg_admin_result( client, message )
+				return
+			when "delete"
+				help_msg_admin_delete( client, message )
+				return
+			else
+				client.send_user_message message.actor, "Unknown admin command '#{command}':"
+			end
+
 		end
+
+		client.send_user_message message.actor, "The following admin commands are available:"
+		client.send_user_message message.actor, "!help admin \"command\" - detailed help on the admin command"
+		client.send_user_message message.actor, "!admin login \"password\" - login as SuperUser"
+		client.send_user_message message.actor, "!admin setchan \"role\" - set a channel's role"
+		client.send_user_message message.actor, "!admin setrole \"role\" \"parameter\" - set a role"
+		client.send_user_message message.actor, "!admin delrole \"role\" - delete a role"
+		client.send_user_message message.actor, "!admin playernum \"number\" - set the required number of players per team"
+		client.send_user_message message.actor, "!admin alias \"player\" \"alias\" - set a player's alias"
+		client.send_user_message message.actor, "!admin come - make the bot move to your channel"
+		client.send_user_message message.actor, "!admin op \"player\" - make \"player\" an admin"
+		client.send_user_message message.actor, "!admin result \"match_id\" \"scores\"- set the result of a match"
+		client.send_user_message message.actor, "!admin delete \"match_id\" - delete a match"
+
 	end
 
 	def cmd_admin_login client, message
