@@ -126,6 +126,12 @@ class Bot
 
 			client.connect
 
+			comment = "!mute 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)<BR>"
+			comment << "!result \"scores\" - report the results of your last PUG (\"yourcaps\"-\"theircaps\" for each map)<BR>"
+			comment << "!list - shows the latest matches<BR>"
+
+			client.set_comment comment
+
 		end
 
 		while connected? do
