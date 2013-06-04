@@ -20,24 +20,32 @@ Commands
 
 The following commands are available:
 
-+	!help "command" - detailed help on the command
-+	!find "nick" - find which channel someone is in (mumble or tribes nick)
-+	!goto "mumble_nick" - move yourself to someone's channel
-+	!info "nick" "stat" - detailed stats on player
-+	!mute 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)
-+	!result "scores" - report the results of your last PUG ("yourcaps"-"theircaps" for each map)
-+	!list - shows the latest matches
-+	!admin "command" - admin commands
+!help "command" - detailed help on the command
+
+!find "nick" - find which channel someone is in (mumble or tribes nick)
+
+!goto "mumble_nick" - move yourself to someone's channel
+
+!info "nick" "stat" - detailed stats on player
+
+!mute 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)
+
+!result "scores" - report the results of your last PUG ("yourcaps"-"theircaps" for each map)
+
+!list - shows the latest matches
+
+!admin "command" - admin commands
+
 
 Command details
 ---------------
 
 ### !find ###
-	Syntax: !find "nick"
+	!find "nick"
 Returns "nick"'s channel. "nick" can be a mumble nick or a player name.
 
 ### !goto ###
-	Syntax: !goto "mumble_nick"
+	!goto "mumble_nick"
 The bot tries to move you to "mumble_nick"'s. Fails if the bot doesn't have sufficient rights.
 
 Admin Commands
@@ -45,17 +53,28 @@ Admin Commands
 
 The following admin commands are available:
 
-+	!help admin "command" - detailed help on the admin command
-+	!admin login "password" - login as SuperUser
-+	!admin setchan "role" - set a channel's role
-+	!admin setrole "role" "parameter" - set a role
-+	!admin delrole "role" - delete a role
-+	!admin playernum "number" - set the required number of players per team
-+	!admin alias "player" "alias" - set a player's alias
-+	!admin come - make the bot move to your channel
-+	!admin op "player" - make "player" an admin
-+	!admin result "match_id" "scores"- set the result of a match"
-+	!admin delete "match_id" - delete a match"
+!help admin "command" - detailed help on the admin command
+
+!admin login "password" - login as SuperUser
+
+!admin setchan "role" - set a channel's role
+
+!admin setrole "role" "parameter" - set a role
+
+!admin delrole "role" - delete a role
+
+!admin playernum "number" - set the required number of players per team
+
+!admin alias "player" "alias" - set a player's alias
+
+!admin come - make the bot move to your channel
+
+!admin op "player" - make "player" an admin
+
+!admin result "match_id" "scores"- set the result of a match"
+
+!admin delete "match_id" - delete a match"
+
 
 Installation
 ------------
