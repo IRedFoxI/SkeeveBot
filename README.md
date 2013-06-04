@@ -4,7 +4,9 @@ SkeeveBot
 It is spamming me text messages, make it stop!
 ----------------------------------------------
 
-Send the bot this text message: "!mute".
+Send the bot this text message:  
+
+"!mute"
 
 Outline
 -------
