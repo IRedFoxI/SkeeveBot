@@ -129,11 +129,20 @@ class Bot
 		end
 
 		while connected? do
-			sleep 0.2
+			sleep 60
+			remove_old_matches
 		end
 	end
 
 	private
+
+	def remove_old_matches
+		@matches.each do|match|
+			if !match.date.nil? &&  ( Time.now - match.date ) > 24 * 60 * 60
+				@matches.delete( match )
+			end
+		end
+	end
 
 	def change_user client, session, *chanPath
 
