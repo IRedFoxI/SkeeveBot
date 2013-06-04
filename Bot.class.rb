@@ -43,9 +43,9 @@ class Bot
 	end
 
 	def connected?
-		connected = false
+		connected = true
 		@connections.each_key do |client|
-			connected = connected || client.connected?
+			connected = connected && client.connected?
 		end
 		return connected
 	end
