@@ -42,9 +42,11 @@ trap("INT") do
 	exit 0
 end
 
-Thread.abort_on_exception = true
+#Thread.abort_on_exception = true
 
-bot.run $servers
+while true
+	bot.run $servers
+end
 
 
 
