@@ -694,8 +694,8 @@ class Bot
 	end
 
 	def help_msg_find client, message
-		client.send_user_message message.actor, "Syntax: !find \"mumble_nick\""
-		client.send_user_message message.actor, "Returns \"mumble_nick\"'s channel"
+		client.send_user_message message.actor, "Syntax: !find \"nick\""
+		client.send_user_message message.actor, "Returns \"nick\"'s channel. \"nick\" can be a mumble nick or a player name."
 	end
 
 	def cmd_goto client, message
@@ -708,8 +708,7 @@ class Bot
 
 	def help_msg_goto client, message
 		client.send_user_message message.actor, "Syntax: !goto \"mumble_nick\""
-		client.send_user_message message.actor, "The bot tries to move you to \"mumble_nick\"'s"
-		client.send_user_message message.actor, "Fails if the bot doesn't have sufficient rights"
+		client.send_user_message message.actor, "The bot tries to move you to \"mumble_nick\"'s. Fails if the bot doesn't have sufficient rights"
 	end
 
 	def cmd_test client, message
