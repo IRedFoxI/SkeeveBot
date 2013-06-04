@@ -1916,6 +1916,7 @@ class Bot
 				next unless ( status.eql?( "Started" ) || status.eql?( "Pending" ) || status.eql?( "Finished" ) )
 
 				date = Time.parse( section.getValue( "Date" ) )
+				next unless ( Time.now - date ) < 24 * 60 * 60
 
 				# if ( date == nil )
 				# 	puts "Invalid Date: " + section.getValue( 'Date' ).to_s
