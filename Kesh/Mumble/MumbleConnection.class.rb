@@ -141,7 +141,7 @@ module Kesh
 				mumble_write(message)
 			end
 
-			def send_user_state session, channel_id, self_mute, self_deaf, mute, deaf
+			def send_user_state session, channel_id, self_mute, self_deaf, mute, deaf, comment
 				message = MumbleProto::UserState.new
 				message.session = session
 				#message.actor = session
@@ -150,6 +150,7 @@ module Kesh
 				message.self_deaf = self_deaf if self_deaf != nil
 				message.mute = mute if mute != nil
 				message.deaf = deaf if deaf != nil
+				message.comment = comment if comment != nil
 
 				mumble_write(message)
 			end

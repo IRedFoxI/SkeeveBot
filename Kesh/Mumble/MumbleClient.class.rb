@@ -157,11 +157,11 @@ module Kesh
 			end
 
 			def self_mute state
-				send_user_state @session, nil, state, nil, nil, nil
+				send_user_state @session, nil, state, nil, nil, nil, nil
 			end
 
 			def self_deaf state
-				send_user_state @session, nil, nil, state, nil, nil
+				send_user_state @session, nil, nil, state, nil, nil, nil
 			end
 
 			def switch_channel channel
@@ -169,12 +169,12 @@ module Kesh
 				if channel.nil?
 					return
 				end
-				send_user_state @session, channel.channel_id, nil, nil, nil, nil
+				send_user_state @session, channel.channel_id, nil, nil, nil, nil, nil
 			end
 
 			# Highlevel Commands on Others (usually disallowed by server)
 			def move_user user, channel
-				send_user_state user.session, channel.channel_id, nil, nil, nil, nil
+				send_user_state user.session, channel.channel_id, nil, nil, nil, nil, nil
 			end
 
 			def send_channel_message channel, message, recursive = false
@@ -187,11 +187,15 @@ module Kesh
 			end
 
 			def mute state
-				send_user_state @session, nil, nil, nil, state, nil
+				send_user_state @session, nil, nil, nil, state, nil, nil
 			end
 
 			def deaf state
-				send_user_state @session, nil, nil, nil, nil, state
+				send_user_state @session, nil, nil, nil, nil, state, nil
+			end
+
+			def set_comment comment
+				send_user_state @session, nil, nil, nil, nil, nil, comment
 			end
 
 			def send_user_message user, message
