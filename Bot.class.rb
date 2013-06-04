@@ -796,7 +796,7 @@ class Bot
 		client.send_user_message message.actor, "Syntax !info"
 		client.send_user_message message.actor, "Returns your tag, playername and level based on your mumble nick"
 		client.send_user_message message.actor, "Syntax !info \"stat\""
-		client.send_user_message message.actor, "As above but also shows your \"stat\""
+		client.send_user_message message.actor, "As above but also shows your additional statistic \"stat\""
 		client.send_user_message message.actor, "Syntax !info \"tribes_nick\""
 		client.send_user_message message.actor, "Returns \"nick\"'s tag, playername and level, seaching for his alias if set"
 		client.send_user_message message.actor, "Syntax !info \"tribes_nick\" \"stat\""

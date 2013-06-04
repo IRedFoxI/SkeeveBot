@@ -1,6 +1,3 @@
-SkeeveBot
-=========
-
 It is spamming me text messages, make it stop!
 ----------------------------------------------
 
@@ -46,7 +43,7 @@ The bot tries to move you to "mumble_nick"'s. Fails if the bot doesn't have suff
 Returns your tag, playername and level based on your mumble nick or alias, if set.  
 
 	!info "stat"  
-As above but also shows specific statistcs "stat"  
+As above but also shows your additional statistic "stat"  
 
 	!info "nick"  
 Returns "nick"'s tag, playername and level, seaching for the alias if set.  
@@ -54,7 +51,7 @@ Returns "nick"'s tag, playername and level, seaching for the alias if set.
 	!info "nick" "stat"  
 As above but also shows additional statistics "stat"  
 
-For all above "stat" can be a space delimited case-insensitive list of statistics that are supported by the TribesAPI.  
+For all of the above "stat" can be a space delimited, case-insensitive list of statistics that are supported by the TribesAPI.  
 
 	!help info  
 Returns a list of available statistics
