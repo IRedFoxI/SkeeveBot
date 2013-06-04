@@ -455,6 +455,10 @@ class Bot
 
 		if match.status.eql?( "Picking" )
 
+			if match.players.empty?
+				@matches.select{ |m| m.id.eql?( match.id ) }.first.status = "Signup"
+			end
+
 			teamsPicked = 0
 			playerNum = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
 
@@ -537,6 +541,8 @@ class Bot
 		@matches[ index ].status = "Pending"
 
 		message_all( client, "Your match (id: #{match.id}) seems to be over. Please report the result (message me \"!help result\" for help).", [ matchId ], 2 )
+
+		write_matches_ini
 
 	end
 
@@ -1360,13 +1366,15 @@ class Bot
 	def cmd_debug client, message
 
 		result = @query.get_data_used
-		actSessions = result[ "Active_Sessions" ]
-		concSessions = result[ "Concurrent_Sessions" ]
-		todaySessions = result[ "Total_Sessions_Today" ]
-		capSessions = result[ "Session_Cap" ]
-		todayRequests = result[ "Total_Requests_Today" ]
-		capRequests = result[ "Request_Limit_Daily" ]
-		client.send_user_message message.actor, "TribesAPI: #{actSessions}/#{concSessions}(Cur. Sessions), #{todaySessions}/#{capSessions} (Tot. Sessions), #{todayRequests}/#{capRequests} (Tot. Requests)"
+		unless result.nil?
+			actSessions = result[ "Active_Sessions" ]
+			concSessions = result[ "Concurrent_Sessions" ]
+			todaySessions = result[ "Total_Sessions_Today" ]
+			capSessions = result[ "Session_Cap" ]
+			todayRequests = result[ "Total_Requests_Today" ]
+			capRequests = result[ "Request_Limit_Daily" ]
+			client.send_user_message message.actor, "TribesAPI: #{actSessions}/#{concSessions}(Cur. Sessions), #{todaySessions}/#{capSessions} (Tot. Sessions), #{todayRequests}/#{capRequests} (Tot. Requests)"
+		end
 
 		if @players[ client ]
 			@players[ client ].each_pair do |session, player|

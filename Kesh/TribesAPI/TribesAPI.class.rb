@@ -33,8 +33,9 @@ module Kesh
 
 				create_session if @sessionId.nil?
 				
-				result = send_method( "getplayer", nick ).first
-				return result
+				result = send_method( "getplayer", nick )
+				return nil if result.nil?
+				return result.first
 
 			rescue Kesh::TribesAPI::SessionError
 				@sessionId = nil
@@ -43,8 +44,9 @@ module Kesh
 					return nil
 				end
 
-				result = send_method( "getplayer", nick ).first
-				return result
+				result = send_method( "getplayer", nick )
+				return nil if result.nil?
+				return result.first
 
 			rescue Kesh::TribesAPI::QueryError
 				return nil
@@ -133,8 +135,9 @@ module Kesh
 
 				create_session if @sessionId.nil?
 
-				result = send_method( "getdataused" ).first
-				return result
+				result = send_method( "getdataused" )
+				return nil if result.nil?
+				return result.first
 
 			rescue Kesh::TribesAPI::SessionError
 				@sessionId = nil
@@ -143,8 +146,9 @@ module Kesh
 					return nil
 				end
 
-				result = send_method( "getdataused" ).first
-				return result
+				result = send_method( "getdataused" )
+				return nil if result.nil?
+				return result.first
 
 			rescue Kesh::TribesAPI::QueryError
 				return nil
@@ -195,6 +199,9 @@ module Kesh
 
 			rescue JSON::ParserError
 				raise ParseError
+
+			rescue Errno::ENOENT
+				return nil
 
 			end
 
