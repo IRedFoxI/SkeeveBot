@@ -40,15 +40,20 @@ Returns "nick"'s channel. "nick" can be a mumble nick or a player name.
 The bot tries to move you to "mumble_nick"'s. Fails if the bot doesn't have sufficient rights.
 
 ### !info ###
-	!info
+	!info  
 Returns your tag, playername and level based on your mumble nick or alias, if set.  
+
 	!info "stat"  
 As above but also shows specific statistcs "stat"  
+
 	!info "nick"  
 Returns "nick"'s tag, playername and level, seaching for the alias if set.  
+
 	!info "nick" "stat"  
 As above but also shows additional statistics "stat"  
+
 For all above "stat" can be a space delimited case-insensitive list of statistics that are supported by the TribesAPI.  
+
 	!help info  
 Returns a list of available statistics
 
