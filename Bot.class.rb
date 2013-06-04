@@ -7,7 +7,7 @@ requireLibrary 'Mumble'
 requireLibrary 'TribesAPI'
 
 
-Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :playerName, :level, :noCaps, :noMaps, :match, :roles, :team )
+Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :playerName, :level, :tag, :noCaps, :noMaps, :match, :roles, :team )
 Match = Struct.new( :id, :status, :date, :teams, :players, :comment, :results )
 Result = Struct.new( :map, :teams, :scores, :comment )
 
@@ -313,7 +313,8 @@ class Bot
 				elo = playerData[ "elo" ]
 				playerName = playerData[ "playerName" ]
 				level = playerData[ "level" ]
-				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, playerName, level, nil, nil, nil, roles, nil )
+				tag = playerData[ "tag" ]
+				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, roles, nil )
 
 				firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
@@ -741,6 +742,8 @@ class Bot
 		stats = Array.new
 		stats << "Name"
 		stats << "Level"
+		stats << "Tag"
+		noDefaultStats = stats.length
 		stats.push( *text.split(" ")[ 2..-1 ] )
 		stats.map! do |stat|
 			stat.split('_').map!( &:capitalize ).join('_')
@@ -750,7 +753,7 @@ class Bot
 
 		if ( statsVals.nil? && nick != ownNick )
 
-			stats.insert( 2, nick.split('_').map!( &:capitalize ).join('_') )
+			stats.insert( noDefaultStats, nick.split('_').map!( &:capitalize ).join('_') )
 			statsVals = get_player_stats( ownNick, stats )
 
 			if statsVals.nil?
@@ -767,13 +770,17 @@ class Bot
 			return
 		end
 
-		if ( stats[ 2 ] == nick && statsVals[ 2 ].nil? )
+		if ( stats[ noDefaultStats ] == nick && statsVals[ noDefaultStats ].nil? )
 			client.send_user_message message.actor, "Player #{nick} not found."
 		else
 			name = statsVals.shift
 			level = statsVals.shift
-			stats.shift( 2 )
+			tag = statsVals.shift
+			stats.shift( noDefaultStats )
+
+			name = "[#{tag}]#{name}" if tag
 			client.send_user_message message.actor, "Player #{name} has level #{level}."
+			
 			while stat = stats.shift
 				statVal = statsVals.shift
 				if statVal
@@ -821,7 +828,8 @@ class Bot
 			elo = playerData[ "elo" ]
 			playerName = playerData[ "playerName" ]
 			level = playerData[ "level" ]
-			player = Player.new( message.actor, mumbleNick, admin, aliasNick, muted, elo, playerName, level, nil, nil, nil, nil, nil )
+			tag = playerData[ "tag" ]
+			player = Player.new( message.actor, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, nil, nil )
 			@players[ client ][ mumbleNick ] = player
 		end
 
@@ -2008,18 +2016,21 @@ class Bot
 		stats = Array.new
 		stats << "Name"
 		stats << "Level"
+		stats << "Tag"
 
 		statsVals = get_player_stats( nick, stats )
 
 		if statsVals.nil?
 			playerName = nick
 			level = "unknown"
+			tag = nil
 		else
 			playerName = statsVals.shift
 			level = statsVals.shift
+			tag = statsVals.shift
 		end
 
-		return { "session" => session, "mumbleNick" => mumbleNick, "admin" => admin, "aliasNick" => aliasNick, "muted" => muted, "elo" => elo, "playerName" => playerName, "level" => level }
+		return { "session" => session, "mumbleNick" => mumbleNick, "admin" => admin, "aliasNick" => aliasNick, "muted" => muted, "elo" => elo, "playerName" => playerName, "level" => level, "tag" => tag }
 
 	end
 
