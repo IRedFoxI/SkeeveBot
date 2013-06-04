@@ -794,11 +794,11 @@ class Bot
 
 	def help_msg_info client, message
 		client.send_user_message message.actor, "Syntax !info"
-		client.send_user_message message.actor, "Returns your playername and level based on your mumble nick"
+		client.send_user_message message.actor, "Returns your tag, playername and level based on your mumble nick"
 		client.send_user_message message.actor, "Syntax !info \"stat\""
 		client.send_user_message message.actor, "As above but also shows your \"stat\""
 		client.send_user_message message.actor, "Syntax !info \"tribes_nick\""
-		client.send_user_message message.actor, "Returns \"tribes_nick\"'s your playername and level"
+		client.send_user_message message.actor, "Returns \"nick\"'s tag, playername and level, seaching for his alias if set"
 		client.send_user_message message.actor, "Syntax !info \"tribes_nick\" \"stat\""
 		client.send_user_message message.actor, "As above but also shows \"tribes_nick\"'s \"stat\""
 		client.send_user_message message.actor, "\"stat\" can be a space delimited list of these stats:"
@@ -1471,7 +1471,7 @@ class Bot
 
 	def help_msg_mute client, message
 		client.send_user_message message.actor, "Syntax: !mute 0/1/2"
-		client.send_user_message message.actor, "Mute the bots spam messages from 0 (no mute) to 2 (all muted)"
+		client.send_user_message message.actor, "Mute the bot's spam messages from 0 (no mute) to 2 (all muted)"
 	end
 
 	def cmd_result client, message
@@ -1542,7 +1542,7 @@ class Bot
 
 	def help_msg_result client, message
 		client.send_user_message message.actor, "Syntax: !result \"scores\""
-		client.send_user_message message.actor, "\"scores\" are the scores for all maps in form \"ourcaps\"-\"theircaps\" separated by a space."
+		client.send_user_message message.actor, "Report the results of a game with \"scores\" the scores for all maps in form \"yourcaps\"-\"theircaps\" separated by a space."
 	end
 
 	def cmd_admin_result client, message
@@ -1736,7 +1736,7 @@ class Bot
 
 	def help_msg_list client, message
 		client.send_user_message message.actor, "Syntax: !list"
-		client.send_user_message message.actor, "Shows all registered matches"
+		client.send_user_message message.actor, "Shows the latest matches that have been registered on the bot."
 	end
 
 	def get_player_stats nick, *stats

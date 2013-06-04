@@ -27,7 +27,6 @@ The following commands are available:
 	!mute 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)
 	!result "scores" - report the results of your last PUG ("yourcaps"-"theircaps" for each map)
 	!list - shows the latest matches
-	!admin "command" - admin commands
 
 Command details
 ---------------
@@ -39,6 +38,32 @@ Returns "nick"'s channel. "nick" can be a mumble nick or a player name.
 ### !goto ###
 	!goto "mumble_nick"
 The bot tries to move you to "mumble_nick"'s. Fails if the bot doesn't have sufficient rights.
+
+### !info ###
+	!info
+Returns your tag, playername and level based on your mumble nick or alias, if set.
+	!info "stat"
+As above but also shows specific statistcs "stat"
+	!info "nick"
+Returns "nick"'s tag, playername and level, seaching for the alias if set.
+	!info "nick" "stat"
+As above but also shows additional statistics "stat"
+For all above "stat" can be a space delimited case-insensitive list of statistics that are supported by the TribesAPI.
+	!help info
+Returns a list of available statistics
+
+### !mute ###
+	!mute 0/1/2
+Mute the bot's spam messages from 0 (no mute) to 2 (all muted)
+
+### !result ###
+	!result "scores"
+Report the results of a game with "scores" the scores for all maps in form "yourcaps"-"theircaps" separated by a space.
+
+### !list ###
+	!list
+Shows the latest matches that have been registered on the bot.
+
 
 Admin Commands
 --------------
