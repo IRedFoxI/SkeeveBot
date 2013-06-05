@@ -45,7 +45,12 @@ end
 #Thread.abort_on_exception = true
 
 while true
-	bot.run $servers
+	begin
+		bot.run $servers
+	rescue => e
+		# TODO: Message all connected superusers when this occurs
+		puts("An unhandled exception occurred '#{e}'!");
+	end
 end
 
 
