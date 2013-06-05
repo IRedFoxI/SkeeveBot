@@ -1733,6 +1733,14 @@ class Bot
 
 		if selection
 			selection.each do |match|
+
+				statusStr = ", Status: #{match.status}"
+
+				dateStr = ""
+				if ( match.status.eql?( "Started" ) || match.status.eql?( "Pending" ) || match.status.eql?( "Finished" ) )
+					dateStr << ", Date: #{match.date.strftime("%d/%m %H:%M")}"
+				end
+
 				playerStr = []
 				match.teams.each do |team|
 					players = match.players.select{ |pN, t| t.eql?( team ) }.keys
@@ -1740,18 +1748,18 @@ class Bot
 				end
 				teamStr = ""
 				if playerStr.length > 0
-					teamStr << ", teams: #{playerStr.join( ' ')}"
+					teamStr << ", Teams: #{playerStr.join( ' ')}"
 				end
 
 				resultStr = ""
 				if match.results.length > 0
-					resultStr << ", results:"
+					resultStr << ", Results:"
 					match.results.each do |res|
 						resultStr << " #{res.scores.join('-')}"
 					end
 				end
 
-				client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}#{teamStr}#{resultStr}"
+				client.send_user_message message.actor, "Id: #{match.id}#{dateStr}#{statusStr}#{teamStr}#{resultStr}"
 			end
 		else
 			client.send_user_message message.actor, "No match found."
