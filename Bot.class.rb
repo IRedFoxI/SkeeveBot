@@ -388,6 +388,7 @@ class Bot
 						noTeams = @teamNum[ client ] ? @teamNum[ client ] : @defaultTeamNum
 						if match.teams.length >= noTeams
 							match.status = "Picking"
+							messagePlayer << " Picking has started!"
 							messageAll << " Picking has started!"
 						end
 
@@ -470,7 +471,7 @@ class Bot
 
 		if match.status.eql?( "Picking" )
 
-			if match.players.empty?
+			if match.players.length < noTeams
 				@matches.select{ |m| m.id.eql?( match.id ) }.first.status = "Signup"
 			end
 
