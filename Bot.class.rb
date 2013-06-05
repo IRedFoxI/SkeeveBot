@@ -14,6 +14,7 @@ Result = Struct.new( :map, :teams, :scores, :comment )
 class Bot
 
 	def initialize options
+		@shutdown = false
 		@clientcount = 0
 		@options = options
 		@connections = Hash.new
@@ -42,7 +43,7 @@ class Bot
 		end
 	end
 
-	def connected?
+	def all_connected?
 		connected = true
 		@connections.each_key do |client|
 			connected = connected && client.connected?
@@ -134,10 +135,12 @@ class Bot
 
 		end
 
-		while connected? do
-			sleep 60
+		while !@shutdown do
 			remove_old_matches
+			return true unless all_connected? # FIXME: This is a very ugly way to reset all connections
+			sleep 30
 		end
+
 	end
 
 	private
@@ -881,6 +884,8 @@ class Bot
 				cmd_admin_result( client, message )
 			when "delete"
 				cmd_admin_delete( client, message )
+			when "shutdown"
+				@shutdown = true
 			else
 				client.send_user_message message.actor, "Unknown admin command '#{command}'."
 			end

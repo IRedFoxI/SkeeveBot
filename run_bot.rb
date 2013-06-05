@@ -35,17 +35,25 @@ if (ARGV.length < 0)
 	exit 0
 end
 
-bot = Bot.new $options
 
-trap("INT") do
-	bot.exit_by_user
-	exit 0
-end
+exitflag = true
+while exitflag
 
-#Thread.abort_on_exception = true
+	bot = Bot.new $options
 
-while true
-	bot.run $servers
+	trap("INT") do
+		bot.exit_by_user
+		exit 0
+	end
+
+	Thread.abort_on_exception = true
+
+	begin
+		exitflag = bot.run $servers
+	rescue
+	end
+	
+	sleep 0.2
 end
 
 
