@@ -226,7 +226,12 @@ module Kesh
 
 				if handler
 					log "handle '#{prefix}' with #{handler.name}" if @options[:debug]
-					handler.call(self, message)
+					begin
+						handler.call(self, message)
+					rescue => e
+						# TODO: Message all connected superusers when this occurs
+						puts("The handler for '#{prefix}' threw an exception '#{e}'!");
+					end
 				else
 					client.send_user_message message.actor, "Unknown command '#{prefix}'!"
 				end
