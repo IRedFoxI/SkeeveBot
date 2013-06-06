@@ -110,6 +110,7 @@ class Bot
 			client.register_handler :UserState, method( :on_user_state )
 			client.register_handler :UserRemove, method( :on_user_remove )
 			# client.register_handler :UDPTunnel, method( :on_audio )
+
 			client.register_text_handler "!help", method( :cmd_help )
 			client.register_text_handler "!find", method( :cmd_find )
 			client.register_text_handler "!goto", method( :cmd_goto )
@@ -120,6 +121,8 @@ class Bot
 			client.register_text_handler "!result", method( :cmd_result )
 			client.register_text_handler "!list", method( :cmd_list )
 			client.register_text_handler "!debug", method( :cmd_debug )
+
+			client.register_exception_handler method( :on_exception )
 
 			load_roles_ini client
 
@@ -137,13 +140,31 @@ class Bot
 
 		while !@shutdown do
 			remove_old_matches
-			return true unless all_connected? # FIXME: This is a very ugly way to reset all connections
+			return true unless all_connected? # TODO: This is a very ugly way to reset all connections
 			sleep 30
 		end
 
 	end
 
 	private
+
+	def on_exception client, message
+		server = @connections[ client ]
+		serverStr = "#{server[ :host ]}:#{server[ :port ]}"
+
+		@connections.keys.each do |cl|
+
+			admins = @players[ cl ].select{ |mN, pl| pl.admin.eql?( "SuperUser" ) }
+
+			unless admins.empty?
+				admins.each_value do |pl|
+					cl.send_user_message( pl.session, "(#{serverStr}) #{message}" )
+				end
+			end
+
+		end
+
+	end
 
 	def remove_old_matches
 		@matches.each do|match|
@@ -952,6 +973,18 @@ class Bot
 
 	end
 
+	def cmd_admin_raise client, message
+		text = message.message
+		exception = text.split(' ')[ 2..-1 ].join(' ')
+
+		mumbleNick = client.find_user( message.actor ).name
+
+		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
+			client.send_user_message message.actor, "Raising an exception: #{exception}"
+			raise exception
+		end
+	end
+
 	def cmd_admin_login client, message
 		text = message.message
 		password = text.split(' ')[ 2 ]
@@ -1334,7 +1367,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin
+		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
 	
 			text = message.message
 
@@ -1385,56 +1418,85 @@ class Bot
 	end
 
 	def cmd_debug client, message
+		displayAPI = false
+		displayPlayers = false
+		displayMatches = false
 
-		result = @query.get_data_used
-		unless result.nil?
-			actSessions = result[ "Active_Sessions" ]
-			concSessions = result[ "Concurrent_Sessions" ]
-			todaySessions = result[ "Total_Sessions_Today" ]
-			capSessions = result[ "Session_Cap" ]
-			todayRequests = result[ "Total_Requests_Today" ]
-			capRequests = result[ "Request_Limit_Daily" ]
-			client.send_user_message message.actor, "TribesAPI: #{actSessions}/#{concSessions}(Cur. Sessions), #{todaySessions}/#{capSessions} (Tot. Sessions), #{todayRequests}/#{capRequests} (Tot. Requests)"
-		end
+		text = message.message
+		command = text.split(' ')[1]
 
-		if @players[ client ]
-			@players[ client ].each_pair do |session, player|
-				client.send_user_message message.actor, "Player: #{player.playerName}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
+		unless command.nil?
+			case command.downcase
+				when "api"
+					displayAPI = true
+				when "players"
+					displayPlayers = true
+				when "matches"
+					displayMatches = true
+				else
+					client.send_user_message message.actor, "Unknown argument '#{command}'!"
 			end
 		else
-			client.send_user_message message.actor, "No players registered"
+			displayAPI = true
+			displayPlayers = true
+			displayMatches = true
 		end
 
-		if @matches
+		if displayAPI
+			result = @query.get_data_used
+			unless result.nil?
+				actSessions = result[ "Active_Sessions" ]
+				concSessions = result[ "Concurrent_Sessions" ]
+				todaySessions = result[ "Total_Sessions_Today" ]
+				capSessions = result[ "Session_Cap" ]
+				todayRequests = result[ "Total_Requests_Today" ]
+				capRequests = result[ "Request_Limit_Daily" ]
+				client.send_user_message message.actor, "TribesAPI: #{actSessions}/#{concSessions}(Cur. Sessions), #{todaySessions}/#{capSessions} (Tot. Sessions), #{todayRequests}/#{capRequests} (Tot. Requests)"
+			end
+		end
 
-			@matches.each do |match|
-
-				playerStr = []
-				match.teams.each do |team|
-					players = match.players.select{ |pN, t| t.eql?( team ) }.keys
-					playerStr << "#{players.join(', ')} (#{team})"
+		if displayPlayers
+			if @players[ client ]
+				@players[ client ].each_pair do |session, player|
+					client.send_user_message message.actor, "Player: #{player.playerName}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 				end
-				teamStr = ""
-				if playerStr.length > 0
-					teamStr << ", teams: #{playerStr.join( ' ')}"
-				end
+			else
+				client.send_user_message message.actor, "No players registered"
+			end
+		end
 
-				resultStr = ""
-				if match.results.length > 0
-					resultStr << ", results:"
-					match.results.each do |res|
-						resultStr << " #{res.scores.join('-')}"
+		if displayMatches
+			if @matches
+
+				@matches.each do |match|
+
+					playerStr = []
+					match.teams.each do |team|
+						players = match.players.select{ |pN, t| t.eql?( team ) }.keys
+						playerStr << "#{players.join(', ')} (#{team})"
 					end
+					teamStr = ""
+					if playerStr.length > 0
+						teamStr << ", teams: #{playerStr.join( ' ')}"
+					end
+
+					resultStr = ""
+					if match.results.length > 0
+						resultStr << ", results:"
+						match.results.each do |res|
+							resultStr << " #{res.scores.join('-')}"
+						end
+					end
+
+					client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}#{teamStr}#{resultStr}"
+
 				end
 
-				client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}#{teamStr}#{resultStr}"
+			else
+
+				client.send_user_message message.actor, "No matches registered - this is not good!"
 
 			end
-
-		else
-
-			client.send_user_message message.actor, "No matches registered - this is not good!"
-
 		end
 
 	end
@@ -1505,10 +1567,20 @@ class Bot
 
 	def cmd_result client, message
 		text = message.message
-		if text.split(' ').length == 1
+		scores = text.split(' ')[ 1..-1 ]
+
+		if scores.empty?
 			client.send_user_message message.actor, "You need to enter at least one score."
 			return
+		elsif
+			scores.each do |score|
+				if score.split('-').length != 2
+					client.send_user_message message.actor, "Malformed result: please use \"yourcaps\"-\"theircaps\" for each map."
+					return
+				end
+			end
 		end
+
 		mumbleNick = client.find_user( message.actor ).name
 
 		if !@players[ client ] || !@players[ client ].has_key?( mumbleNick )
@@ -1526,10 +1598,10 @@ class Bot
 
 		if match
 
-			scores = text.split(' ')[ 1..-1 ]
 			ownTeam = match.players.select{ |pN, t| pN.downcase.eql?( player.playerName.downcase ) }.values.first
 
 			scores.each do |score|
+
 				ownScore = score.split('-')[0]
 				otherScore = score.split('-')[1]
 				result = Result.new
@@ -1543,6 +1615,7 @@ class Bot
 					result.scores << ownScore
 				end
 				match.results << result
+				
 			end
 
 			match.status = "Finished" 
@@ -1559,7 +1632,7 @@ class Bot
 			end
 
 			client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
-			message_all( client, "#{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", match.id, 2, message.actor )
+			message_all( client, "#{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", [ match.id ], 2, message.actor )
 
 		else
 
@@ -1582,9 +1655,6 @@ class Bot
 		if matchId.nil?
 			client.send_user_message message.actor, "You need to enter a match id and at least one score."
 			return
-		elsif scores.nil?
-			client.send_user_message message.actor, "You need to enter at least one score."
-			return
 		end
 
 		if matchId.to_i.to_s != matchId
@@ -1592,6 +1662,18 @@ class Bot
 			return
 		end
 		matchId = matchId.to_i
+
+		if scores.empty?
+			client.send_user_message message.actor, "You need to enter at least one score."
+			return
+		elsif
+			scores.each do |score|
+				if score.split('-').length != 2
+					client.send_user_message message.actor, "Malformed result: please use \"yourcaps\"-\"theircaps\" for each map."
+					return
+				end
+			end
+		end
 
 		mumbleNick = client.find_user( message.actor ).name
 
@@ -1603,7 +1685,10 @@ class Bot
 
 				firstTeam = match.teams[ 0 ]
 
+				match.results.clear
+
 				scores.each do |score|
+
 					firstScore = score.split('-')[0]
 					secondScore = score.split('-')[1]
 					result = Result.new
@@ -1617,6 +1702,7 @@ class Bot
 						result.scores << firstScore
 					end
 					match.results << result
+
 				end
 
 				match.status = "Finished"
@@ -2076,6 +2162,8 @@ class Bot
 		return unless @players[ client ]
 
 		targets = Array.new
+
+		raise "In method 'message_all': matchIds has to be an Array." unless matchIds.is_a?( Array )
 
 		matchIds.each do |id|
 

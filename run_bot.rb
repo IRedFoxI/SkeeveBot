@@ -46,11 +46,13 @@ while exitflag
 		exit 0
 	end
 
-	Thread.abort_on_exception = true
+	#Thread.abort_on_exception = true
 
 	begin
 		exitflag = bot.run $servers
-	rescue
+	rescue => e
+		# TODO: Message all connected superusers when this occurs
+		puts("An unhandled exception occurred '#{e}'!");
 	end
 	
 	sleep 0.2
