@@ -35,22 +35,27 @@ if (ARGV.length < 0)
 	exit 0
 end
 
-bot = Bot.new $options
 
-trap("INT") do
-	bot.exit_by_user
-	exit 0
-end
+exitflag = true
+while exitflag
 
-#Thread.abort_on_exception = true
+	bot = Bot.new $options
 
-while true
+	trap("INT") do
+		bot.exit_by_user
+		exit 0
+	end
+
+	#Thread.abort_on_exception = true
+
 	begin
-		bot.run $servers
+		exitflag = bot.run $servers
 	rescue => e
 		# TODO: Message all connected superusers when this occurs
 		puts("An unhandled exception occurred '#{e}'!");
 	end
+	
+	sleep 0.2
 end
 
 
