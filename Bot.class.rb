@@ -15,6 +15,7 @@ class Bot
 
 	def initialize options
 		@shutdown = false
+		@restart = false
 		@clientcount = 0
 		@options = options
 		@connections = Hash.new
@@ -143,6 +144,8 @@ class Bot
 			return true unless all_connected? # TODO: This is a very ugly way to reset all connections
 			sleep 30
 		end
+
+		return @restart
 
 	end
 
@@ -906,6 +909,9 @@ class Bot
 			when "delete"
 				cmd_admin_delete( client, message )
 			when "shutdown"
+				@shutdown = true
+			when "restart"
+				@restart = true
 				@shutdown = true
 			else
 				client.send_user_message message.actor, "Unknown admin command '#{command}'."

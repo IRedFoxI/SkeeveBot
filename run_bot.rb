@@ -55,7 +55,13 @@ while exitflag
 		puts("An unhandled exception occurred '#{e}'!");
 	end
 	
+	if exitflag
+		sleep 0.2
+		system( 'git pull' )
+	end
+
 	sleep 0.2
+
 end
 
 
