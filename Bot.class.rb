@@ -32,6 +32,7 @@ class Bot
 		@defaultMute = 1
 		@moveQueue = Hash.new
 		@query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
+		@lastCleanUp = Time.now
 
 		load_matches_ini
 	end
@@ -139,10 +140,18 @@ class Bot
 
 		end
 
+		# Main loop
 		while !@shutdown do
-			remove_old_matches
+
+			if ( Time.now - @lastCleanUp ) > 60 * 60
+				remove_old_matches
+				@lastCleanUp = Time.now
+			end
+
 			return true unless all_connected? # TODO: This is a very ugly way to reset all connections
-			sleep 30
+
+			sleep 0.2
+
 		end
 
 		return @restart
@@ -909,10 +918,9 @@ class Bot
 			when "delete"
 				cmd_admin_delete( client, message )
 			when "shutdown"
-				@shutdown = true
+				cmd_admin_shutdown( client, message )
 			when "restart"
-				@restart = true
-				@shutdown = true
+				cmd_admin_restart( client, message )
 			else
 				client.send_user_message message.actor, "Unknown admin command '#{command}'."
 			end
@@ -977,6 +985,17 @@ class Bot
 		client.send_user_message message.actor, "!admin result \"match_id\" \"scores\"- set the result of a match"
 		client.send_user_message message.actor, "!admin delete \"match_id\" - delete a match"
 
+	end
+
+	def cmd_admin_shutdown client, message
+		client.send_user_message message.actor, "Shutting down..."
+		@shutdown = true
+	end
+
+	def cmd_admin_restart client, message
+		client.send_user_message message.actor, "Restarting..."
+		@restart = true
+		@shutdown = true
 	end
 
 	def cmd_admin_raise client, message
