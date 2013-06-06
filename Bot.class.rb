@@ -109,6 +109,7 @@ class Bot
 			client.register_handler :UserState, method( :on_user_state )
 			client.register_handler :UserRemove, method( :on_user_remove )
 			# client.register_handler :UDPTunnel, method( :on_audio )
+
 			client.register_text_handler "!help", method( :cmd_help )
 			client.register_text_handler "!find", method( :cmd_find )
 			client.register_text_handler "!goto", method( :cmd_goto )
@@ -119,6 +120,8 @@ class Bot
 			client.register_text_handler "!result", method( :cmd_result )
 			client.register_text_handler "!list", method( :cmd_list )
 			client.register_text_handler "!debug", method( :cmd_debug )
+
+			client.register_exception_handler method( :on_exception )
 
 			load_roles_ini client
 
@@ -141,6 +144,24 @@ class Bot
 	end
 
 	private
+
+	def on_exception client, message
+		server = @connections[ client ]
+		serverStr = "#{server[ :host ]}:#{server[ :port ]}"
+
+		@connections.keys.each do |cl|
+
+			admins = @players[ cl ].select{ |mN, pl| pl.admin.eql?( "SuperUser" ) }
+
+			unless admins.empty?
+				admins.each_value do |pl|
+					cl.send_user_message( pl.session, "(#{serverStr}) #{message}" )
+				end
+			end
+
+		end
+
+	end
 
 	def remove_old_matches
 		@matches.each do|match|
@@ -881,6 +902,8 @@ class Bot
 				cmd_admin_result( client, message )
 			when "delete"
 				cmd_admin_delete( client, message )
+			when "raise"
+				cmd_admin_raise( client, message )
 			else
 				client.send_user_message message.actor, "Unknown admin command '#{command}'."
 			end
@@ -945,6 +968,18 @@ class Bot
 		client.send_user_message message.actor, "!admin result \"match_id\" \"scores\"- set the result of a match"
 		client.send_user_message message.actor, "!admin delete \"match_id\" - delete a match"
 
+	end
+
+	def cmd_admin_raise client, message
+		text = message.message
+		exception = text.split(' ')[ 2..-1 ].join(' ')
+
+		mumbleNick = client.find_user( message.actor ).name
+
+		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
+			client.send_user_message message.actor, "Raising an exception: #{exception}"
+			raise exception
+		end
 	end
 
 	def cmd_admin_login client, message

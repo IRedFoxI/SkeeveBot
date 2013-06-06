@@ -25,6 +25,7 @@ module Kesh
 				@version = options[:version]
 				@event_handler = { }
 				@text_handler = { }
+				@exception_handler = Array.new
 				register_local_handlers
 			end
 
@@ -120,6 +121,10 @@ module Kesh
 				end
 			end
 
+			def register_exception_handler( callback )
+				@exception_handler << callback
+			end
+
 			# Helper API
 			def find_channel channel
 				channel_path = channel.split('/')
@@ -213,12 +218,17 @@ module Kesh
 				if handler
 					handler.each do |h|
 						log "handle #{message.class} with #{h.name}" if @options[:debug]
-						h.call(self, message)
+						begin
+							h.call(self, message)
+						rescue
+							log "The handler for '#{message.class}' threw an exception '#{e}'!"
+							exception_handler( "The handler for '#{message.class}' threw an exception '#{e}'!" )
+						end
 					end
 				end
 			end
 
-			def handle_text_message(client, message)
+			def handle_text_message client, message
 				text = message.message.to_s
 				prefix = text.split(" ").first
 				prefix.downcase! unless prefix.nil?
@@ -229,11 +239,21 @@ module Kesh
 					begin
 						handler.call(self, message)
 					rescue => e
-						# TODO: Message all connected superusers when this occurs
-						puts("The handler for '#{prefix}' threw an exception '#{e}'!");
+						log "The handler for '#{prefix}' threw an exception '#{e}'!"
+						exception_handler( "The handler for '#{prefix}' threw an exception '#{e}'!" )
 					end
 				else
 					client.send_user_message message.actor, "Unknown command '#{prefix}'!"
+				end
+			end
+
+			def exception_handler message
+				handler = @exception_handler
+				unless @exception_handler.empty?
+					@exception_handler.each do |h|
+						log "handle exception with #{h.name}" if @options[:debug]
+						h.call(self, message)
+					end
 				end
 			end
 
