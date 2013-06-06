@@ -1286,20 +1286,30 @@ class Bot
 
 			text = message.message
 
-			player = @players[ client ].values.select{ |v| v.mumbleNick.downcase.eql?( text.split(' ')[ 2 ].downcase ) }.first
+			parameterStr = text.split(' ')[ 2..-1 ].join(' ').gsub( "&quot;", "\"")
+			parameters = parameterStr.scan(/(?:"(?:\\.|[^"])*"|[^" ])+/)
 
-			if player.nil?
-				client.send_user_message message.actor, "Player #{text.split(' ')[ 2 ]} has to be in one of the PUG channels."
+			if parameters.length != 2
+				client.send_user_message message.actor, "This command needs two parameters: the mumble nick and the alias you want to set."
 				return
 			end
 
-			aliasValue = text.split(' ')[ 3 ]
+			target = parameters[0].gsub( "\"", "" )
+
+			player = @players[ client ].values.select{ |v| v.mumbleNick.downcase.eql?( target.downcase ) }.first
+
+			if player.nil?
+				client.send_user_message message.actor, "Player #{target} has to be in one of the PUG channels."
+				return
+			end
+
+			aliasValue = parameters[1].gsub( "\"", "" )
 			aliasValue = aliasValue ? aliasValue : player.mumbleNick
 
 			statsVals = get_player_stats( aliasValue, [ "Name", "Level" ] )
 
 			if statsVals.nil?
-				client.send_user_message message.actor, "Player not found or unable to connect to TribesAPI, alias not set."
+				client.send_user_message message.actor, "Player #{aliasValue} not found or unable to connect to TribesAPI, alias not set."
 				return
 			end
 
