@@ -105,6 +105,16 @@ Then you can run the bot with:
 
 	./run_bot.rb
 
+For the ELO plotter you need to install
+
+	sudo apt-get install librmagick-ruby libmagickcore-dev libmagickwand-dev
+	sudo gem install rmagick
+	sudo gem install gruff
+
+Then run it with 
+
+	./ELOCalculator.rb
+
 Thanks
 ------
 
