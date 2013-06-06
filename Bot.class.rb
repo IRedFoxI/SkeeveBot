@@ -1529,10 +1529,20 @@ class Bot
 
 	def cmd_result client, message
 		text = message.message
-		if text.split(' ').length == 1
+		scores = text.split(' ')[ 1..-1 ]
+
+		if scores.empty?
 			client.send_user_message message.actor, "You need to enter at least one score."
 			return
+		elsif
+			scores.each do |score|
+				if score.split('-').length != 2
+					client.send_user_message message.actor, "Malformed result: please use \"yourcaps\"-\"theircaps\" for each map."
+					return
+				end
+			end
 		end
+
 		mumbleNick = client.find_user( message.actor ).name
 
 		if !@players[ client ] || !@players[ client ].has_key?( mumbleNick )
@@ -1550,10 +1560,10 @@ class Bot
 
 		if match
 
-			scores = text.split(' ')[ 1..-1 ]
 			ownTeam = match.players.select{ |pN, t| pN.downcase.eql?( player.playerName.downcase ) }.values.first
 
 			scores.each do |score|
+
 				ownScore = score.split('-')[0]
 				otherScore = score.split('-')[1]
 				result = Result.new
@@ -1567,6 +1577,7 @@ class Bot
 					result.scores << ownScore
 				end
 				match.results << result
+				
 			end
 
 			match.status = "Finished" 
@@ -1583,7 +1594,7 @@ class Bot
 			end
 
 			client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
-			message_all( client, "#{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", match.id, 2, message.actor )
+			message_all( client, "#{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", [ match.id ], 2, message.actor )
 
 		else
 
@@ -1606,9 +1617,6 @@ class Bot
 		if matchId.nil?
 			client.send_user_message message.actor, "You need to enter a match id and at least one score."
 			return
-		elsif scores.nil?
-			client.send_user_message message.actor, "You need to enter at least one score."
-			return
 		end
 
 		if matchId.to_i.to_s != matchId
@@ -1616,6 +1624,18 @@ class Bot
 			return
 		end
 		matchId = matchId.to_i
+
+		if scores.empty?
+			client.send_user_message message.actor, "You need to enter at least one score."
+			return
+		elsif
+			scores.each do |score|
+				if score.split('-').length != 2
+					client.send_user_message message.actor, "Malformed result: please use \"yourcaps\"-\"theircaps\" for each map."
+					return
+				end
+			end
+		end
 
 		mumbleNick = client.find_user( message.actor ).name
 
@@ -1627,7 +1647,10 @@ class Bot
 
 				firstTeam = match.teams[ 0 ]
 
+				match.results.clear
+
 				scores.each do |score|
+
 					firstScore = score.split('-')[0]
 					secondScore = score.split('-')[1]
 					result = Result.new
@@ -1641,6 +1664,7 @@ class Bot
 						result.scores << firstScore
 					end
 					match.results << result
+
 				end
 
 				match.status = "Finished"
@@ -2100,6 +2124,8 @@ class Bot
 		return unless @players[ client ]
 
 		targets = Array.new
+
+		raise "In method 'message_all': matchIds has to be an Array." unless matchIds.is_a?( Array )
 
 		matchIds.each do |id|
 
