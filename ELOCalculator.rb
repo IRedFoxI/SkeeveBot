@@ -201,16 +201,21 @@ class ELOCalculator
 			end
 		end
 
-		totalMaps = mapWins[0] + mapWins[1]
+		
 
-		if totalMaps == 1
-			score = 1.0
-		elsif totalMaps == 2
-			score = 0.75
-		elsif totalMaps == 3
-			score = 0.6
-		else
+		if mapWins[0] == mapsWins[1]
 			score = 0.5
+		else
+			totalMaps = mapWins[0] + mapWins[1]
+			if totalMaps == 1
+				score = 1.0
+			elsif totalMaps == 2
+				score = 0.75
+			elsif totalMaps == 3
+				score = 0.6
+			else
+				score = 0.5
+			end
 		end
 
 		if mapWins[0] > mapWins[1]
@@ -221,7 +226,7 @@ class ELOCalculator
 			actualScores[ teams[1] ] = score
 		else
 			actualScores[ teams[0] ] = score
-			actualScores[ teams[1] ] = score
+			actualScores[ teams[1] ] = 1 - score
 		end
 
 		return actualScores
