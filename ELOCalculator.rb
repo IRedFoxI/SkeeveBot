@@ -203,7 +203,7 @@ class ELOCalculator
 
 		
 
-		if mapWins[0] == mapsWins[1]
+		if mapWins[0] == mapWins[1]
 			score = 0.5
 		else
 			totalMaps = mapWins[0] + mapWins[1]
