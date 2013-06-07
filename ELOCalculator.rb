@@ -115,14 +115,16 @@ class ELOCalculator
 		# g.title_font_size = 25
 
 		data = @players[ playerName ]
-		dates = data.keys
-		dataset = data.values
+		dataset = Array.new
+		@dates.each do |date|
+			dataset << data[ date ]
+		end
 
 		g.data( "#{playerName}", dataset )
 
 		labels = Hash.new
-		dates.each_index do |index|
-			labels[ index ] = dates[ index ].strftime("%d/%m\n%H:%m")
+		@dates.each_index do |index|
+			labels[ index ] = @dates[ index ].strftime("%d/%m\n%H:%m")
 		end
 
 		g.labels = labels
@@ -138,7 +140,8 @@ class ELOCalculator
 
 	def calc_init_factor matchNumber
 		# factor = 1 + 1.1 ** ( -2 * matchNumber )
-		factor = 1 + 1.2 ** ( 10 - 2 * matchNumber )
+		# factor = 1 + 1.2 ** ( 10 - 2 * matchNumber )
+		factor = 1 + 1.2 ** ( 10 - matchNumber )
 		return factor
 	end
 
