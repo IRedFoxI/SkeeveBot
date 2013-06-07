@@ -21,6 +21,7 @@ class ELOCalculator
 		@dates = Array.new
 		@estimated = Hash.new
 		@actual = Hash.new
+		@ratioNew = Hash.new
 	end
 
 	def calculate_elos
@@ -32,6 +33,15 @@ class ELOCalculator
 			@dates << match.date
 
 			teamELOs = Hash.new
+
+			newPlayers = 0.0
+			match.players.each_key do |pN|
+				if !@currentELOs.has_key?( pN )
+					newPlayers += 1.0
+				end
+			end
+
+			@ratioNew[ match.date ] = newPlayers / match.players.keys.length
 
 			match.teams.each do |team|
 
@@ -96,6 +106,36 @@ class ELOCalculator
 
 	private
 
+	def plot_player_elo playerName
+
+		g = Gruff::Line.new(1600)
+		g.title = "ELO History #{playerName}"
+		# g.dot_radius = 2
+		# g.line_width = 1
+		# g.title_font_size = 25
+
+		data = @players[ playerName ]
+		dates = data.keys
+		dataset = data.values
+
+		g.data( "#{playerName}", dataset )
+
+		labels = Hash.new
+		dates.each_index do |index|
+			labels[ index ] = dates[ index ].strftime("%d/%m\n%H:%m")
+		end
+
+		g.labels = labels
+		g.marker_font_size = 10
+
+		g.hide_legend = true
+
+		fileName = "Graphs/Players/elo_history_#{playerName}.png"
+
+		g.write( fileName )
+
+	end
+
 	def calc_init_factor matchNumber
 		# factor = 1 + 1.1 ** ( -2 * matchNumber )
 		factor = 1 + 1.2 ** ( 10 - 2 * matchNumber )
@@ -109,13 +149,17 @@ class ELOCalculator
 
 		@players.each_pair do |pN, data|
 			g.data( pN, data.keys.length )
+			plot_player_elo( pN ) if data.keys.length >= 5
+			# puts "#Player: #{pN}"
+			# puts "Number of matches: #{data.keys.length}"
+			# puts "ELO: #{@currentELOs[pN]}"
 		end
 
 		g.marker_font_size = 10
 
 		g.hide_legend = true
 
-		g.write('number_of_matches.png')
+		g.write('Graphs/number_of_matches.png')
 
 	end
 
@@ -130,15 +174,18 @@ class ELOCalculator
 		datasetEst = Array.new
 		datasetAct = Array.new
 		datasetDiff = Array.new
+		datasetNew = Array.new
 		@dates.each do |date|
 			datasetEst << @estimated[ date ]
 			datasetAct << @actual[ date ]
 			datasetDiff << ( @estimated[ date ] - @actual[ date ] ).abs
+			datasetNew << @ratioNew[ date ]
 		end
 
 		g.data("Estimated", datasetEst )
 		g.data("Actual", datasetAct )
 		g.data("Difference", datasetDiff )
+		g.data("New player ratio", datasetNew )
 
 		labels = Hash.new
 		@dates.each_index do |index|
@@ -150,7 +197,7 @@ class ELOCalculator
 
 		# g.hide_legend = true
 
-		g.write('elo_performance.png')
+		g.write('Graphs/elo_performance.png')
 
 	end
 
@@ -163,6 +210,7 @@ class ELOCalculator
 		g.title_font_size = 25
 
 		@players.each_pair do |pN, data|
+			next if data.keys.length < 5
 			dataset = Array.new
 			@dates.each do |date|
 				dataset << data[ date ]
@@ -180,7 +228,7 @@ class ELOCalculator
 
 		g.hide_legend = true
 
-		g.write('elo_history.png')
+		g.write('Graphs/elo_history.png')
 
 	end
 
@@ -252,9 +300,9 @@ class ELOCalculator
 
 	end
 
-	def get_player_elo playerNames
-		return @currentELOs[ playerNames ] if @currentELOs.has_key?( playerNames )
-		return @currentELOs[ playerNames ] = 1000
+	def get_player_elo playerName
+		return @currentELOs[ playerName ] if @currentELOs.has_key?( playerName )
+		return @currentELOs[ playerName ] = 1000
 	end
 
 	def load_matches_ini
