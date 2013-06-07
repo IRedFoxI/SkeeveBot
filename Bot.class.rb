@@ -132,11 +132,8 @@ class Bot
 
 			client.connect
 
-			comment = "!mute 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)<BR>"
-			comment << "!result \"scores\" - report the results of your last PUG (\"yourcaps\"-\"theircaps\" for each map)<BR>"
-			comment << "!list - shows the latest matches<BR>"
+			create_comment( client )
 
-			client.set_comment comment
 
 		end
 
@@ -159,6 +156,34 @@ class Bot
 	end
 
 	private
+
+	def create_comment client
+		comment = String.new
+		comment << "<center>-=[ SkeeveBot ]=-</center>"
+		comment << "<code>---------------------------------------------------------------</code><BR>"
+		comment << "<code>!mute 0/1/2</code> [ from 0 (no mute) to 2 (all muted) ]<BR>"
+		comment << "<code>!result map1 map2 map3</code> [ use yourcaps-theircaps for each map ]<BR>"
+		comment << "<code>!list</code> [ shows all matches in the last 24h ]"
+		comment << "<HR>"
+
+		match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
+		comment << "Current status: #{match.status}<HR>"
+
+		comment << "Signups: "
+		unless @players[ client ].nil?
+			signups = @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }
+			signups.each_value do |pl|
+				name = String.new
+				name << "[#{pl.tag}]" if pl.tag
+				name << pl.playerName
+				roles = pl.roles.join('/')
+				comment << "#{name}(#{roles}) "
+			end
+			comment << "<HR>"
+		end
+
+		client.set_comment comment
+	end		
 
 	def on_exception client, message
 		server = @connections[ client ]
@@ -528,7 +553,6 @@ class Bot
 				message_all( client, "The teams are picked, match (id: #{match.id}) started.", [ nil, @currentMatch[ client ] ], 2 )
 
 				# Create new match
-				# previousMatch = @currentMatch[ client ]
 				create_new_match( client )
 				match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
 
@@ -567,6 +591,8 @@ class Bot
 			end
 
 		end
+
+		create_comment( client )
 
 	end
 
