@@ -97,7 +97,8 @@ class ELOCalculator
 	private
 
 	def calc_init_factor matchNumber
-		factor = 1 + 1.1 ** ( -2 * matchNumber )
+		# factor = 1 + 1.1 ** ( -2 * matchNumber )
+		factor = 1 + 1.2 ** ( 10 - 2 * matchNumber )
 		return factor
 	end
 
