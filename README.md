@@ -1,15 +1,12 @@
-SkeeveBot
-=========
+# SkeeveBot #
 
-It is spamming me text messages, make it stop!
-----------------------------------------------
+## It is spamming me text messages, make it stop! ##
 
 Send the bot this text message:  
 
 	!mute
 
-Outline
--------
+## Outline ##
 
 The goal is to create a mumble bot that keeps track of Pick-Up Games
 organised on the different Tribes Ascend community mumble servers. 
@@ -17,8 +14,7 @@ Based on the outcome of the games it will calculate players (ELO based)
 ratings and help captains pick teams (or suggest entire lineups).
 
 
-Commands
---------
+## Commands ##
 
 The following commands are available:
 
@@ -30,8 +26,7 @@ The following commands are available:
 	!result <map1> <map2> <map3> - report the results of your last PUG (use <yourcaps>-<theircaps> for each map)
 	!list - shows all the matches in the last 24h
 
-Command details
----------------
+## Command details ##
 
 ### !find ###
 	!find <nick>  
@@ -72,8 +67,7 @@ Report the results of your last game with the scores for all maps in form &lt;yo
 Shows the latest matches that have been registered on the bot.
 
 
-Admin Commands
---------------
+## Admin commands ##
 
 The following admin commands are available:
 
@@ -85,9 +79,11 @@ The following admin commands are available:
 	!admin playernum <number> - set the required number of players per team
 	!admin alias <mumble nick> <tribes nick> - set a player's alias
 	!admin come - make the bot move to your channel
-	!admin op <player> - make a player an admin
+	!admin op "player" - make "player" an admin
 	!admin result <match_id> <map1> <map2> <map3> - set the result of a match"
 	!admin delete <match_id> - delete a match"
+
+## Admin commands details ##
 
 ### !admin alias ###
 
@@ -114,11 +110,10 @@ undeleted.
 ### !admin playernum ###
 
 	!admin playernum <number>  
-Set the required number of players per team .
+Set the required number of players per team.
 
 
-Installation
-------------
+## Installation ##
 
 You need to install they protobuf gem:
 
@@ -143,7 +138,6 @@ Then run it with
 
 	./ELOCalculator.rb
 
-Thanks
-------
+## Thanks ##
 
-Big thank you to [Orvid](https://github.com/Orvid) for helping, Lumberjack for the IRC library and general Ruby help and [FreeApophis](https://github.com/FreeApophis) for the mumble library.
+Big thank you to [Orvid](https://github.com/Orvid) for helping, Lumberjack for the library system and general Ruby help and [FreeApophis](https://github.com/FreeApophis) for the mumble library.
