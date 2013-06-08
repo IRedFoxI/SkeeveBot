@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>Skeevebot by IRedFoxI</title>
+    <title>SkeeveBot by IRedFoxI</title>
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/pygment_trac.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
@@ -31,7 +31,7 @@
 
       <section>
         <div id="title">
-          <h1>Skeevebot</h1>
+          <h1>SkeeveBot</h1>
           <p></p>
           <hr>
           <span class="credits left">Project maintained by <a href="https://github.com/IRedFoxI">IRedFoxI</a></span>
@@ -59,13 +59,13 @@ ratings and help captains pick teams (or suggest entire lineups).</p>
 
 <p>The following commands are available:</p>
 
-<pre><code>!help "command" - detailed help on the command
-!find "nick" - find which channel someone is in (mumble or tribes nick)
-!goto "mumble_nick" - move yourself to someone's channel
-!info "nick" "stat" - detailed stats on player
+<pre><code>!help &lt;command&gt; - detailed help on the command
+!find &lt;nick&gt; - find which channel someone is in (mumble or tribes nick)
+!goto &lt;mumble_nick&gt; - move yourself to someone's channel
+!info &lt;nick&gt; &lt;stat&gt; - detailed stats on player
 !mute 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)
-!result "scores" - report the results of your last PUG ("yourcaps"-"theircaps" for each map)
-!list - shows the latest matches
+!result &lt;map1&gt; &lt;map2&gt; &lt;map3&gt; - report the results of your last PUG (use &lt;yourcaps&gt;-&lt;theircaps&gt; for each map)
+!list - shows all the matches in the last 24h
 </code></pre>
 
 <h2>
@@ -74,18 +74,18 @@ ratings and help captains pick teams (or suggest entire lineups).</p>
 <h3>
 <a name="find" class="anchor" href="#find"><span class="octicon octicon-link"></span></a>!find</h3>
 
-<pre><code>!find "nick"
+<pre><code>!find &lt;nick&gt;  
 </code></pre>
 
-<p>Returns "nick"'s channel. "nick" can be a mumble nick or a player name.</p>
+<p>Returns &lt;nick&gt;'s channel. &lt;nick&gt; can be a mumble nick or a player name.</p>
 
 <h3>
 <a name="goto" class="anchor" href="#goto"><span class="octicon octicon-link"></span></a>!goto</h3>
 
-<pre><code>!goto "mumble_nick"
+<pre><code>!goto &lt;mumble_nick&gt;  
 </code></pre>
 
-<p>The bot tries to move you to "mumble_nick"'s. Fails if the bot doesn't have sufficient rights.</p>
+<p>The bot tries to move you to &lt;mumble_nick&gt;'s. Fails if the bot doesn't have sufficient rights.</p>
 
 <h3>
 <a name="info" class="anchor" href="#info"><span class="octicon octicon-link"></span></a>!info</h3>
@@ -95,22 +95,22 @@ ratings and help captains pick teams (or suggest entire lineups).</p>
 
 <p>Returns your tag, playername and level based on your mumble nick or alias, if set.  </p>
 
-<pre><code>!info "stat"  
+<pre><code>!info &lt;stat&gt;  
 </code></pre>
 
-<p>As above but also shows your additional statistic "stat"  </p>
+<p>As above but also shows your additional statistic &lt;stat&gt;  </p>
 
-<pre><code>!info "nick"  
+<pre><code>!info &lt;nick&gt;  
 </code></pre>
 
-<p>Returns "nick"'s tag, playername and level, seaching for the alias if set.  </p>
+<p>Returns &lt;nick&gt;'s tag, playername and level, seaching for the alias if set.  </p>
 
-<pre><code>!info "nick" "stat"  
+<pre><code>!info &lt;nick&gt; &lt;stat&gt;  
 </code></pre>
 
-<p>As above but also shows additional statistics "stat"  </p>
+<p>As above but also shows additional statistics &lt;stat&gt;  </p>
 
-<p>For all of the above "stat" can be a space delimited, case-insensitive list of statistics that are supported by the TribesAPI.  </p>
+<p>For all of the above &lt;stat&gt; can be a space delimited, case-insensitive list of statistics that are supported by the TribesAPI.  </p>
 
 <pre><code>!help info  
 </code></pre>
@@ -128,10 +128,10 @@ ratings and help captains pick teams (or suggest entire lineups).</p>
 <h3>
 <a name="result" class="anchor" href="#result"><span class="octicon octicon-link"></span></a>!result</h3>
 
-<pre><code>!result "scores"
+<pre><code>!result &lt;map1&gt; &lt;map2&gt; &lt;map3&gt;
 </code></pre>
 
-<p>Report the results of a game with "scores" the scores for all maps in form "yourcaps"-"theircaps" separated by a space.</p>
+<p>Report the results of your last game with the scores for all maps in form &lt;yourcaps&gt;-&lt;theircaps&gt;.</p>
 
 <h3>
 <a name="list" class="anchor" href="#list"><span class="octicon octicon-link"></span></a>!list</h3>
@@ -146,18 +146,60 @@ ratings and help captains pick teams (or suggest entire lineups).</p>
 
 <p>The following admin commands are available:</p>
 
-<pre><code>!help admin "command" - detailed help on the admin command
-!admin login "password" - login as SuperUser
-!admin setchan "role" - set a channel's role
-!admin setrole "role" "parameter" - set a role
-!admin delrole "role" - delete a role
-!admin playernum "number" - set the required number of players per team
-!admin alias "player" "alias" - set a player's alias
+<pre><code>!help admin &lt;command&gt; - detailed help on the admin command
+!admin login &lt;password&gt; - login as SuperUser
+!admin setchan &lt;role&gt; - set a channel's role
+!admin setrole &lt;role&gt; &lt;parameter&gt; - set a role
+!admin delrole &lt;role&gt; - delete a role
+!admin playernum &lt;number&gt; - set the required number of players per team
+!admin alias &lt;mumble nick&gt; &lt;tribes nick&gt; - set a player's alias
 !admin come - make the bot move to your channel
-!admin op "player" - make "player" an admin
-!admin result "match_id" "scores"- set the result of a match"
-!admin delete "match_id" - delete a match"
+!admin op &lt;player&gt; - make a player an admin
+!admin result &lt;match_id&gt; &lt;map1&gt; &lt;map2&gt; &lt;map3&gt; - set the result of a match"
+!admin delete &lt;match_id&gt; - delete a match"
 </code></pre>
+
+<h3>
+<a name="admin-alias" class="anchor" href="#admin-alias"><span class="octicon octicon-link"></span></a>!admin alias</h3>
+
+<pre><code>!admin alias &lt;mumble nick&gt; &lt;tribes nick&gt;  
+</code></pre>
+
+<p>Set a player's alias; if either nick has a space in it please use double
+quotes around it "like this".</p>
+
+<h3>
+<a name="admin-come" class="anchor" href="#admin-come"><span class="octicon octicon-link"></span></a>!admin come</h3>
+
+<pre><code>!admin come  
+</code></pre>
+
+<p>Make the bot move to your channel.</p>
+
+<h3>
+<a name="admin-result" class="anchor" href="#admin-result"><span class="octicon octicon-link"></span></a>!admin result</h3>
+
+<pre><code>!admin result &lt;match_id&gt; &lt;map1&gt; &lt;map2&gt; &lt;map3&gt;  
+</code></pre>
+
+<p>Set the result of a match, with the scores for all maps in form &lt;BEcaps&gt;-&lt;DScaps&gt;.</p>
+
+<h3>
+<a name="admin-delete" class="anchor" href="#admin-delete"><span class="octicon octicon-link"></span></a>!admin delete</h3>
+
+<pre><code>!admin delete &lt;match_id&gt;  
+</code></pre>
+
+<p>Deletes a match; Actually, they are just hidden and can be
+undeleted.</p>
+
+<h3>
+<a name="admin-playernum" class="anchor" href="#admin-playernum"><span class="octicon octicon-link"></span></a>!admin playernum</h3>
+
+<pre><code>!admin playernum &lt;number&gt;  
+</code></pre>
+
+<p>Set the required number of players per team .</p>
 
 <h2>
 <a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h2>
@@ -176,6 +218,18 @@ vim config.rb
 <p>Then you can run the bot with:</p>
 
 <pre><code>./run_bot.rb
+</code></pre>
+
+<p>For the ELO plotter you need to install</p>
+
+<pre><code>sudo apt-get install librmagick-ruby libmagickcore-dev libmagickwand-dev
+sudo gem install rmagick
+sudo gem install gruff
+</code></pre>
+
+<p>Then run it with </p>
+
+<pre><code>./ELOCalculator.rb
 </code></pre>
 
 <h2>
