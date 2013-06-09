@@ -1884,7 +1884,7 @@ class Bot
 				statusStr = ", Status: #{match.status}"
 
 				dateStr = ""
-				if ( match.status.eql?( "Started" ) || match.status.eql?( "Pending" ) || match.status.eql?( "Finished" ) match.status.eql?( "Deleted" ) )
+				if ( match.status.eql?( "Started" ) || match.status.eql?( "Pending" ) || match.status.eql?( "Finished" ) || match.status.eql?( "Deleted" ) )
 					dateStr << ", Date: #{match.date.strftime("%d/%m %H:%M")}"
 				end
 
