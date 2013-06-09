@@ -174,7 +174,7 @@ class Bot
 			signups = @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }
 			signups.each_value do |pl|
 				name = String.new
-				name << "[#{pl.tag}]" if pl.tag
+				name << "[#{pl.tag}]" if ( pl.tag  && !pl.tag.eql?( "" ) )
 				name << pl.playerName
 				roles = pl.roles.join('/')
 				comment << "#{name}(#{roles}) "
@@ -1870,17 +1870,12 @@ class Bot
 
 	def cmd_list client, message
 		text = message.message
-		matchId = text.split(' ')[ 1 ]
+		status = text.split(' ')[ 1 ]
 
 		if matchId.nil?
-			selection = @matches
+			selection = @matches.select{ |m| !m.status.eql?( "Deleted" ) }
 		else
-			if matchId.to_i.to_s != matchId
-				client.send_user_message message.actor, "The match id has to be numerical."
-				return
-			end
-			matchId = matchId.to_i
-			selection = @matches.select{ |m| m.id.eql?( matchId ) }
+			selection = @matches.select{ |m| m.status.downcase.eql?( status.downcase ) }
 		end
 
 		if selection
@@ -1889,7 +1884,7 @@ class Bot
 				statusStr = ", Status: #{match.status}"
 
 				dateStr = ""
-				if ( match.status.eql?( "Started" ) || match.status.eql?( "Pending" ) || match.status.eql?( "Finished" ) )
+				if ( match.status.eql?( "Started" ) || match.status.eql?( "Pending" ) || match.status.eql?( "Finished" ) match.status.eql?( "Deleted" ) )
 					dateStr << ", Date: #{match.date.strftime("%d/%m %H:%M")}"
 				end
 
