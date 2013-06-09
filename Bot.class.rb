@@ -1872,7 +1872,7 @@ class Bot
 		text = message.message
 		status = text.split(' ')[ 1 ]
 
-		if matchId.nil?
+		if status.nil?
 			selection = @matches.select{ |m| !m.status.eql?( "Deleted" ) }
 		else
 			selection = @matches.select{ |m| m.status.downcase.eql?( status.downcase ) }
