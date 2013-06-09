@@ -2,7 +2,7 @@
 
 require 'rubygems'
 require 'fileutils'
-require 'time'
+require 'date'
 require 'gruff'
 
 require File.expand_path( File.dirname( __FILE__ ) + '/Loader.library.rb' )
@@ -24,13 +24,29 @@ class ELOCalculator
 		@ratioNew = Hash.new
 	end
 
-	def calculate_elos
-
+	def load_matches
 		load_matches_ini
+	end
+
+	def make_plots param
+		plot_elo_history param * 5
+		plot_elo_performance param * 5
+		plot_number_of_matches param * 5
+	end
+
+	def calculate_elos *params
+
+		if params.first.nil?
+			monthOffset =  0
+		else
+			monthOffset = params.first
+		end
 
 		@matches.each do |match|
 
-			@dates << match.date
+			date = match.date >> monthOffset
+
+			@dates << ( date )
 
 			teamELOs = Hash.new
 
@@ -41,7 +57,7 @@ class ELOCalculator
 				end
 			end
 
-			@ratioNew[ match.date ] = newPlayers / match.players.keys.length
+			@ratioNew[ date ] = newPlayers / match.players.keys.length
 
 			match.teams.each do |team|
 
@@ -59,10 +75,10 @@ class ELOCalculator
 			end
 
 			estimatedScores = calc_estimated_scores( teamELOs )
-			@estimated[ match.date ] = estimatedScores[ match.teams[0] ]
+			@estimated[ date ] = estimatedScores[ match.teams[0] ]
 
 			actualScores = calc_actual_scores( match.results )
-			@actual[ match.date ] = actualScores[ match.teams[0] ]
+			@actual[ date ] = actualScores[ match.teams[0] ]
 
 			match.teams.each do |team|
 
@@ -90,7 +106,7 @@ class ELOCalculator
 						@players[ pN ] = Hash.new
 					end
 
-					@players[ pN ][ match.date ] = @currentELOs[ pN ]
+					@players[ pN ][ date ] = @currentELOs[ pN ]
 
 				end
 
@@ -98,10 +114,6 @@ class ELOCalculator
 
 		end
 
-		plot_elo_history
-		plot_elo_performance
-		plot_number_of_matches
-		
 	end
 
 	private
@@ -110,9 +122,9 @@ class ELOCalculator
 
 		g = Gruff::Line.new(1600)
 		g.title = "ELO History #{playerName}"
-		# g.dot_radius = 2
-		# g.line_width = 1
-		# g.title_font_size = 25
+		g.dot_radius = 2
+		g.line_width = 1
+		g.title_font_size = 25
 
 		data = @players[ playerName ]
 		dataset = Array.new
@@ -127,7 +139,7 @@ class ELOCalculator
 			labels[ index ] = @dates[ index ].strftime("%d/%m\n%H:%m")
 		end
 
-		g.labels = labels
+		# g.labels = labels
 		g.marker_font_size = 10
 
 		g.hide_legend = true
@@ -142,20 +154,19 @@ class ELOCalculator
 		# factor = 1 + 1.1 ** ( -2 * matchNumber )
 		# factor = 1 + 1.2 ** ( 10 - 2 * matchNumber )
 		factor = 1 + 1.2 ** ( 10 - matchNumber )
+		factor = factor * 2
 		return factor
 	end
 
-	def plot_number_of_matches
+	def plot_number_of_matches minMatches
 
 		g = Gruff::Bar.new(1600)
+
 		g.title = "Number of matches"
 
 		@players.each_pair do |pN, data|
 			g.data( pN, data.keys.length )
-			plot_player_elo( pN ) if data.keys.length >= 5
-			# puts "#Player: #{pN}"
-			# puts "Number of matches: #{data.keys.length}"
-			# puts "ELO: #{@currentELOs[pN]}"
+			plot_player_elo( pN ) if data.keys.length >= minMatches
 		end
 
 		g.marker_font_size = 10
@@ -164,15 +175,29 @@ class ELOCalculator
 
 		g.write('Graphs/number_of_matches.png')
 
+		g = Gruff::Bar.new(1600)
+
+		g.title = "Number of matches - Reduced"
+
+		@players.each_pair do |pN, data|
+			g.data( pN, data.keys.length ) if data.keys.length >= minMatches
+		end
+
+		g.marker_font_size = 10
+
+		g.hide_legend = false
+
+		g.write('Graphs/number_of_matches_reduced.png')		
+
 	end
 
-	def plot_elo_performance
+	def plot_elo_performance param
 
 		g = Gruff::Line.new(1600)
 		g.title = "ELO Performance"
-		# g.dot_radius = 2
-		# g.line_width = 1
-		# g.title_font_size = 25
+		g.dot_radius = 2
+		g.line_width = 1
+		g.title_font_size = param
 
 		datasetEst = Array.new
 		datasetAct = Array.new
@@ -195,7 +220,7 @@ class ELOCalculator
 			labels[ index ] = @dates[ index ].strftime("%d/%m\n%H:%m")
 		end
 
-		g.labels = labels
+		# g.labels = labels
 		g.marker_font_size = 10
 
 		# g.hide_legend = true
@@ -204,7 +229,7 @@ class ELOCalculator
 
 	end
 
-	def plot_elo_history
+	def plot_elo_history param
 
 		g = Gruff::Line.new(1600)
 		g.title = "ELO History"
@@ -213,7 +238,7 @@ class ELOCalculator
 		g.title_font_size = 25
 
 		@players.each_pair do |pN, data|
-			next if data.keys.length < 5
+			next if data.keys.length < param
 			dataset = Array.new
 			@dates.each do |date|
 				dataset << data[ date ]
@@ -226,7 +251,7 @@ class ELOCalculator
 			labels[ index ] = @dates[ index ].strftime("%d/%m\n%H:%m")
 		end
 
-		g.labels = labels
+		# g.labels = labels
 		g.marker_font_size = 10
 
 		g.hide_legend = true
@@ -327,7 +352,7 @@ class ELOCalculator
 				status = section.getValue( "Status" )
 				next unless ( status.eql?( "Finished" ) )
 
-				date = Time.parse( section.getValue( "Date" ) )
+				date = DateTime.parse( section.getValue( "Date" ) )
 
 				players = Hash.new
 
@@ -401,6 +426,13 @@ end
 
 calc = ELOCalculator.new
 
-calc.calculate_elos
+calc.load_matches
 
+repeat = 0
+while repeat < 1
+	calc.calculate_elos( repeat )
+	repeat += 1
+end
+
+calc.make_plots repeat
 
