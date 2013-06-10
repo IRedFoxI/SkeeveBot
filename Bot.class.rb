@@ -8,7 +8,7 @@ requireLibrary 'TribesAPI'
 
 
 Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :playerName, :level, :tag, :noCaps, :noMaps, :match, :roles, :team )
-Match = Struct.new( :id, :status, :date, :teams, :players, :comment, :results )
+Match = Struct.new( :id, :label, :status, :date, :teams, :players, :comment, :results )
 Result = Struct.new( :map, :teams, :scores, :comment )
 
 class Bot
@@ -642,13 +642,14 @@ class Bot
 	def create_new_match client
 		id = @nextMatchId
 		@nextMatchId += 1
+		label = @connections[ client ][ :label ]
 		status = "Signup"
 		date = nil
 		teams = Array.new
 		players = Hash.new
 		comment= ""
 		result = Array.new
-		match = Match.new( id, status, date, teams, players, comment, result )
+		match = Match.new( id, label, status, date, teams, players, comment, result )
 		@matches << match
 		@currentMatch[ client ] = id
 		@moveQueue[ client ] = false
@@ -1564,7 +1565,7 @@ class Bot
 						end
 					end
 
-					client.send_user_message message.actor, "Id: #{match.id}, status: #{match.status}#{teamStr}#{resultStr}"
+					client.send_user_message message.actor, "Id: #{match.id}, label: #{match.label}, status: #{match.status}#{teamStr}#{resultStr}"
 
 				end
 
@@ -1885,15 +1886,23 @@ class Bot
 
 	def cmd_list client, message
 		text = message.message
-		status = text.split(' ')[ 1 ]
+		params = text.split(' ')[ 1..-1 ]
 
-		if status.nil?
-			selection = @matches.select{ |m| !m.status.eql?( "Deleted" ) }
+
+		selection = Array.new
+		if params.empty?
+			selection = selection | @matches.select{ |m| !m.status.eql?( "Deleted" ) && m.label.eql?( @connections[ client ][ :label ] ) }
 		else
-			selection = @matches.select{ |m| m.status.downcase.eql?( status.downcase ) }
+			params.each do |param|
+				if param.downcase.eql?( "all" )
+					selection = selection | @matches.select{ |m| true }
+				elsif
+					selection = selection |  @matches.select{ |m| m.status.downcase.eql?( param.downcase ) && m.label.eql?( @connections[ client ][ :label ] ) }
+				end
+			end
 		end
 
-		if selection
+		if selection.length > 0
 			selection.each do |match|
 
 				statusStr = ", Status: #{match.status}"
@@ -1924,7 +1933,7 @@ class Bot
 				client.send_user_message message.actor, "Id: #{match.id}#{dateStr}#{statusStr}#{teamStr}#{resultStr}"
 			end
 		else
-			client.send_user_message message.actor, "No match found."
+			client.send_user_message message.actor, "No matches found."
 		end
 	end
 
@@ -2053,6 +2062,7 @@ class Bot
 			sectionName = "#{match.id}"
 			ini.removeSection( sectionName )
 
+			ini.setValue( sectionName, "Label", match.label )
 			ini.setValue( sectionName, "Status", match.status )
 			if match.date
 				ini.setValue( sectionName, "Date", match.date.utc.to_s )
@@ -2097,6 +2107,8 @@ class Bot
 
 				idInt = id.to_i
 				@nextMatchId = ( idInt + 1 ) if ( idInt >= @nextMatchId )
+
+				label = section.getValue( "Label" )
 
 				status = section.getValue( "Status" )
 				next unless ( status.eql?( "Started" ) || status.eql?( "Pending" ) || status.eql?( "Finished" ) )
@@ -2164,7 +2176,7 @@ class Bot
 
 				end
 
-				@matches << Match.new( idInt, status, date, teams, players, comment, results )
+				@matches << Match.new( idInt, label, status, date, teams, players, comment, results )
 
 			end
 

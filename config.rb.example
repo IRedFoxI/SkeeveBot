@@ -12,5 +12,5 @@ $options = {
 # Servers
 
 $servers = []
-$servers << { :host => "server.ip", :port => 64738, :channel => "ChannelName", :nick => "BotName", :admin => true }
-$servers << { :host => "server.tld", :port => 64738, :channel => "ChannelName", :nick => "BotName", :admin => false }
+$servers << { :host => "server.ip", :port => 64738, :label => "Server1", :channel => "ChannelName", :nick => "BotName", :admin => true }
+$servers << { :host => "server.tld", :port => 64738, :label => "Server2", :channel => "ChannelName", :nick => "BotName", :admin => false }
