@@ -167,20 +167,35 @@ class Bot
 		comment << "<HR>"
 
 		match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
-		comment << "Current status: #{match.status}<HR>"
-
-		comment << "Signups: "
+		comment << "Current status: #{match.status}"
 		unless @players[ client ].nil?
+			comment << "<HR><TABLE BORDER=\"0\"><TR>"
 			signups = @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }
+			signupCol = false
+			if !signups.select{ |mN, pl| pl.team.nil? }.empty?
+				comment << "<TD>Signup</TD>"
+				signupCol = true
+			end
+			match.teams.each do |t|
+				comment << "<TD>#{t}</TD>"
+			end
+			comment << "</TR>"
 			signups.each_value do |pl|
+				comment << "<TR>"
+				teamIndex = match.teams.index( pl.team )
+				i = signupCol ? 0 : 1
+				while !teamIndex.nil? && i <= teamIndex
+					comment << "<TD></TD>"
+					i +=1
+				end
 				name = String.new
 				name << "[#{pl.tag}]" if ( pl.tag  && !pl.tag.eql?( "" ) )
 				name << pl.playerName
 				roles = pl.roles.join('/')
-				comment << "#{name}(#{roles}) "
+				comment << "<TD>#{name}(level: #{pl.level}): #{roles}</TD></TR>"
 			end
-			comment << "<HR>"
 		end
+		comment << "</TABLE><HR>Documentation: <A HREF=http://iredfoxi.github.io/SkeeveBot/>http://iredfoxi.github.io/SkeeveBot/</A>"
 
 		client.set_comment comment
 	end		
