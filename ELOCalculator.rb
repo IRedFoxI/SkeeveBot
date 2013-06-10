@@ -197,7 +197,7 @@ class ELOCalculator
 		g.title = "ELO Performance"
 		g.dot_radius = 2
 		g.line_width = 1
-		g.title_font_size = param
+		g.title_font_size = 25
 
 		datasetEst = Array.new
 		datasetAct = Array.new
