@@ -164,40 +164,73 @@ class Bot
 		comment << "<code>!mute 0/1/2</code> [ from 0 (no mute) to 2 (all muted) ]<BR>"
 		comment << "<code>!result map1 map2 map3</code> [ use BE-DS for each map ]<BR>"
 		comment << "<code>!list</code> [ shows all matches in the last 24h ]"
-		comment << "<HR>"
 
 		match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
-		comment << "Current status: #{match.status}"
-		unless @players[ client ].nil?
-			comment << "<HR><TABLE BORDER=\"0\"><TR>"
+		comment << "<HR>Current status: #{match.status}"
+
+		if !@players[ client ].nil? && !@players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }.empty?
+			comment << "<HR><TABLE BORDER=\"0\"><TR><TD>Signups</TD>"
 			signups = @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }
-			signupCol = false
-			if !signups.select{ |mN, pl| pl.team.nil? }.empty?
-				comment << "<TD>Signup</TD>"
-				signupCol = true
-			end
+			noCols = 1
 			match.teams.each do |t|
 				comment << "<TD>#{t}</TD>"
+				noCols += 1
 			end
 			comment << "</TR>"
 			signups.each_value do |pl|
 				comment << "<TR>"
-				teamIndex = match.teams.index( pl.team )
-				i = signupCol ? 0 : 1
-				while !teamIndex.nil? && i <= teamIndex
-					comment << "<TD></TD>"
-					i +=1
-				end
 				name = String.new
 				name << "[#{pl.tag}]" if ( pl.tag  && !pl.tag.eql?( "" ) )
 				name << pl.playerName
 				roles = pl.roles.join('/')
-				comment << "<TD>#{name}(level: #{pl.level}): #{roles}</TD></TR>"
+				comment << "<TD>#{name}(level: #{pl.level}): #{roles}</TD>"
+				i = 2
+				while i <= noCols
+					if pl.team.eql?( match.teams[ i - 2 ] )
+						comment << "<TD><CENTER>*</CENTER></TD>"
+					else
+						comment << "<TD></TD>"
+					end
+					i += 1
+				end
+				comment << "</TR>"
 			end
+			comment << "</TABLE>"
 		end
-		comment << "</TABLE><BR><HR>Documentation: <A HREF=http://iredfoxi.github.io/SkeeveBot/>http://iredfoxi.github.io/SkeeveBot/</A>"
 
-		client.set_comment comment
+		selection = Array.new
+		selection = selection | @matches.select{ |m| m.label.eql?( @connections[ client ][ :label ] ) && !m.status.eql?( "Deleted" ) && !m.id.eql?( @currentMatch[ client ] ) }
+		unless selection.empty?
+			
+			comment << "<HR>Recent matches:<TABLE BORDER=\"0\"><TR><TD>Id</TD><TD>Date</TD><TD>Time</TD><TD>Status</TD>"
+			comment << "<TD>#{selection.first.teams.join('</TD><TD>')}</TD><TD>Result</TD></TR>"
+
+			selection.each do |match|
+				comment << "<TR><TD>#{match.id}</TD><TD>#{match.date.strftime("%d/%m")}</TD><TD>#{match.date.strftime("%H:%M")}</TD>"
+				comment << "<TD>#{match.status}</TD>"
+
+				match.teams.each do |team|
+					players = match.players.select{ |pN, t| t.eql?( team ) }.keys
+					comment << "<TD>#{players.join(', ')}</TD>"
+				end
+
+				
+				if match.results.empty?
+					comment << "<TD>pending</TD>"
+				else
+					results = Array.new
+					match.results.each do |res|
+						results << "#{res.scores.join('-')}"
+					end
+					comment << "<TD>#{results.join(' ')}</TD>"
+				end
+				comment << "</TR>"
+			end
+			comment << "</TABLE>"
+		end
+		comment << "<HR>Documentation: <A HREF=http://iredfoxi.github.io/SkeeveBot/><CODE>http://iredfoxi.github.io/SkeeveBot/</CODE></A>"
+
+		client.set_comment( comment )
 	end		
 
 	def on_exception client, message
@@ -1887,7 +1920,7 @@ class Bot
 			end
 		end
 
-		if selection.length > 0
+		unless selection.empty?
 			selection.each do |match|
 
 				statusStr = ", Status: #{match.status}"
