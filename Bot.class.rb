@@ -728,7 +728,7 @@ class Bot
 	end
 
 	def cmd_help client, message
-		text = message.message
+		text = convert_html_symbols( message.message )
 		command = text.split(' ')[ 1 ]
 
 		unless command.nil?
@@ -772,7 +772,7 @@ class Bot
 		client.send_user_message message.actor, "!admin \"command\" - admin commands"	end
 
 	def cmd_find client, message
-		text = message.message
+		text = convert_html_symbols( message.message )
 		nick = text.split(' ')[ 1 ]
 
 		playerName = nil
@@ -835,7 +835,7 @@ class Bot
 	end
 
 	def cmd_goto client, message
-		text = message.message
+		text = convert_html_symbols( message.message )
 		nick = text.split(' ')[ 1 ]
 		target = client.find_user nick
 		source = client.find_user message.actor
@@ -862,7 +862,7 @@ class Bot
 			ownNick = @players[ client ][ mumbleNick ].aliasNick
 		end
 
-		text = message.message
+		text = convert_html_symbols( message.message )
 
 		nick = text.split(' ')[ 1 ]
 		nick = nick.nil? ? ownNick : nick
@@ -946,7 +946,7 @@ class Bot
 
 	def cmd_admin client, message
 
-		text = message.message
+		text = convert_html_symbols( message.message )
 		command = text.split(' ')[ 1 ]
 
 		unless @players[ client ]
@@ -1008,7 +1008,7 @@ class Bot
 	end
 
 	def help_msg_admin client, message
-		text = message.message
+		text = convert_html_symbols( message.message )
 		command = text.split(' ')[ 2 ]
 
 		unless command.nil?
@@ -1077,7 +1077,7 @@ class Bot
 	end
 
 	def cmd_admin_raise client, message
-		text = message.message
+		text = convert_html_symbols( message.message )
 		exception = text.split(' ')[ 2..-1 ].join(' ')
 
 		mumbleNick = client.find_user( message.actor ).name
@@ -1089,7 +1089,7 @@ class Bot
 	end
 
 	def cmd_admin_login client, message
-		text = message.message
+		text = convert_html_symbols( message.message )
 		password = text.split(' ')[ 2 ]
 
 		mumbleNick = client.find_user( message.actor ).name
@@ -1143,7 +1143,7 @@ class Bot
 
 		if @players[ client ][ mumbleNick ].admin
 
-			text = message.message
+			text = convert_html_symbols( message.message )
 			chanPath = client.find_user( message.actor ).channel.path
 			roles = text.split(' ')[ 2..-1 ]
 
@@ -1209,7 +1209,7 @@ class Bot
 
 		if @players[ client ][ mumbleNick ].admin
 
-			text = message.message
+			text = convert_html_symbols( message.message )
 			chanPath = client.find_user( message.actor ).channel.path
 			role = text.split(' ')[ 2 ]
 			required = text.split(' ')[ 3 ]
@@ -1274,7 +1274,7 @@ class Bot
 
 		if @players[ client ][ mumbleNick ].admin
 
-			text = message.message
+			text = convert_html_symbols( message.message )
 			chanPath = client.find_user( message.actor ).channel.path
 			role = text.split(' ')[ 2 ]
 
@@ -1362,9 +1362,9 @@ class Bot
 
 		if @players[ client ][ mumbleNick ].admin
 
-			text = message.message
+			text = convert_html_symbols( message.message )
 
-			parameterStr = text.split(' ')[ 2..-1 ].join(' ').gsub( "&quot;", "\"")
+			parameterStr = text.split(' ')[ 2..-1 ].join(' ')
 			parameters = parameterStr.scan(/(?:"(?:\\.|[^"])*"|[^" ])+/)
 
 			if parameters.length != 2
@@ -1482,9 +1482,15 @@ class Bot
 
 		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
 	
-			text = message.message
+			text = convert_html_symbols( message.message )
+			param = text.split(' ')[ 2..-1 ]
+			unless param.length.eql?( 1 )
+				client.send_user_message message.actor, "Please specify exactly one mumble nick to make admin." 
+				return
+			end
+			param = param.first
 
-			player = @players[ client ].values.select{ |v| v.mumbleNick.downcase.eql?( text.split(' ')[ 2 ].downcase ) }.first
+			player = @players[ client ].values.select{ |v| v.mumbleNick.downcase.eql?( param.downcase ) }.first
 
 			if player.nil?
 				client.send_user_message message.actor, "Player #{text.split(' ')[ 2 ]} has to be in one of the PUG channels."
@@ -1535,7 +1541,7 @@ class Bot
 		displayPlayers = false
 		displayMatches = false
 
-		text = message.message
+		text = convert_html_symbols( message.message )
 		command = text.split(' ')[1]
 
 		unless command.nil?
@@ -1616,7 +1622,7 @@ class Bot
 
 	def cmd_mute client, message 
 
-		text = message.message
+		text = convert_html_symbols( message.message )
 		mumbleNick = client.find_user( message.actor ).name
 
 		if !@players[ client ] || !@players[ client ].has_key?( mumbleNick )
@@ -1679,7 +1685,7 @@ class Bot
 	end
 
 	def cmd_result client, message
-		text = message.message
+		text = convert_html_symbols( message.message )
 		scores = text.split(' ')[ 1..-1 ]
 
 		if scores.empty?
@@ -1752,7 +1758,7 @@ class Bot
 	end
 
 	def cmd_admin_result client, message
-		text = message.message
+		text = convert_html_symbols( message.message )
 		matchId = text.split(' ')[ 2 ]
 		scores = text.split(' ')[ 3..-1 ]
 
@@ -1833,7 +1839,7 @@ class Bot
 	end
 
 	def cmd_admin_delete client, message
-		text = message.message
+		text = convert_html_symbols( message.message )
 		matchId = text.split(' ')[ 2 ]
 
 		if matchId.nil?
@@ -1903,7 +1909,7 @@ class Bot
 	end
 
 	def cmd_list client, message
-		text = message.message
+		text = convert_html_symbols( message.message )
 		params = text.split(' ')[ 1..-1 ]
 
 
@@ -2317,6 +2323,16 @@ class Bot
 		disappeared.each do |mumbleNick|
 			@players[ client ].delete( mumbleNick )
 		end
+	end
+
+	def convert_html_symbols text
+		raise 'Not a String' unless text.class.eql?( String )
+		text.gsub!( "&amp;", "&" )
+		text.gsub!( "&quot;", "\"" )
+		text.gsub!( "&lt;", "<" )
+		text.gsub!( "&gt;", ">" )
+		# TODO: add more symbols
+		return text
 	end
 
 end
