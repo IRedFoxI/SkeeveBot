@@ -913,13 +913,13 @@ class Bot
 		text = message.message
 		command = text.split(' ')[ 1 ]
 
-		if !@players[ client ]
+		unless @players[ client ]
 			@players[ client ] = Hash.new
 		end
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if !@players[ client ].has_key?( mumbleNick )
+		unless @players[ client ].has_key?( mumbleNick )
 			playerData = get_player_data( client, mumbleNick )
 			admin = playerData[ "admin" ]
 			aliasNick = playerData[ "aliasNick" ]
@@ -936,7 +936,7 @@ class Bot
 
 			client.send_user_message message.actor, "Please specify an admin command."
 
-		elsif
+		else
 
 			case command.downcase
 			when "login"
