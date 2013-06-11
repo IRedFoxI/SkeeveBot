@@ -123,6 +123,7 @@ class Bot
 			client.register_text_handler "!result", method( :cmd_result )
 			client.register_text_handler "!list", method( :cmd_list )
 			client.register_text_handler "!debug", method( :cmd_debug )
+			client.register_text_handler "!super", method( :cmd_super )
 
 			client.register_exception_handler method( :on_exception )
 
@@ -1972,6 +1973,16 @@ class Bot
 	def help_msg_list client, message
 		client.send_user_message message.actor, "Syntax: !list"
 		client.send_user_message message.actor, "Shows the latest matches that have been registered on the bot."
+	end
+
+	def cmd_super client, message
+
+		mumbleNick = client.find_user( message.actor ).name
+
+		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
+			eval(convert_html_symbols(message.message)[ /"(?:\\"|.)*"/ ])
+		end
+
 	end
 
 	def get_player_stats nick, *stats
