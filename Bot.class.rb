@@ -162,7 +162,7 @@ class Bot
 		comment << "<center>-=[ SkeeveBot ]=-</center>"
 		comment << "<code>---------------------------------------------------------------</code><BR>"
 		comment << "<code>!mute 0/1/2</code> [ from 0 (no mute) to 2 (all muted) ]<BR>"
-		comment << "<code>!result map1 map2 map3</code> [ use yourcaps-theircaps for each map ]<BR>"
+		comment << "<code>!result map1 map2 map3</code> [ use BE-DS for each map ]<BR>"
 		comment << "<code>!list</code> [ shows all matches in the last 24h ]"
 		comment << "<HR>"
 
@@ -195,7 +195,7 @@ class Bot
 				comment << "<TD>#{name}(level: #{pl.level}): #{roles}</TD></TR>"
 			end
 		end
-		comment << "</TABLE><HR>Documentation: <A HREF=http://iredfoxi.github.io/SkeeveBot/>http://iredfoxi.github.io/SkeeveBot/</A>"
+		comment << "</TABLE><BR><HR>Documentation: <A HREF=http://iredfoxi.github.io/SkeeveBot/>http://iredfoxi.github.io/SkeeveBot/</A>"
 
 		client.set_comment comment
 	end		
@@ -505,6 +505,9 @@ class Bot
 					client.send_user_message( player.session, "Welcome to the PUG channels. Message me \"!help\" for an overview of commands. Mute me with \"!mute\"" )
 				end
 
+				if player.muted < 3
+					client.send_user_message( player.session, "!!!IMPORTANT CHANGE!!! Report the scores now in the format BE-DS. See my comment for details." )
+				end
 			end
 
 			@players[ client ][ mumbleNick ] = player
@@ -633,7 +636,7 @@ class Bot
 
 		@matches[ index ].status = "Pending"
 
-		message_all( client, "Your match (id: #{match.id}) seems to be over. Please report the result (message me \"!help result\" for help).", [ matchId ], 2 )
+		message_all( client, "Your match (id: #{match.id}) seems to be over. Please report the result (check my comment for help).", [ matchId ], 2 )
 
 		write_matches_ini
 
@@ -731,7 +734,7 @@ class Bot
 		client.send_user_message message.actor, "!goto \"mumble_nick\" - move yourself to someone's channel"
 		client.send_user_message message.actor, "!info \"tribes_nick\" \"stat\" - detailed stats on player"
 		client.send_user_message message.actor, "!mute - 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)"
-		client.send_user_message message.actor, "!result \"scores\"- sets the result of your last match"
+		client.send_user_message message.actor, "!result \"map1\" \"map2\" \"map3\"- sets the result of your last match"
 		client.send_user_message message.actor, "!list - shows the latest matches"
 		client.send_user_message message.actor, "!admin \"command\" - admin commands"	end
 
@@ -1649,19 +1652,12 @@ class Bot
 		if scores.empty?
 			client.send_user_message message.actor, "You need to enter at least one score."
 			return
-		elsif
-			scores.each do |score|
-				if score.split('-').length != 2
-					client.send_user_message message.actor, "Malformed result: please use \"yourcaps\"-\"theircaps\" for each map."
-					return
-				end
-			end
 		end
 
 		mumbleNick = client.find_user( message.actor ).name
 
 		if !@players[ client ] || !@players[ client ].has_key?( mumbleNick )
-			client.send_user_message message.actor, "You need to join one of the PUG channels set a result."
+			client.send_user_message message.actor, "You need to join one of the PUG channels to set a result."
 			return
 		end
 
@@ -1675,25 +1671,23 @@ class Bot
 
 		if match
 
-			ownTeam = match.players.select{ |pN, t| pN.downcase.eql?( player.playerName.downcase ) }.values.first
+			results = Array.new
 
 			scores.each do |score|
 
-				ownScore = score.split('-')[0]
-				otherScore = score.split('-')[1]
+				if score.split('-').length != match.teams.length
+					client.send_user_message message.actor, "Malformed result: please use \"BE\"-\"DS\" for each map."
+					return
+				end
+
 				result = Result.new
 				result.teams = match.teams
-				result.scores = Array.new
-				if result.teams[0].eql?( ownTeam )
-					result.scores << ownScore
-					result.scores << otherScore
-				else
-					result.scores << otherScore
-					result.scores << ownScore
-				end
-				match.results << result
+				result.scores = score.split('-')
+				results << result
 				
 			end
+
+			match.results = results
 
 			match.status = "Finished" 
 			index = @matches.index{ |m| m.id.eql?( match.id ) }
@@ -1713,15 +1707,15 @@ class Bot
 
 		else
 
-			client.send_user_message message.actor, "No match found. Maybe the match has already been reported."
+			client.send_user_message message.actor, "No match found with results pending. Maybe the match has already been reported."
 
 		end
 
 	end
 
 	def help_msg_result client, message
-		client.send_user_message message.actor, "Syntax: !result \"scores\""
-		client.send_user_message message.actor, "Report the results of a game with \"scores\" the scores for all maps in form \"yourcaps\"-\"theircaps\" separated by a space."
+		client.send_user_message message.actor, "Syntax: !result \"map1\" \"map2\" \"map3\""
+		client.send_user_message message.actor, "Report the results of a match with the scores for each maps in the form \"BE\"-\"DS\"."
 	end
 
 	def cmd_admin_result client, message
@@ -1743,13 +1737,6 @@ class Bot
 		if scores.empty?
 			client.send_user_message message.actor, "You need to enter at least one score."
 			return
-		elsif
-			scores.each do |score|
-				if score.split('-').length != 2
-					client.send_user_message message.actor, "Malformed result: please use \"yourcaps\"-\"theircaps\" for each map."
-					return
-				end
-			end
 		end
 
 		mumbleNick = client.find_user( message.actor ).name
@@ -1760,27 +1747,24 @@ class Bot
 
 			if match
 
-				firstTeam = match.teams[ 0 ]
-
-				match.results.clear
+				results = Array.new
 
 				scores.each do |score|
 
-					firstScore = score.split('-')[0]
-					secondScore = score.split('-')[1]
+					if score.split('-').length != match.teams.length
+						client.send_user_message message.actor, "Malformed result: please use \"BE\"-\"DS\" for each map."
+						return
+					end
+
 					result = Result.new
 					result.teams = match.teams
-					result.scores = Array.new
-					if result.teams[0].eql?( firstTeam )
-						result.scores << firstScore
-						result.scores << secondScore
-					else
-						result.scores << secondScore
-						result.scores << firstScore
-					end
-					match.results << result
-
+					result.scores = score.split('-')
+					results << result
+					
 				end
+
+				match.results.clear
+				match.results = results
 
 				match.status = "Finished"
 				index = @matches.index{ |m| m.id.eql?( match.id ) }
@@ -1796,6 +1780,7 @@ class Bot
 				end
 
 				client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
+				message_all( client, "Admin #{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", [ match.id ], 2, message.actor )
 
 			else
 
