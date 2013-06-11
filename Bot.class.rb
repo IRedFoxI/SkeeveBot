@@ -172,15 +172,7 @@ class Bot
 		if !@players[ client ].nil? && !@players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }.empty?
 			comment << "<HR><TABLE BORDER=\"0\"><TR><TD>Signups</TD>"
 			signups = @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }
-<<<<<<< HEAD
 			noCols = 1
-=======
-			signupCol = false
-			unless signups.select{ |mN, pl| pl.team.nil? }.empty?
-				comment << "<TD>Signup</TD>"
-				signupCol = true
-			end
->>>>>>> More style consistency fixes. Also another instance of elsif where else should be used. As well as fixing a comment on Kesh/Loader/requireFile & Kesh/Loader/loadFile (the comments were reversed)
 			match.teams.each do |t|
 				comment << "<TD>#{t}</TD>"
 				noCols += 1
