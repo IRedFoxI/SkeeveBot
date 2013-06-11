@@ -90,14 +90,14 @@ def loadClass( name )
 end
 
 
-# Load the given file name.  Path is relative to that of the calling file's.
+# Require the given file name.  Path is relative to that of the calling file's.
 def requireFile( name )
 	Kesh::ArgTest::stringLength( "name", name, 1 )
 	require File.expand_path( File.dirname( Kesh::Loader::ModuleInfo.getCallingFile() ) + "/" + name )
 end
 
 
-# Require the given file name.  Path is relative to that of the calling file's.
+# Load the given file name.  Path is relative to that of the calling file's.
 def loadFile( name )
 	Kesh::ArgTest::stringLength( "name", name, 1 )
 	require File.expand_path( File.dirname( Kesh::Loader::ModuleInfo.getCallingFile() ) + "/" + name )
