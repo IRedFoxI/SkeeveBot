@@ -29,9 +29,9 @@ class ELOCalculator
 	end
 
 	def make_plots param
-		plot_elo_history param * 5
-		plot_elo_performance param * 5
-		plot_number_of_matches param * 5
+		plot_elo_history param * 10
+		plot_elo_performance param * 10
+		plot_number_of_matches param * 10
 	end
 
 	def calculate_elos *params
@@ -154,7 +154,7 @@ class ELOCalculator
 		# factor = 1 + 1.1 ** ( -2 * matchNumber )
 		# factor = 1 + 1.2 ** ( 10 - 2 * matchNumber )
 		factor = 1 + 1.2 ** ( 10 - matchNumber )
-		factor = factor * 2
+		factor = factor * 1
 		return factor
 	end
 
@@ -429,7 +429,7 @@ calc = ELOCalculator.new
 calc.load_matches
 
 repeat = 0
-while repeat < 1
+while repeat < 2
 	calc.calculate_elos( repeat )
 	repeat += 1
 end
