@@ -782,11 +782,13 @@ class Bot
 
 		if user.nil?
 
+			player = nil
+
 			if @players[ client ]
 				player = @players[ client ].select{ |mN, pl| pl.playerName.downcase.eql?( nick.downcase ) }.values.first
 			end
 
-			if player.nil? 
+			if player.nil?
 
 				if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
 					ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
@@ -808,7 +810,7 @@ class Bot
 					end
 				end
 
-			elsif
+			else
 
 				user = client.find_user( player.mumbleNick )
 				playerName = player.playerName
