@@ -429,7 +429,7 @@ calc = ELOCalculator.new
 calc.load_matches
 
 repeat = 0
-while repeat < 2
+while repeat < 1
 	calc.calculate_elos( repeat )
 	repeat += 1
 end
