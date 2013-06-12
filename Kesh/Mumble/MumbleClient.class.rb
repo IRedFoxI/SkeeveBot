@@ -103,7 +103,7 @@ module Kesh
 
 			# Register Events Handler
 			def register_handler(type, callback)
-				if !@event_handler[type]
+				unless @event_handler[type]
 					@event_handler[type] = []
 				end
 				if type == :UserRemove || type == :ChannelRemove
@@ -114,10 +114,10 @@ module Kesh
 			end
 
 			def register_text_handler(prefix, callback)
-				if !@text_handler[prefix.downcase]
-					@text_handler[prefix.downcase] = callback
+				if @text_handler[prefix.downcase]
+					$stderr.puts "Callback for Textmessage '#{prefix} is already registered."
 				else
-					$stderr.puts "Callback for Textmessage #{prefix} is already registered."
+					@text_handler[prefix.downcase] = callback
 				end
 			end
 
@@ -133,7 +133,7 @@ module Kesh
 					return channels.first unless channels.length != 1
 				end
 				channel = @root_channel
-				while channel_name = channel_path.shift
+				while (channel_name = channel_path.shift)
 					channel.ordered_subchannels.each do |ch|
 						if ch.name == channel_name
 							channel = ch
@@ -146,7 +146,7 @@ module Kesh
 			def find_user user
 				if user.is_a?( Fixnum )
 					users = @users.values.select{ |u| u.session == user }
-				elsif
+				else
 					users = @users.values.select{ |u| u.name.downcase == user.downcase }
 				end
 				return users.first
@@ -276,7 +276,7 @@ module Kesh
 			end
 
 			def handle_ping(client, message)
-				if (message.timestamp == @last_ping[:ts])
+				if message.timestamp == @last_ping[:ts]
 					@ping_time = 1000 * (Time.now - @last_ping[:ping])
 				end
 			end

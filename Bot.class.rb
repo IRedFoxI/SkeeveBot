@@ -123,6 +123,7 @@ class Bot
 			client.register_text_handler "!result", method( :cmd_result )
 			client.register_text_handler "!list", method( :cmd_list )
 			client.register_text_handler "!debug", method( :cmd_debug )
+			client.register_text_handler "!super", method( :cmd_super )
 
 			client.register_exception_handler method( :on_exception )
 
@@ -276,12 +277,12 @@ class Bot
 			chanPath = chanPath.first
 		end
 
-		if ( defined?( chanPath ) && @chanRoles[ client ].has_key?( chanPath ) )
+		if defined?( chanPath ) && @chanRoles[ client ].has_key?( chanPath )
 			# In a monitored channel
 
 			roles = @chanRoles[ client ][ chanPath ]
 
-			if ( @players[ client ] && @players[ client ].has_key?( mumbleNick ) )
+			if @players[ client ] && @players[ client ].has_key?( mumbleNick )
 				# Already signed up
 
 				player = @players[ client ][ mumbleNick ]
@@ -886,7 +887,7 @@ class Bot
 
 		statsVals = get_player_stats( nick, stats )
 
-		if ( statsVals.nil? && nick != ownNick )
+		if statsVals.nil? && nick != ownNick
 
 			stats.insert( noDefaultStats, nick.split('_').map!( &:capitalize ).join('_') )
 			statsVals = get_player_stats( ownNick, stats )
@@ -905,7 +906,7 @@ class Bot
 			return
 		end
 
-		if ( stats[ noDefaultStats ] == nick && statsVals[ noDefaultStats ].nil? )
+		if stats[ noDefaultStats ] == nick && statsVals[ noDefaultStats ].nil?
 			client.send_user_message message.actor, "Player #{nick} not found."
 		else
 			name = statsVals.shift
@@ -916,7 +917,7 @@ class Bot
 			name = "[#{tag}]#{name}" if tag
 			client.send_user_message message.actor, "Player #{name} has level #{level}."
 			
-			while stat = stats.shift
+			while (stat = stats.shift)
 				statVal = statsVals.shift
 				if statVal
 					client.send_user_message message.actor, "#{stat}: #{statVal}."
@@ -1920,7 +1921,7 @@ class Bot
 			params.each do |param|
 				if param.downcase.eql?( "all" )
 					selection = selection | @matches.select{ |m| true }
-				elsif
+				else
 					selection = selection |  @matches.select{ |m| m.status.downcase.eql?( param.downcase ) && m.label.eql?( @connections[ client ][ :label ] ) }
 				end
 			end
@@ -1932,7 +1933,7 @@ class Bot
 				statusStr = ", Status: #{match.status}"
 
 				dateStr = ""
-				if ( match.status.eql?( "Started" ) || match.status.eql?( "Pending" ) || match.status.eql?( "Finished" ) || match.status.eql?( "Deleted" ) )
+				if match.status.eql?( "Started" ) || match.status.eql?( "Pending" ) || match.status.eql?( "Finished" ) || match.status.eql?( "Deleted" )
 					dateStr << ", Date: #{match.date.strftime("%d/%m %H:%M")}"
 				end
 
@@ -1964,6 +1965,16 @@ class Bot
 	def help_msg_list client, message
 		client.send_user_message message.actor, "Syntax: !list"
 		client.send_user_message message.actor, "Shows the latest matches that have been registered on the bot."
+	end
+
+	def cmd_super client, message
+
+		mumbleNick = client.find_user( message.actor ).name
+
+		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
+			eval(convert_html_symbols(message.message)[ /"(?:\\"|.)*"/ ])
+		end
+
 	end
 
 	def get_player_stats nick, *stats
@@ -2129,7 +2140,7 @@ class Bot
 
 				id = section.name
 
-				if ( id[ /^\d+$/ ] == nil )
+				if id[ /^\d+$/ ].nil?
 					puts "Invalid ID: " + id.to_s
 					raise SyntaxError
 				end
@@ -2163,7 +2174,7 @@ class Bot
 
 						playerNames = section.getValue( "#{team}" )
 
-						if !playerNames.nil?
+						unless playerNames.nil?
 							playerNames = playerNames.split( ' ' )
 							playerNames.each do |pN|
 								players[ pN ] = team
@@ -2177,7 +2188,7 @@ class Bot
 				comment = section.getValue( "Comment" )
 				resultCount = section.getValue( "ResultCount" )
 
-				if ( resultCount[ /^\d+$/ ] == nil )
+				if resultCount[ /^\d+$/ ].nil?
 					puts "Invalid Result Count: " + resultCount.to_s
 					raise SyntaxError
 				end
@@ -2187,7 +2198,7 @@ class Bot
 				rCount = resultCount.to_i
 				rIndex = 0
 
-				while ( rIndex < rCount )
+				while rIndex < rCount
 
 					rMap = section.getValue( "Result#{rIndex}Map")
 					rTeams = teams
@@ -2245,6 +2256,10 @@ class Bot
 		else
 
 			nick = mumbleNick
+			admin = nil
+			aliasNick = nil
+			muted = nil
+			elo = nil
 
 		end
 

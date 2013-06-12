@@ -52,7 +52,7 @@ class ELOCalculator
 
 			newPlayers = 0.0
 			match.players.each_key do |pN|
-				if !@currentELOs.has_key?( pN )
+				unless @currentELOs.has_key?( pN )
 					newPlayers += 1.0
 				end
 			end
@@ -102,7 +102,7 @@ class ELOCalculator
 
 					@currentELOs[ pN ] = ( @currentELOs[ pN ] + k * ( actualScores[ team ] - estimatedScores[ team ] ) ).round
 
-					if !@players.has_key?( pN )
+					unless @players.has_key?( pN )
 						@players[ pN ] = Hash.new
 					end
 
@@ -330,7 +330,7 @@ class ELOCalculator
 
 	def get_player_elo playerName
 		return @currentELOs[ playerName ] if @currentELOs.has_key?( playerName )
-		return @currentELOs[ playerName ] = 1000
+		return (@currentELOs[ playerName ] = 1000)
 	end
 
 	def load_matches_ini
@@ -342,7 +342,7 @@ class ELOCalculator
 
 				id = section.name
 
-				if ( id[ /^\d+$/ ] == nil )
+				if id[ /^\d+$/ ].nil?
 					puts "Invalid ID: " + id.to_s
 					raise SyntaxError
 				end
@@ -367,7 +367,7 @@ class ELOCalculator
 
 						playerNames = section.getValue( "#{team}" )
 
-						if !playerNames.nil?
+						unless playerNames.nil?
 							playerNames = playerNames.split( ' ' )
 							playerNames.each do |pN|
 								players[ pN ] = team
@@ -381,7 +381,7 @@ class ELOCalculator
 				comment = section.getValue( "Comment" )
 				resultCount = section.getValue( "ResultCount" )
 
-				if ( resultCount[ /^\d+$/ ] == nil )
+				if resultCount[ /^\d+$/ ].nil?
 					puts "Invalid Result Count: " + resultCount.to_s
 					raise SyntaxError
 				end
@@ -394,7 +394,7 @@ class ELOCalculator
 
 				rIndex = 0
 
-				while ( rIndex < rCount )
+				while rIndex < rCount
 
 					rMap = section.getValue( "Result#{rIndex}Map")
 					rTeams = teams
@@ -412,7 +412,7 @@ class ELOCalculator
 
 				end
 
-				next if rCount = 1 && results[ 0 ].scores == [ 0, 0 ]
+				next if (rCount = 1) && results[ 0 ].scores == [ 0, 0 ]
 
 				@matches << Match.new( idInt, status, date, teams, players, comment, results )
 
