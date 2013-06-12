@@ -39,7 +39,13 @@ class ELOCalculator
 		if params.first.nil?
 			monthOffset =  0
 		else
-			monthOffset = params.first
+			monthOffset = params.shift
+		end
+
+		if params.first.nil?
+			weightedAverage = false
+		elsif params.shift
+			weightedAverage = true
 		end
 
 		@matches.each do |match|
@@ -47,8 +53,6 @@ class ELOCalculator
 			date = match.date >> monthOffset
 
 			@dates << ( date )
-
-			teamELOs = Hash.new
 
 			newPlayers = 0.0
 			match.players.each_key do |pN|
@@ -59,20 +63,7 @@ class ELOCalculator
 
 			@ratioNew[ date ] = newPlayers / match.players.keys.length
 
-			match.teams.each do |team|
-
-				noPlayers = 0
-				teamELOs[ team ] = 0
-
-
-				match.players.select{ |pN, t| t.eql?( team ) }.each_key do |pN|
-					teamELOs[ team ] += get_player_elo( pN )
-					noPlayers += 1
-				end
-
-				teamELOs[ team ] = teamELOs[ team ] / noPlayers
-
-			end
+			teamELOs = calc_team_ELOs( match, weightedAverage )
 
 			estimatedScores = calc_estimated_scores( teamELOs )
 			@estimated[ date ] = estimatedScores[ match.teams[0] ]
@@ -84,21 +75,7 @@ class ELOCalculator
 
 				match.players.select{ |pN, t| t.eql?( team ) }.each_key do |pN|
 
-					if @currentELOs[ pN ] < 2100
-						k = 32
-					elsif @currentELOs[ pN ] > 2400
-						k = 16
-					else
-						k = 24
-					end
-
-					matchNumber = 1
-
-					if @players.has_key?( pN )
-						matchNumber += @players[ pN ].keys.length
-					end
-
-					k *= calc_init_factor( matchNumber )
+					k = calc_k_factor( pN )
 
 					@currentELOs[ pN ] = ( @currentELOs[ pN ] + k * ( actualScores[ team ] - estimatedScores[ team ] ) ).round
 
@@ -117,6 +94,65 @@ class ELOCalculator
 	end
 
 	private
+
+	def calc_team_ELOs match, weightedAverage
+
+		teamELOs = Hash.new
+
+		match.teams.each do |team|
+
+			noPlayers = 0
+			totalWeight = 0
+
+			teamELOs[ team ] = 0
+
+			match.players.select{ |pN, t| t.eql?( team ) }.each_key do |pN|
+				playerELO = get_player_elo( pN )
+
+				k = calc_k_factor( pN )
+				totalWeight += 1.0 / k
+				noPlayers += 1
+
+				if weightedAverage
+					teamELOs[ team ] += playerELO / k
+				else
+					teamELOs[ team ] += get_player_elo( pN )
+				end
+
+			end
+
+			if weightedAverage
+				teamELOs[ team ] = teamELOs[ team ] / totalWeight
+			else
+				teamELOs[ team ] = teamELOs[ team ] / noPlayers
+			end
+
+		end
+
+		return teamELOs
+
+	end
+
+	def calc_k_factor playerName
+
+		if @currentELOs[ playerName ] < 2100
+			k = 32
+		elsif @currentELOs[ playerName ] > 2400
+			k = 16
+		else
+			k = 24
+		end
+
+		matchNumber = 1
+
+		if @players.has_key?( playerName )
+			matchNumber += @players[ playerName ].keys.length
+		end
+
+		k *= calc_init_factor( matchNumber )
+
+		return k
+	end
 
 	def plot_player_elo playerName
 
@@ -154,7 +190,7 @@ class ELOCalculator
 		# factor = 1 + 1.1 ** ( -2 * matchNumber )
 		# factor = 1 + 1.2 ** ( 10 - 2 * matchNumber )
 		factor = 1 + 1.2 ** ( 10 - matchNumber )
-		factor = factor * 1
+		factor = factor * 3
 		return factor
 	end
 
@@ -428,9 +464,11 @@ calc = ELOCalculator.new
 
 calc.load_matches
 
+weightedAverage = false
+
 repeat = 0
 while repeat < 1
-	calc.calculate_elos( repeat )
+	calc.calculate_elos( repeat, weightedAverage )
 	repeat += 1
 end
 
