@@ -412,7 +412,7 @@ class ELOCalculator
 
 				end
 
-				next if (rCount = 1) && results[ 0 ].scores == [ 0, 0 ]
+				next if (rCount == 1) && results[ 0 ].scores == [ 0, 0 ]
 
 				@matches << Match.new( idInt, status, date, teams, players, comment, results )
 
