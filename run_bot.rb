@@ -52,8 +52,8 @@ while exitflag
 		exitflag = bot.run $servers
 	rescue => e
 		# TODO: Message all connected superusers when this occurs
-		puts("An unhandled exception occurred '#{e}'!");
-	end
+		puts( "The handler for '#{prefix}' threw an exception '#{e}'!\nTRACE:\n#{e.backtrace.join('\n')}" )
+ 	end
 	
 	if exitflag
 		sleep 0.2
