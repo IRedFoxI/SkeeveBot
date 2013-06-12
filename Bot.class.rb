@@ -1466,6 +1466,8 @@ class Bot
 
 			ini.writeToFile( 'players.ini' )
 
+			create_comment( client )
+
 		else
 			client.send_user_message message.actor, "No admin privileges."
 		end
