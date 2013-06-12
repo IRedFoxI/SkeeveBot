@@ -914,7 +914,7 @@ class Bot
 			tag = statsVals.shift
 			stats.shift( noDefaultStats )
 
-			name = "[#{tag}]#{name}" if tag
+			name = "[#{tag}]#{name}" unless tag.empty?
 			client.send_user_message message.actor, "Player #{name} has level #{level}."
 			
 			while (stat = stats.shift)
