@@ -1147,12 +1147,12 @@ class Bot
 			chanPath = client.find_user( message.actor ).channel.path
 			roles = text.split(' ')[ 2..-1 ]
 
-			if !@rolesRequired[ client ]
+			unless @rolesRequired[ client ]
 				client.send_user_message message.actor, "No roles defined."
 				return
 			end
 
-			if !roles.nil?
+			unless roles.empty?
 				roles.each do |role|
 					if !@rolesRequired[ client ].has_key? role
 						client.send_user_message message.actor, "Unknown role: '#{role}'."
@@ -1166,7 +1166,7 @@ class Bot
 
 				if @chanRoles[ client ].has_key? chanPath
 					prevValue = @chanRoles[ client ][ chanPath ]
-					if roles.nil?
+					if roles.empty?
 						@chanRoles[ client ].delete chanPath
 					else
 						@chanRoles[ client ][ chanPath ] = roles
@@ -1182,7 +1182,7 @@ class Bot
 			write_roles_ini client
 
 			if prevValue
-				if roles.nil?
+				if roles.empty?
 					client.send_user_message message.actor, "Channel #{chanPath} removed (was '#{prevValue.join(' ')}')."
 				else
 					client.send_user_message message.actor, "Channel #{chanPath} changed from '#{prevValue.join(' ')}' to '#{roles.join(' ')}'."
@@ -1292,7 +1292,7 @@ class Bot
 				return
 			end
 
-			@rolesRequired[ client ].delete rolesRequired
+			@rolesRequired[ client ].delete( role )
 
 			write_roles_ini client
 
@@ -1367,7 +1367,7 @@ class Bot
 			parameterStr = text.split(' ')[ 2..-1 ].join(' ')
 			parameters = parameterStr.scan(/(?:"(?:\\.|[^"])*"|[^" ])+/)
 
-			if parameters.length != 2
+			unless parameters.length.eql?( 2 )
 				client.send_user_message message.actor, "This command needs two parameters: the mumble nick and the alias you want to set."
 				return
 			end
@@ -2047,7 +2047,7 @@ class Bot
 				section.values.each do |value|
 					if value.name.eql? "PlayerNum"
 						@playerNum[ client ] = value.value.to_i
-					else
+					elsif !value.value.nil?
 						rolesHash[ value.name ] = value.value
 					end
 				end
@@ -2062,7 +2062,12 @@ class Bot
 				channelsHash = Hash.new
 
 				section.values.each do |value|
-					channelsHash[ value.name ] = value.value.split(',')
+					next if value.value.nil?
+					roles = value.value.split(',')
+					roles.each do |role|
+						roles.delete( role ) unless @rolesRequired[ client ].has_key?( role )
+					end
+					channelsHash[ value.name ] = roles unless roles.empty?
 				end
 
 				@chanRoles[ client ] = channelsHash
@@ -2331,7 +2336,55 @@ class Bot
 		text.gsub!( "&quot;", "\"" )
 		text.gsub!( "&lt;", "<" )
 		text.gsub!( "&gt;", ">" )
-		# TODO: add more symbols
+		text.gsub!( "&nbsp;", " " )
+		# text.gsub!( "&iexcl;", "¡" )
+		# text.gsub!( "&cent;", "¢" )
+		# text.gsub!( "&pound;", "£" )
+		# text.gsub!( "&curren;", "¤" )
+		# text.gsub!( "&yen;", "¥" )
+		# text.gsub!( "&brvbar;", "¦" )
+		# text.gsub!( "&sect;", "§" )
+		# text.gsub!( "&uml;", "¨" )
+		# text.gsub!( "&copy;", "©" )
+		# text.gsub!( "&ordf;", "ª" )
+		# text.gsub!( "&laquo;", "«" )
+		# text.gsub!( "&not;", "¬" )
+		text.gsub!( "&shy;", "-" )
+		# text.gsub!( "&reg;", "®" )
+		# text.gsub!( "&macr;", "¯" )
+		# text.gsub!( "&deg;", "°" )
+		# text.gsub!( "&plusmn;", "±" )
+		# text.gsub!( "&sup2;", "²" )
+		# text.gsub!( "&sup3;", "³" )
+		# text.gsub!( "&acute;", "´" )
+		# text.gsub!( "&micro;", "µ" )
+		# text.gsub!( "&para;", "¶" )
+		# text.gsub!( "&middot;", "·" )
+		# text.gsub!( "&cedil;", "¸" )
+		# text.gsub!( "&sup1;", "¹" )
+		# text.gsub!( "&ordm;", "º" )
+		# text.gsub!( "&raquo;", "»" )
+		# text.gsub!( "&frac14;", "¼" )
+		# text.gsub!( "&frac12;", "½" )
+		# text.gsub!( "&frac34;", "¾" )
+		# text.gsub!( "&iquest;", "¿" )
+		# text.gsub!( "&times;", "×" )
+		# text.gsub!( "&divide;", "÷" )
+		# text.gsub!( "&ETH;", "Ð" )
+		# text.gsub!( "&eth;", "ð" )
+		# text.gsub!( "&THORN;", "Þ" )
+		# text.gsub!( "&thorn;", "þ" )
+		# text.gsub!( "&AElig;", "Æ" )
+		# text.gsub!( "&aelig;", "æ" )
+		# text.gsub!( "&OElig;", "Œ" )
+		# text.gsub!( "&oelig;", "œ" )
+		# text.gsub!( "&Aring;", "Å" )
+		# text.gsub!( "&Oslash;", "Ø" )
+		# text.gsub!( "&Ccedil;", "Ç" )
+		# text.gsub!( "&ccedil;", "ç" )
+		# text.gsub!( "&szlig;", "ß" )
+		# text.gsub!( "&Ntilde;", "Ñ" )
+		# text.gsub!( "&ntilde;", "ñ" )
 		return text
 	end
 
