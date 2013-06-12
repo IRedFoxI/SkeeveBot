@@ -123,7 +123,7 @@ class Bot
 			client.register_text_handler "!result", method( :cmd_result )
 			client.register_text_handler "!list", method( :cmd_list )
 			client.register_text_handler "!debug", method( :cmd_debug )
-			client.register_text_handler "!super", method( :cmd_super )
+			client.register_text_handler "!eval", method( :cmd_eval )
 
 			client.register_exception_handler method( :on_exception )
 
@@ -1969,12 +1969,15 @@ class Bot
 		client.send_user_message message.actor, "Shows the latest matches that have been registered on the bot."
 	end
 
-	def cmd_super client, message
+	def cmd_eval client, message
 
 		mumbleNick = client.find_user( message.actor ).name
 
 		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
-			eval(convert_html_symbols(message.message)[ /"(?:\\"|.)*"/ ])
+			cmd = convert_html_symbols(message.message)[ 6..-1 ]
+			unless cmd.nil?
+				eval(cmd)
+			end
 		end
 
 	end
@@ -2282,7 +2285,17 @@ class Bot
 			tag = statsVals.shift
 		end
 
-		return { "session" => session, "mumbleNick" => mumbleNick, "admin" => admin, "aliasNick" => aliasNick, "muted" => muted, "elo" => elo, "playerName" => playerName, "level" => level, "tag" => tag }
+		return {
+				"session" => session,
+				"mumbleNick" => mumbleNick,
+				"admin" => admin,
+				"aliasNick" => aliasNick,
+				"muted" => muted,
+				"elo" => elo,
+				"playerName" => playerName,
+				"level" => level,
+				"tag" => tag
+		}
 
 	end
 
