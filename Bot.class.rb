@@ -25,9 +25,11 @@ class Bot
 		@teamNum = Hash.new
 		@defaultPlayerNum = 7
 		@playerNum = Hash.new
+		# [Hash<(MumbleClient, Hash<(String, Player)>)>]
 		@players = Hash.new
 		@currentMatch = Hash.new
 		@nextMatchId = 0
+		# [Array<(Match)>]
 		@matches = Array.new
 		@defaultMute = 1
 		@moveQueue = Hash.new
@@ -856,6 +858,7 @@ class Bot
 		end
 	end
 
+	# @param client [MumbleClient] The mumble client.
 	def cmd_info client, message
 
 		mumbleNick = client.find_user( message.actor ).name
