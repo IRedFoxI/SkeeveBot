@@ -124,8 +124,6 @@ class Bot
 			client.register_text_handler "!mute", method( :cmd_mute )
 			client.register_text_handler "!result", method( :cmd_result )
 			client.register_text_handler "!list", method( :cmd_list )
-			client.register_text_handler "!debug", method( :cmd_debug )
-			client.register_text_handler "!eval", method( :cmd_eval )
 
 			client.register_exception_handler method( :on_exception )
 
@@ -164,7 +162,7 @@ class Bot
 		comment = String.new
 		comment << "<center>-=[ SkeeveBot ]=-</center>"
 		comment << "<code>---------------------------------------------------------------</code><BR>"
-		comment << "<code>!mute 0/1/2</code> [ from 0 (no mute) to 2 (all muted) ]<BR>"
+		comment << "<code>!mute 0/1/2/3</code> [ from 0 (no mute) to 3 (all muted) ]<BR>"
 		comment << "<code>!result map1 map2 map3</code> [ use BE-DS for each map ]<BR>"
 		comment << "<code>!list</code> [ shows all matches in the last 24h ]"
 
@@ -509,7 +507,6 @@ class Bot
 				elsif firstRoleReq.eql? "Q"
 					# Joined a queue channel
 
-
 					player.roles = roles
 					player.team = nil
 					player.match = nil
@@ -542,7 +539,8 @@ class Bot
 				end
 
 				if player.muted < 3
-					client.send_user_message( player.session, "!!!IMPORTANT CHANGE!!! Report the scores now in the format BE-DS. See my comment for details." )
+					# Important announcements here and reset players mute level from 3 to 2
+					# client.send_user_message( player.session, "!!!IMPORTANT ANNOUNCEMENT!!!" )
 				end
 			end
 
@@ -769,7 +767,7 @@ class Bot
 		client.send_user_message message.actor, "!find \"mumble_nick\" - find which channel someone is in"
 		client.send_user_message message.actor, "!goto \"mumble_nick\" - move yourself to someone's channel"
 		client.send_user_message message.actor, "!info \"tribes_nick\" \"stat\" - detailed stats on player"
-		client.send_user_message message.actor, "!mute - 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)"
+		client.send_user_message message.actor, "!mute - 0/1/2/3 - mute the bots spam messages from 0 (no mute) to 3 (all muted)"
 		client.send_user_message message.actor, "!result \"map1\" \"map2\" \"map3\"- sets the result of your last match"
 		client.send_user_message message.actor, "!list - shows the latest matches"
 		client.send_user_message message.actor, "!admin \"command\" - admin commands"	end
@@ -806,7 +804,6 @@ class Bot
 							if playerName.downcase.eql?( nick.downcase )
 								user = u
 								found = true
-								puts playerName
 							end
 						end
 					end
@@ -820,8 +817,6 @@ class Bot
 			end
 
 		end
-
-		puts playerName
 		
 		if user
 			if playerName.nil?
@@ -919,7 +914,7 @@ class Bot
 			tag = statsVals.shift
 			stats.shift( noDefaultStats )
 
-			name = "[#{tag}]#{name}" if tag
+			name = "[#{tag}]#{name}" unless tag.empty?
 			client.send_user_message message.actor, "Player #{name} has level #{level}."
 			
 			while (stat = stats.shift)
@@ -1005,6 +1000,10 @@ class Bot
 				cmd_admin_shutdown( client, message )
 			when "restart"
 				cmd_admin_restart( client, message )
+			when "eval"
+				cmd_admin_eval( client, message )
+			when "debug"
+				cmd_admin_debug( client, message )
 			else
 				client.send_user_message message.actor, "Unknown admin command '#{command}'."
 			end
@@ -1544,20 +1543,21 @@ class Bot
 		client.send_user_message message.actor, "Makes \"mumble_nick\" an admin if you are a SuperUser"
 	end
 
-	def cmd_debug client, message
-		displayAPI = false
-		displayPlayers = false
-		displayMatches = false
+	def cmd_admin_debug client, message
 
-		text = convert_html_symbols( message.message )
-		command = text.split(' ')[1]
+		mumbleNick = client.find_user( message.actor ).name
 
-		if command.nil?
-			displayAPI = true
-			displayPlayers = true
-			displayMatches = true
-		else
-			case command.downcase
+		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
+
+			displayAPI = false
+			displayPlayers = false
+			displayMatches = false
+
+			text = convert_html_symbols( message.message )
+			command = text.split(' ')[2]
+
+			unless command.nil?
+				case command.downcase
 				when "api"
 					displayAPI = true
 				when "players"
@@ -1566,64 +1566,72 @@ class Bot
 					displayMatches = true
 				else
 					client.send_user_message message.actor, "Unknown argument '#{command}'!"
-			end
-		end
-
-		if displayAPI
-			result = @query.get_data_used
-			unless result.nil?
-				actSessions = result[ "Active_Sessions" ]
-				concSessions = result[ "Concurrent_Sessions" ]
-				todaySessions = result[ "Total_Sessions_Today" ]
-				capSessions = result[ "Session_Cap" ]
-				todayRequests = result[ "Total_Requests_Today" ]
-				capRequests = result[ "Request_Limit_Daily" ]
-				client.send_user_message message.actor, "TribesAPI: #{actSessions}/#{concSessions}(Cur. Sessions), #{todaySessions}/#{capSessions} (Tot. Sessions), #{todayRequests}/#{capRequests} (Tot. Requests)"
-			end
-		end
-
-		if displayPlayers
-			if @players[ client ]
-				@players[ client ].each_pair do |session, player|
-					client.send_user_message message.actor, "Player: #{player.playerName}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 				end
 			else
-				client.send_user_message message.actor, "No players registered"
+				displayAPI = true
+				displayPlayers = true
+				displayMatches = true
 			end
-		end
 
-		if displayMatches
-			if @matches
+			if displayAPI
+				result = @query.get_data_used
+				unless result.nil?
+					actSessions = result[ "Active_Sessions" ]
+					concSessions = result[ "Concurrent_Sessions" ]
+					todaySessions = result[ "Total_Sessions_Today" ]
+					capSessions = result[ "Session_Cap" ]
+					todayRequests = result[ "Total_Requests_Today" ]
+					capRequests = result[ "Request_Limit_Daily" ]
+					client.send_user_message message.actor, "TribesAPI: #{actSessions}/#{concSessions}(Cur. Sessions), #{todaySessions}/#{capSessions} (Tot. Sessions), #{todayRequests}/#{capRequests} (Tot. Requests)"
+				end
+			end
 
-				@matches.each do |match|
-
-					playerStr = []
-					match.teams.each do |team|
-						players = match.players.select{ |pN, t| t.eql?( team ) }.keys
-						playerStr << "#{players.join(', ')} (#{team})"
+			if displayPlayers
+				if @players[ client ]
+					@players[ client ].each_pair do |session, player|
+						client.send_user_message message.actor, "Player: #{player.playerName}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 					end
-					teamStr = ""
-					if playerStr.length > 0
-						teamStr << ", teams: #{playerStr.join( ' ')}"
-					end
+				else
+					client.send_user_message message.actor, "No players registered"
+				end
+			end
 
-					resultStr = ""
-					if match.results.length > 0
-						resultStr << ", results:"
-						match.results.each do |res|
-							resultStr << " #{res.scores.join('-')}"
+			if displayMatches
+				if @matches
+
+					@matches.each do |match|
+
+						playerStr = []
+						match.teams.each do |team|
+							players = match.players.select{ |pN, t| t.eql?( team ) }.keys
+							playerStr << "#{players.join(', ')} (#{team})"
 						end
+						teamStr = ""
+						if playerStr.length > 0
+							teamStr << ", teams: #{playerStr.join( ' ')}"
+						end
+
+						resultStr = ""
+						if match.results.length > 0
+							resultStr << ", results:"
+							match.results.each do |res|
+								resultStr << " #{res.scores.join('-')}"
+							end
+						end
+
+						client.send_user_message message.actor, "Id: #{match.id}, label: #{match.label}, status: #{match.status}#{teamStr}#{resultStr}"
+
 					end
 
-					client.send_user_message message.actor, "Id: #{match.id}, label: #{match.label}, status: #{match.status}#{teamStr}#{resultStr}"
+				else
+
+					client.send_user_message message.actor, "No matches registered - this is not good!"
 
 				end
-
-			else
-
-				client.send_user_message message.actor, "No matches registered - this is not good!"
-
 			end
+
+		else
+			client.send_user_message message.actor, "No admin privileges."
 		end
 
 	end
@@ -1653,7 +1661,7 @@ class Bot
 			end
 		else
 			muteValue = player.muted + 1
-			if muteValue > 2
+			if muteValue > 3
 				muteValue = 0
 			end
 		end
@@ -1688,8 +1696,8 @@ class Bot
 	end
 
 	def help_msg_mute client, message
-		client.send_user_message message.actor, "Syntax: !mute 0/1/2"
-		client.send_user_message message.actor, "Mute the bot's spam messages from 0 (no mute) to 2 (all muted)"
+		client.send_user_message message.actor, "Syntax: !mute 0/1/2/3"
+		client.send_user_message message.actor, "Mute the bot's spam messages from 0 (no mute) to 3 (all muted)"
 	end
 
 	def cmd_result client, message
@@ -1974,17 +1982,31 @@ class Bot
 		client.send_user_message message.actor, "Shows the latest matches that have been registered on the bot."
 	end
 
-	def cmd_eval client, message
+	def cmd_admin_eval client, message
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
-			cmd = convert_html_symbols(message.message)[ 6..-1 ]
-			unless cmd.nil?
-				eval(cmd)
+		if @players[ client ].has_key?( mumbleNick ) && @players[ client ][ mumbleNick ].admin.eql?( "SuperUser" )
+			cmd = convert_html_symbols(message.message).split[ 2..-1 ].join(' ')
+			unless cmd.empty?
+				if ( cmd.include?( "system" ) || cmd.include?( "`" ) || cmd.include?( "%x" ) )
+					client.send_user_message message.actor, "System calls not allowed."
+					return
+				else
+					Thread.new { eval_cmd( client, message.actor, cmd ) }
+				end
 			end
+		else
+			client.send_user_message message.actor, "No SuperUser privileges."
 		end
 
+	end
+
+	def eval_cmd client, session, command
+		puts "Eval called with command: #{command}"
+		output = eval(command)
+		puts "Eval call returned: #{output}"
+		client.send_user_message session, "Output: #{output}"
 	end
 
 	def get_player_stats nick, *stats
