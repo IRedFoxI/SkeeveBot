@@ -141,6 +141,12 @@ module Kesh
 				mumble_write(message)
 			end
 
+			# @param channel_id [Numeric]
+			# @param self_mute [Boolean]
+			# @param self_deaf [Boolean]
+			# @param mute [Boolean]
+			# @param deaf [Boolean]
+			# @param comment [String]
 			def send_user_state session, channel_id, self_mute, self_deaf, mute, deaf, comment
 				message = MumbleProto::UserState.new
 				message.session = session

@@ -25,9 +25,11 @@ class Bot
 		@teamNum = Hash.new
 		@defaultPlayerNum = 7
 		@playerNum = Hash.new
+		# [Hash<(MumbleClient, Hash<(String, Player)>)>]
 		@players = Hash.new
 		@currentMatch = Hash.new
 		@nextMatchId = 0
+		# [Array<(Match)>]
 		@matches = Array.new
 		@defaultMute = 1
 		@moveQueue = Hash.new
@@ -137,7 +139,7 @@ class Bot
 		end
 
 		# Main loop
-		while !@shutdown do
+		until @shutdown do
 
 			if ( Time.now - @lastCleanUp ) > 60 * 60
 				remove_old_matches
@@ -167,7 +169,7 @@ class Bot
 		match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
 		comment << "<HR>Current status: #{match.status}"
 
-		if !@players[ client ].nil? && !@players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }.empty?
+		unless @players[ client ].nil? || @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }.empty?
 			comment << "<HR><TABLE BORDER=\"0\"><TR><TD>Signups</TD>"
 			signups = @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }
 			noCols = 1
@@ -227,7 +229,7 @@ class Bot
 			end
 			comment << "</TABLE>"
 		end
-		comment << "<HR>Documentation: <A HREF=http://iredfoxi.github.io/SkeeveBot/><CODE>http://iredfoxi.github.io/SkeeveBot/</CODE></A>"
+		comment << "<HR>Documentation: <A HREF='http://iredfoxi.github.io/SkeeveBot/'><CODE>http://iredfoxi.github.io/SkeeveBot/</CODE></A>"
 
 		client.set_comment( comment )
 	end		
@@ -780,11 +782,13 @@ class Bot
 
 		if user.nil?
 
+			player = nil
+
 			if @players[ client ]
 				player = @players[ client ].select{ |mN, pl| pl.playerName.downcase.eql?( nick.downcase ) }.values.first
 			end
 
-			if player.nil? 
+			if player.nil?
 
 				if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
 					ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
@@ -805,7 +809,7 @@ class Bot
 					end
 				end
 
-			elsif
+			else
 
 				user = client.find_user( player.mumbleNick )
 				playerName = player.playerName
@@ -849,6 +853,7 @@ class Bot
 		end
 	end
 
+	# @param client [MumbleClient] The mumble client.
 	def cmd_info client, message
 
 		mumbleNick = client.find_user( message.actor ).name
@@ -930,7 +935,7 @@ class Bot
 		client.send_user_message message.actor, "Syntax !info \"stat\""
 		client.send_user_message message.actor, "As above but also shows your additional statistic \"stat\""
 		client.send_user_message message.actor, "Syntax !info \"tribes_nick\""
-		client.send_user_message message.actor, "Returns \"nick\"'s tag, playername and level, seaching for his alias if set"
+		client.send_user_message message.actor, "Returns \"nick\"'s tag, playername and level, searching for his alias if set"
 		client.send_user_message message.actor, "Syntax !info \"tribes_nick\" \"stat\""
 		client.send_user_message message.actor, "As above but also shows \"tribes_nick\"'s \"stat\""
 		client.send_user_message message.actor, "\"stat\" can be a space delimited list of these stats:"
@@ -1154,13 +1159,14 @@ class Bot
 
 			unless roles.empty?
 				roles.each do |role|
-					if !@rolesRequired[ client ].has_key? role
+					unless @rolesRequired[ client ].has_key? role
 						client.send_user_message message.actor, "Unknown role: '#{role}'."
 						return
 					end
 				end
 			end
 
+			prevValue = nil
 
 			if @chanRoles[ client ]
 
@@ -1214,7 +1220,7 @@ class Bot
 			role = text.split(' ')[ 2 ]
 			required = text.split(' ')[ 3 ]
 
-			if ( required.nil? && @chanRoles[ client ] && @chanRoles[ client ][ chanPath ] && @chanRoles[ client ][ chanPath ].length == 1 )
+			if required.nil? && @chanRoles[ client ] && @chanRoles[ client ][ chanPath ] && @chanRoles[ client ][ chanPath ].length == 1
 				role = @chanRoles[ client ][ chanPath ].first
 				required = text.split(' ')[ 2 ]
 			end
@@ -1230,6 +1236,8 @@ class Bot
 				client.send_user_message message.actor, "Argument must be numeric, 'T' or 'Q'."
 				return
 			end
+
+			prevValue = nil
 
 			if @rolesRequired[ client ]
 
@@ -1278,7 +1286,7 @@ class Bot
 			chanPath = client.find_user( message.actor ).channel.path
 			role = text.split(' ')[ 2 ]
 
-			if ( role.nil? && @chanRoles[ client ][ chanPath ] && @chanRoles[ client ][ chanPath ].length == 1 )
+			if role.nil? && @chanRoles[ client ][ chanPath ] && @chanRoles[ client ][ chanPath ].length == 1
 				role = @chanRoles[ client ][ chanPath ] 
 			end
 
@@ -1287,7 +1295,7 @@ class Bot
 				return
 			end
 
-			if !@rolesRequired[ client ].has_key? role
+			unless @rolesRequired[ client ].has_key? role
 					client.send_user_message message.actor, "Unknown role: '#{role}'."
 				return
 			end
@@ -1451,7 +1459,7 @@ class Bot
 
 			sectionName = "Muted"
 
-			if !player.muted.eql?( @defaultMute )
+			unless player.muted.eql?( @defaultMute )
 				ini.removeValue( sectionName, oldPlayerName )
 				ini.setValue( sectionName, player.aliasNick ? player.aliasNick : player.mumbleNick, player.muted.to_s )
 			end
@@ -1459,7 +1467,7 @@ class Bot
 			sectionName = "ELO"
 
 			if !player.elo.nil? && !player.elo.eql?( 1000 )
-				ini.removeValue( sectionName, oldPlayer.aliasNick ? oldPlayer.aliasNick : oldPlayer.mumbleNick )
+				ini.removeValue( sectionName, oldPlayerName )
 				ini.setValue( sectionName, player.aliasNick ? player.aliasNick : player.mumbleNick, player.elo.to_s )
 			end
 
@@ -1551,7 +1559,11 @@ class Bot
 			text = convert_html_symbols( message.message )
 			command = text.split(' ')[2]
 
-			unless command.nil?
+			if command.nil?
+				displayAPI = true
+				displayPlayers = true
+				displayMatches = true
+			else
 				case command.downcase
 				when "api"
 					displayAPI = true
@@ -1562,10 +1574,6 @@ class Bot
 				else
 					client.send_user_message message.actor, "Unknown argument '#{command}'!"
 				end
-			else
-				displayAPI = true
-				displayPlayers = true
-				displayMatches = true
 			end
 
 			if displayAPI
@@ -1984,7 +1992,7 @@ class Bot
 		if @players[ client ].has_key?( mumbleNick ) && @players[ client ][ mumbleNick ].admin.eql?( "SuperUser" )
 			cmd = convert_html_symbols(message.message).split[ 2..-1 ].join(' ')
 			unless cmd.empty?
-				if ( cmd.include?( "system" ) || cmd.include?( "`" ) || cmd.include?( "%x" ) )
+				if cmd[ "system" ] || cmd[ "`" ] || cmd[ "%x" ]
 					client.send_user_message message.actor, "System calls not allowed."
 					return
 				else
@@ -2002,6 +2010,8 @@ class Bot
 		output = eval(command)
 		puts "Eval call returned: #{output}"
 		client.send_user_message session, "Output: #{output}"
+	rescue => e
+		client.send_user_message session, "The eval threw an exception '#{e}'\nTRACE:\n#{e.backtrace.join('\n')}"
 	end
 
 	def get_player_stats nick, *stats
@@ -2392,7 +2402,6 @@ class Bot
 
 	def convert_html_symbols text
 		raise 'Not a String' unless text.class.eql?( String )
-		text.gsub!( "&amp;", "&" )
 		text.gsub!( "&quot;", "\"" )
 		text.gsub!( "&lt;", "<" )
 		text.gsub!( "&gt;", ">" )
@@ -2445,6 +2454,7 @@ class Bot
 		# text.gsub!( "&szlig;", "ß" )
 		# text.gsub!( "&Ntilde;", "Ñ" )
 		# text.gsub!( "&ntilde;", "ñ" )
+		text.gsub!( "&amp;", "&" )
 		return text
 	end
 
