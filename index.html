@@ -63,7 +63,7 @@ ratings and help captains pick teams (or suggest entire lineups).</p>
 !find &lt;nick&gt; - find which channel someone is in (mumble or tribes nick)
 !goto &lt;mumble_nick&gt; - move yourself to someone's channel
 !info &lt;nick&gt; &lt;stat&gt; - detailed stats on player
-!mute 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)
+!mute 0/1/2/3 - mute the bots spam messages from 0 (no mute) to 3 (all muted)
 !result &lt;map1&gt; &lt;map2&gt; &lt;map3&gt; - report the results of your last PUG (use &lt;yourcaps&gt;-&lt;theircaps&gt; for each map)
 !list - shows all the matches in the last 24h
 </code></pre>
@@ -120,10 +120,10 @@ ratings and help captains pick teams (or suggest entire lineups).</p>
 <h3>
 <a name="mute" class="anchor" href="#mute"><span class="octicon octicon-link"></span></a>!mute</h3>
 
-<pre><code>!mute 0/1/2
+<pre><code>!mute 0/1/2/3
 </code></pre>
 
-<p>Mute the bot's spam messages from 0 (no mute) to 2 (all muted)</p>
+<p>Mute the bot's spam messages from 0 (no mute) to 3 (all muted)</p>
 
 <h3>
 <a name="result" class="anchor" href="#result"><span class="octicon octicon-link"></span></a>!result</h3>
@@ -142,7 +142,7 @@ ratings and help captains pick teams (or suggest entire lineups).</p>
 <p>Shows the latest matches that have been registered on the bot.</p>
 
 <h2>
-<a name="admin-commands" class="anchor" href="#admin-commands"><span class="octicon octicon-link"></span></a>Admin Commands</h2>
+<a name="admin-commands" class="anchor" href="#admin-commands"><span class="octicon octicon-link"></span></a>Admin commands</h2>
 
 <p>The following admin commands are available:</p>
 
@@ -154,10 +154,13 @@ ratings and help captains pick teams (or suggest entire lineups).</p>
 !admin playernum &lt;number&gt; - set the required number of players per team
 !admin alias &lt;mumble nick&gt; &lt;tribes nick&gt; - set a player's alias
 !admin come - make the bot move to your channel
-!admin op &lt;player&gt; - make a player an admin
+!admin op "player" - make "player" an admin
 !admin result &lt;match_id&gt; &lt;map1&gt; &lt;map2&gt; &lt;map3&gt; - set the result of a match"
 !admin delete &lt;match_id&gt; - delete a match"
 </code></pre>
+
+<h2>
+<a name="admin-commands-details" class="anchor" href="#admin-commands-details"><span class="octicon octicon-link"></span></a>Admin commands details</h2>
 
 <h3>
 <a name="admin-alias" class="anchor" href="#admin-alias"><span class="octicon octicon-link"></span></a>!admin alias</h3>
@@ -199,7 +202,7 @@ undeleted.</p>
 <pre><code>!admin playernum &lt;number&gt;  
 </code></pre>
 
-<p>Set the required number of players per team .</p>
+<p>Set the required number of players per team.</p>
 
 <h2>
 <a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h2>
@@ -235,7 +238,7 @@ sudo gem install gruff
 <h2>
 <a name="thanks" class="anchor" href="#thanks"><span class="octicon octicon-link"></span></a>Thanks</h2>
 
-<p>Big thank you to <a href="https://github.com/Orvid">Orvid</a> for helping, Lumberjack for the IRC library and general Ruby help and <a href="https://github.com/FreeApophis">FreeApophis</a> for the mumble library.</p>
+<p>Big thank you to <a href="https://github.com/Orvid">Orvid</a> for helping, Lumberjack for the library system and general Ruby help and <a href="https://github.com/FreeApophis">FreeApophis</a> for the mumble library.</p>
       </section>
 
     </div>
