@@ -139,7 +139,7 @@ class Bot
 		end
 
 		# Main loop
-		while !@shutdown do
+		until @shutdown do
 
 			if ( Time.now - @lastCleanUp ) > 60 * 60
 				remove_old_matches
@@ -169,7 +169,7 @@ class Bot
 		match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
 		comment << "<HR>Current status: #{match.status}"
 
-		if !@players[ client ].nil? && !@players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }.empty?
+		unless @players[ client ].nil? || @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }.empty?
 			comment << "<HR><TABLE BORDER=\"0\"><TR><TD>Signups</TD>"
 			signups = @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }
 			noCols = 1
@@ -229,7 +229,7 @@ class Bot
 			end
 			comment << "</TABLE>"
 		end
-		comment << "<HR>Documentation: <A HREF=http://iredfoxi.github.io/SkeeveBot/><CODE>http://iredfoxi.github.io/SkeeveBot/</CODE></A>"
+		comment << "<HR>Documentation: <A HREF='http://iredfoxi.github.io/SkeeveBot/'><CODE>http://iredfoxi.github.io/SkeeveBot/</CODE></A>"
 
 		client.set_comment( comment )
 	end		
@@ -935,7 +935,7 @@ class Bot
 		client.send_user_message message.actor, "Syntax !info \"stat\""
 		client.send_user_message message.actor, "As above but also shows your additional statistic \"stat\""
 		client.send_user_message message.actor, "Syntax !info \"tribes_nick\""
-		client.send_user_message message.actor, "Returns \"nick\"'s tag, playername and level, seaching for his alias if set"
+		client.send_user_message message.actor, "Returns \"nick\"'s tag, playername and level, searching for his alias if set"
 		client.send_user_message message.actor, "Syntax !info \"tribes_nick\" \"stat\""
 		client.send_user_message message.actor, "As above but also shows \"tribes_nick\"'s \"stat\""
 		client.send_user_message message.actor, "\"stat\" can be a space delimited list of these stats:"
@@ -1159,13 +1159,14 @@ class Bot
 
 			unless roles.empty?
 				roles.each do |role|
-					if !@rolesRequired[ client ].has_key? role
+					unless @rolesRequired[ client ].has_key? role
 						client.send_user_message message.actor, "Unknown role: '#{role}'."
 						return
 					end
 				end
 			end
 
+			prevValue = nil
 
 			if @chanRoles[ client ]
 
@@ -1219,7 +1220,7 @@ class Bot
 			role = text.split(' ')[ 2 ]
 			required = text.split(' ')[ 3 ]
 
-			if ( required.nil? && @chanRoles[ client ] && @chanRoles[ client ][ chanPath ] && @chanRoles[ client ][ chanPath ].length == 1 )
+			if required.nil? && @chanRoles[ client ] && @chanRoles[ client ][ chanPath ] && @chanRoles[ client ][ chanPath ].length == 1
 				role = @chanRoles[ client ][ chanPath ].first
 				required = text.split(' ')[ 2 ]
 			end
@@ -1235,6 +1236,8 @@ class Bot
 				client.send_user_message message.actor, "Argument must be numeric, 'T' or 'Q'."
 				return
 			end
+
+			prevValue = nil
 
 			if @rolesRequired[ client ]
 
@@ -1283,7 +1286,7 @@ class Bot
 			chanPath = client.find_user( message.actor ).channel.path
 			role = text.split(' ')[ 2 ]
 
-			if ( role.nil? && @chanRoles[ client ][ chanPath ] && @chanRoles[ client ][ chanPath ].length == 1 )
+			if role.nil? && @chanRoles[ client ][ chanPath ] && @chanRoles[ client ][ chanPath ].length == 1
 				role = @chanRoles[ client ][ chanPath ] 
 			end
 
@@ -1292,7 +1295,7 @@ class Bot
 				return
 			end
 
-			if !@rolesRequired[ client ].has_key? role
+			unless @rolesRequired[ client ].has_key? role
 					client.send_user_message message.actor, "Unknown role: '#{role}'."
 				return
 			end
@@ -1456,7 +1459,7 @@ class Bot
 
 			sectionName = "Muted"
 
-			if !player.muted.eql?( @defaultMute )
+			unless player.muted.eql?( @defaultMute )
 				ini.removeValue( sectionName, oldPlayerName )
 				ini.setValue( sectionName, player.aliasNick ? player.aliasNick : player.mumbleNick, player.muted.to_s )
 			end
@@ -1464,7 +1467,7 @@ class Bot
 			sectionName = "ELO"
 
 			if !player.elo.nil? && !player.elo.eql?( 1000 )
-				ini.removeValue( sectionName, oldPlayer.aliasNick ? oldPlayer.aliasNick : oldPlayer.mumbleNick )
+				ini.removeValue( sectionName, oldPlayerName )
 				ini.setValue( sectionName, player.aliasNick ? player.aliasNick : player.mumbleNick, player.elo.to_s )
 			end
 
@@ -1556,7 +1559,11 @@ class Bot
 			text = convert_html_symbols( message.message )
 			command = text.split(' ')[2]
 
-			unless command.nil?
+			if command.nil?
+				displayAPI = true
+				displayPlayers = true
+				displayMatches = true
+			else
 				case command.downcase
 				when "api"
 					displayAPI = true
@@ -1567,10 +1574,6 @@ class Bot
 				else
 					client.send_user_message message.actor, "Unknown argument '#{command}'!"
 				end
-			else
-				displayAPI = true
-				displayPlayers = true
-				displayMatches = true
 			end
 
 			if displayAPI

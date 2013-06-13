@@ -297,6 +297,7 @@ class ELOCalculator
 
 	end
 
+	# @param results [Array<(Result)>]
 	def calc_actual_scores results
 
 		actualScores = Hash.new
