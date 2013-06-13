@@ -505,7 +505,6 @@ class Bot
 				elsif firstRoleReq.eql? "Q"
 					# Joined a queue channel
 
-
 					player.roles = roles
 					player.team = nil
 					player.match = nil
@@ -538,7 +537,8 @@ class Bot
 				end
 
 				if player.muted < 3
-					client.send_user_message( player.session, "!!!IMPORTANT CHANGE!!! Report the scores now in the format BE-DS. See my comment for details." )
+					# Important announcements here and reset players mute level from 3 to 2
+					# client.send_user_message( player.session, "!!!IMPORTANT ANNOUNCEMENT!!!" )
 				end
 			end
 

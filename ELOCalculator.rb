@@ -14,7 +14,7 @@ Result = Struct.new( :map, :teams, :scores, :comment )
 
 class ELOCalculator
 
-	def initialize
+	def initialize multiplier
 		@matches = Array.new
 		@currentELOs = Hash.new
 		@players = Hash.new
@@ -22,6 +22,7 @@ class ELOCalculator
 		@estimated = Hash.new
 		@actual = Hash.new
 		@ratioNew = Hash.new
+		@multiplier = multiplier
 	end
 
 	def load_matches
@@ -190,7 +191,7 @@ class ELOCalculator
 		# factor = 1 + 1.1 ** ( -2 * matchNumber )
 		# factor = 1 + 1.2 ** ( 10 - 2 * matchNumber )
 		factor = 1 + 1.2 ** ( 10 - matchNumber )
-		factor = factor * 3
+		factor = factor * @multiplier
 		return factor
 	end
 
@@ -460,11 +461,12 @@ class ELOCalculator
 
 end
 
-calc = ELOCalculator.new
+multiplier = 7
+calc = ELOCalculator.new( multiplier )
 
 calc.load_matches
 
-weightedAverage = false
+weightedAverage = true
 
 repeat = 0
 while repeat < 1
