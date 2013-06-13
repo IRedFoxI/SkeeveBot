@@ -43,7 +43,7 @@ CREATE TABLE `Match` (
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 
-CREATE TABLE IF NOT EXISTS `MatchResult` (
+CREATE TABLE `MatchResult` (
   `MatchID` int(10) unsigned NOT NULL,
   `MapID` int(10) unsigned NOT NULL,
   `Score` varchar(32) COLLATE utf8_bin NOT NULL,
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS `MatchResult` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 
-CREATE TABLE IF NOT EXISTS `MatchTeam` (
+CREATE TABLE `MatchTeam` (
   `MatchID` int(10) unsigned NOT NULL,
   `TeamID` int(10) unsigned NOT NULL,
   PRIMARY KEY (`MatchID`,`TeamID`),
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS `MatchTeam` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 
-CREATE TABLE IF NOT EXISTS `Player` (
+CREATE TABLE `Player` (
 	`ID` int(10) unsigned NOT NULL AUTO_INCREMENT,
 	`MumbleNick` varchar(64) COLLATE utf8_bin NOT NULL,
 
@@ -75,14 +75,14 @@ CREATE TABLE IF NOT EXISTS `Player` (
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 
-CREATE TABLE IF NOT EXISTS `Team` (
+CREATE TABLE `Team` (
   `ID` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `Comment` text COLLATE utf8_bin NOT NULL,
   PRIMARY KEY (`ID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 
-CREATE TABLE IF NOT EXISTS `TeamPlayer` (
+CREATE TABLE `TeamPlayer` (
   `TeamID` int(10) unsigned NOT NULL,
   `PlayerID` int(10) unsigned NOT NULL,
   PRIMARY KEY (`TeamID`,`PlayerID`),
