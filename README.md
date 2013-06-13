@@ -22,7 +22,7 @@ The following commands are available:
 	!find <nick> - find which channel someone is in (mumble or tribes nick)
 	!goto <mumble_nick> - move yourself to someone's channel
 	!info <nick> <stat> - detailed stats on player
-	!mute 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)
+	!mute 0/1/2/3 - mute the bots spam messages from 0 (no mute) to 3 (all muted)
 	!result <map1> <map2> <map3> - report the results of your last PUG (use <yourcaps>-<theircaps> for each map)
 	!list - shows all the matches in the last 24h
 
@@ -55,8 +55,8 @@ For all of the above &lt;stat&gt; can be a space delimited, case-insensitive lis
 Returns a list of available statistics
 
 ### !mute ###
-	!mute 0/1/2
-Mute the bot's spam messages from 0 (no mute) to 2 (all muted)
+	!mute 0/1/2/3
+Mute the bot's spam messages from 0 (no mute) to 3 (all muted)
 
 ### !result ###
 	!result <map1> <map2> <map3>

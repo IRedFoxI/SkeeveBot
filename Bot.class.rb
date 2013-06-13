@@ -160,7 +160,7 @@ class Bot
 		comment = String.new
 		comment << "<center>-=[ SkeeveBot ]=-</center>"
 		comment << "<code>---------------------------------------------------------------</code><BR>"
-		comment << "<code>!mute 0/1/2</code> [ from 0 (no mute) to 2 (all muted) ]<BR>"
+		comment << "<code>!mute 0/1/2/3</code> [ from 0 (no mute) to 3 (all muted) ]<BR>"
 		comment << "<code>!result map1 map2 map3</code> [ use BE-DS for each map ]<BR>"
 		comment << "<code>!list</code> [ shows all matches in the last 24h ]"
 
@@ -765,7 +765,7 @@ class Bot
 		client.send_user_message message.actor, "!find \"mumble_nick\" - find which channel someone is in"
 		client.send_user_message message.actor, "!goto \"mumble_nick\" - move yourself to someone's channel"
 		client.send_user_message message.actor, "!info \"tribes_nick\" \"stat\" - detailed stats on player"
-		client.send_user_message message.actor, "!mute - 0/1/2 - mute the bots spam messages from 0 (no mute) to 2 (all muted)"
+		client.send_user_message message.actor, "!mute - 0/1/2/3 - mute the bots spam messages from 0 (no mute) to 3 (all muted)"
 		client.send_user_message message.actor, "!result \"map1\" \"map2\" \"map3\"- sets the result of your last match"
 		client.send_user_message message.actor, "!list - shows the latest matches"
 		client.send_user_message message.actor, "!admin \"command\" - admin commands"	end
@@ -1656,7 +1656,7 @@ class Bot
 			end
 		else
 			muteValue = player.muted + 1
-			if muteValue > 2
+			if muteValue > 3
 				muteValue = 0
 			end
 		end
@@ -1691,8 +1691,8 @@ class Bot
 	end
 
 	def help_msg_mute client, message
-		client.send_user_message message.actor, "Syntax: !mute 0/1/2"
-		client.send_user_message message.actor, "Mute the bot's spam messages from 0 (no mute) to 2 (all muted)"
+		client.send_user_message message.actor, "Syntax: !mute 0/1/2/3"
+		client.send_user_message message.actor, "Mute the bot's spam messages from 0 (no mute) to 3 (all muted)"
 	end
 
 	def cmd_result client, message
