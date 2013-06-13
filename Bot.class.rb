@@ -122,7 +122,6 @@ class Bot
 			client.register_text_handler "!mute", method( :cmd_mute )
 			client.register_text_handler "!result", method( :cmd_result )
 			client.register_text_handler "!list", method( :cmd_list )
-			client.register_text_handler "!debug", method( :cmd_debug )
 
 			client.register_exception_handler method( :on_exception )
 
@@ -998,6 +997,8 @@ class Bot
 				cmd_admin_restart( client, message )
 			when "eval"
 				cmd_admin_eval( client, message )
+			when "debug"
+				cmd_admin_debug( client, message )
 			else
 				client.send_user_message message.actor, "Unknown admin command '#{command}'."
 			end
@@ -1537,16 +1538,21 @@ class Bot
 		client.send_user_message message.actor, "Makes \"mumble_nick\" an admin if you are a SuperUser"
 	end
 
-	def cmd_debug client, message
-		displayAPI = false
-		displayPlayers = false
-		displayMatches = false
+	def cmd_admin_debug client, message
 
-		text = convert_html_symbols( message.message )
-		command = text.split(' ')[1]
+		mumbleNick = client.find_user( message.actor ).name
 
-		unless command.nil?
-			case command.downcase
+		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
+
+			displayAPI = false
+			displayPlayers = false
+			displayMatches = false
+
+			text = convert_html_symbols( message.message )
+			command = text.split(' ')[2]
+
+			unless command.nil?
+				case command.downcase
 				when "api"
 					displayAPI = true
 				when "players"
@@ -1555,68 +1561,72 @@ class Bot
 					displayMatches = true
 				else
 					client.send_user_message message.actor, "Unknown argument '#{command}'!"
-			end
-		else
-			displayAPI = true
-			displayPlayers = true
-			displayMatches = true
-		end
-
-		if displayAPI
-			result = @query.get_data_used
-			unless result.nil?
-				actSessions = result[ "Active_Sessions" ]
-				concSessions = result[ "Concurrent_Sessions" ]
-				todaySessions = result[ "Total_Sessions_Today" ]
-				capSessions = result[ "Session_Cap" ]
-				todayRequests = result[ "Total_Requests_Today" ]
-				capRequests = result[ "Request_Limit_Daily" ]
-				client.send_user_message message.actor, "TribesAPI: #{actSessions}/#{concSessions}(Cur. Sessions), #{todaySessions}/#{capSessions} (Tot. Sessions), #{todayRequests}/#{capRequests} (Tot. Requests)"
-			end
-		end
-
-		if displayPlayers
-			if @players[ client ]
-				@players[ client ].each_pair do |session, player|
-					client.send_user_message message.actor, "Player: #{player.playerName}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 				end
 			else
-				client.send_user_message message.actor, "No players registered"
+				displayAPI = true
+				displayPlayers = true
+				displayMatches = true
 			end
-		end
 
-		if displayMatches
-			if @matches
+			if displayAPI
+				result = @query.get_data_used
+				unless result.nil?
+					actSessions = result[ "Active_Sessions" ]
+					concSessions = result[ "Concurrent_Sessions" ]
+					todaySessions = result[ "Total_Sessions_Today" ]
+					capSessions = result[ "Session_Cap" ]
+					todayRequests = result[ "Total_Requests_Today" ]
+					capRequests = result[ "Request_Limit_Daily" ]
+					client.send_user_message message.actor, "TribesAPI: #{actSessions}/#{concSessions}(Cur. Sessions), #{todaySessions}/#{capSessions} (Tot. Sessions), #{todayRequests}/#{capRequests} (Tot. Requests)"
+				end
+			end
 
-				@matches.each do |match|
-
-					playerStr = []
-					match.teams.each do |team|
-						players = match.players.select{ |pN, t| t.eql?( team ) }.keys
-						playerStr << "#{players.join(', ')} (#{team})"
+			if displayPlayers
+				if @players[ client ]
+					@players[ client ].each_pair do |session, player|
+						client.send_user_message message.actor, "Player: #{player.playerName}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 					end
-					teamStr = ""
-					if playerStr.length > 0
-						teamStr << ", teams: #{playerStr.join( ' ')}"
-					end
+				else
+					client.send_user_message message.actor, "No players registered"
+				end
+			end
 
-					resultStr = ""
-					if match.results.length > 0
-						resultStr << ", results:"
-						match.results.each do |res|
-							resultStr << " #{res.scores.join('-')}"
+			if displayMatches
+				if @matches
+
+					@matches.each do |match|
+
+						playerStr = []
+						match.teams.each do |team|
+							players = match.players.select{ |pN, t| t.eql?( team ) }.keys
+							playerStr << "#{players.join(', ')} (#{team})"
 						end
+						teamStr = ""
+						if playerStr.length > 0
+							teamStr << ", teams: #{playerStr.join( ' ')}"
+						end
+
+						resultStr = ""
+						if match.results.length > 0
+							resultStr << ", results:"
+							match.results.each do |res|
+								resultStr << " #{res.scores.join('-')}"
+							end
+						end
+
+						client.send_user_message message.actor, "Id: #{match.id}, label: #{match.label}, status: #{match.status}#{teamStr}#{resultStr}"
+
 					end
 
-					client.send_user_message message.actor, "Id: #{match.id}, label: #{match.label}, status: #{match.status}#{teamStr}#{resultStr}"
+				else
+
+					client.send_user_message message.actor, "No matches registered - this is not good!"
 
 				end
-
-			else
-
-				client.send_user_message message.actor, "No matches registered - this is not good!"
-
 			end
+
+		else
+			client.send_user_message message.actor, "No admin privileges."
 		end
 
 	end
