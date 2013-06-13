@@ -2394,7 +2394,6 @@ class Bot
 
 	def convert_html_symbols text
 		raise 'Not a String' unless text.class.eql?( String )
-		text.gsub!( "&amp;", "&" )
 		text.gsub!( "&quot;", "\"" )
 		text.gsub!( "&lt;", "<" )
 		text.gsub!( "&gt;", ">" )
@@ -2447,6 +2446,7 @@ class Bot
 		# text.gsub!( "&szlig;", "ß" )
 		# text.gsub!( "&Ntilde;", "Ñ" )
 		# text.gsub!( "&ntilde;", "ñ" )
+		text.gsub!( "&amp;", "&" )
 		return text
 	end
 
