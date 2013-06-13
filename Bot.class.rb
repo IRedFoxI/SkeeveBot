@@ -123,7 +123,6 @@ class Bot
 			client.register_text_handler "!result", method( :cmd_result )
 			client.register_text_handler "!list", method( :cmd_list )
 			client.register_text_handler "!debug", method( :cmd_debug )
-			client.register_text_handler "!eval", method( :cmd_eval )
 
 			client.register_exception_handler method( :on_exception )
 
@@ -802,7 +801,6 @@ class Bot
 							if playerName.downcase.eql?( nick.downcase )
 								user = u
 								found = true
-								puts playerName
 							end
 						end
 					end
@@ -816,8 +814,6 @@ class Bot
 			end
 
 		end
-
-		puts playerName
 		
 		if user
 			if playerName.nil?
@@ -1000,6 +996,8 @@ class Bot
 				cmd_admin_shutdown( client, message )
 			when "restart"
 				cmd_admin_restart( client, message )
+			when "eval"
+				cmd_admin_eval( client, message )
 			else
 				client.send_user_message message.actor, "Unknown admin command '#{command}'."
 			end
@@ -1969,17 +1967,31 @@ class Bot
 		client.send_user_message message.actor, "Shows the latest matches that have been registered on the bot."
 	end
 
-	def cmd_eval client, message
+	def cmd_admin_eval client, message
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
-			cmd = convert_html_symbols(message.message)[ 6..-1 ]
-			unless cmd.nil?
-				eval(cmd)
+		if @players[ client ].has_key?( mumbleNick ) && @players[ client ][ mumbleNick ].admin.eql?( "SuperUser" )
+			cmd = convert_html_symbols(message.message).split[ 2..-1 ].join(' ')
+			unless cmd.empty?
+				if ( cmd.include?( "system" ) || cmd.include?( "`" ) || cmd.include?( "%x" ) )
+					client.send_user_message message.actor, "System calls not allowed."
+					return
+				else
+					Thread.new { eval_cmd( client, message.actor, cmd ) }
+				end
 			end
+		else
+			client.send_user_message message.actor, "No SuperUser privileges."
 		end
 
+	end
+
+	def eval_cmd client, session, command
+		puts "Eval called with command: #{command}"
+		output = eval(command)
+		puts "Eval call returned: #{output}"
+		client.send_user_message session, "Output: #{output}"
 	end
 
 	def get_player_stats nick, *stats
