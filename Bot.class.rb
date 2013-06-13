@@ -2138,6 +2138,12 @@ class Bot
 
 			match.teams.each do |team|
 				playerNames = match.players.select{ |pN, t| t.eql?( team ) }.keys
+				playerNames.each_index do |i|
+					if playerNames[ i ].include?(' ')
+						name = playerNames[ i ]
+						playerNames[ i ] = "\"#{name}\""
+					end
+				end
 				ini.setValue( sectionName, "#{team}", playerNames.join( " " ) )
 			end
 
@@ -2199,12 +2205,14 @@ class Bot
 
 					teams.each do |team|
 
-						playerNames = section.getValue( "#{team}" )
+						playerNamesStr = section.getValue( "#{team}" )
 
-						unless playerNames.nil?
-							playerNames = playerNames.split( ' ' )
+						unless playerNamesStr.nil?
+							# playerNames = playerNamesStr.split( ' ' )
+							playerNames = playerNamesStr.scan(/(?:"(?:\\.|[^"])*"|[^" ])+/)
 							playerNames.each do |pN|
-								players[ pN ] = team
+								name = pN.gsub( "\"", "" )
+								players[ name ] = team
 							end
 						end
 
