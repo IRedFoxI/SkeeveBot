@@ -1992,7 +1992,7 @@ class Bot
 		if @players[ client ].has_key?( mumbleNick ) && @players[ client ][ mumbleNick ].admin.eql?( "SuperUser" )
 			cmd = convert_html_symbols(message.message).split[ 2..-1 ].join(' ')
 			unless cmd.empty?
-				if ( cmd.include?( "system" ) || cmd.include?( "`" ) || cmd.include?( "%x" ) )
+				if cmd[ "system" ] || cmd[ "`" ] || cmd[ "%x" ]
 					client.send_user_message message.actor, "System calls not allowed."
 					return
 				else
@@ -2010,6 +2010,8 @@ class Bot
 		output = eval(command)
 		puts "Eval call returned: #{output}"
 		client.send_user_message session, "Output: #{output}"
+	rescue => e
+		client.send_user_message session, "The eval threw an exception '#{e}'\nTRACE:\n#{e.backtrace.join('\n')}"
 	end
 
 	def get_player_stats nick, *stats
