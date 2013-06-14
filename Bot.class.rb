@@ -182,8 +182,8 @@ class Bot
 				comment << "<TR>"
 				name = String.new
 				name << "[#{pl.tag}]" if ( pl.tag  && !pl.tag.eql?( "" ) )
-				name << pl.playerName
-				roles = pl.roles.join('/')
+				name << convert_symbols_to_html( pl.playerName )
+				roles = convert_symbols_to_html( pl.roles.join('/') )
 				comment << "<TD>#{name}(level: #{pl.level}): #{roles}</TD>"
 				i = 2
 				while i <= noCols
@@ -212,7 +212,8 @@ class Bot
 
 				match.teams.each do |team|
 					players = match.players.select{ |pN, t| t.eql?( team ) }.keys
-					comment << "<TD>#{players.join(', ')}</TD>"
+					playersStr = convert_symbols_to_html( players.join(', ') )
+					comment << "<TD>#{playersStr}</TD>"
 				end
 
 				
@@ -729,7 +730,7 @@ class Bot
 	end
 
 	def cmd_help client, message
-		text = convert_html_symbols( message.message )
+		text = convert_symbols_from_html( message.message )
 		command = text.split(' ')[ 1 ]
 
 		unless command.nil?
@@ -773,7 +774,7 @@ class Bot
 		client.send_user_message message.actor, "!admin \"command\" - admin commands"	end
 
 	def cmd_find client, message
-		text = convert_html_symbols( message.message )
+		text = convert_symbols_from_html( message.message )
 		nick = text.split(' ')[ 1 ]
 
 		playerName = nil
@@ -835,7 +836,7 @@ class Bot
 	end
 
 	def cmd_goto client, message
-		text = convert_html_symbols( message.message )
+		text = convert_symbols_from_html( message.message )
 		nick = text.split(' ')[ 1 ]
 		target = client.find_user nick
 		source = client.find_user message.actor
@@ -863,7 +864,7 @@ class Bot
 			ownNick = @players[ client ][ mumbleNick ].aliasNick
 		end
 
-		text = convert_html_symbols( message.message )
+		text = convert_symbols_from_html( message.message )
 
 		nick = text.split(' ')[ 1 ]
 		nick = nick.nil? ? ownNick : nick
@@ -947,7 +948,7 @@ class Bot
 
 	def cmd_admin client, message
 
-		text = convert_html_symbols( message.message )
+		text = convert_symbols_from_html( message.message )
 		command = text.split(' ')[ 1 ]
 
 		unless @players[ client ]
@@ -1013,7 +1014,7 @@ class Bot
 	end
 
 	def help_msg_admin client, message
-		text = convert_html_symbols( message.message )
+		text = convert_symbols_from_html( message.message )
 		command = text.split(' ')[ 2 ]
 
 		unless command.nil?
@@ -1082,7 +1083,7 @@ class Bot
 	end
 
 	def cmd_admin_raise client, message
-		text = convert_html_symbols( message.message )
+		text = convert_symbols_from_html( message.message )
 		exception = text.split(' ')[ 2..-1 ].join(' ')
 
 		mumbleNick = client.find_user( message.actor ).name
@@ -1094,7 +1095,7 @@ class Bot
 	end
 
 	def cmd_admin_login client, message
-		text = convert_html_symbols( message.message )
+		text = convert_symbols_from_html( message.message )
 		password = text.split(' ')[ 2 ]
 
 		mumbleNick = client.find_user( message.actor ).name
@@ -1148,7 +1149,7 @@ class Bot
 
 		if @players[ client ][ mumbleNick ].admin
 
-			text = convert_html_symbols( message.message )
+			text = convert_symbols_from_html( message.message )
 			chanPath = client.find_user( message.actor ).channel.path
 			roles = text.split(' ')[ 2..-1 ]
 
@@ -1215,7 +1216,7 @@ class Bot
 
 		if @players[ client ][ mumbleNick ].admin
 
-			text = convert_html_symbols( message.message )
+			text = convert_symbols_from_html( message.message )
 			chanPath = client.find_user( message.actor ).channel.path
 			role = text.split(' ')[ 2 ]
 			required = text.split(' ')[ 3 ]
@@ -1282,7 +1283,7 @@ class Bot
 
 		if @players[ client ][ mumbleNick ].admin
 
-			text = convert_html_symbols( message.message )
+			text = convert_symbols_from_html( message.message )
 			chanPath = client.find_user( message.actor ).channel.path
 			role = text.split(' ')[ 2 ]
 
@@ -1370,7 +1371,7 @@ class Bot
 
 		if @players[ client ][ mumbleNick ].admin
 
-			text = convert_html_symbols( message.message )
+			text = convert_symbols_from_html( message.message )
 
 			parameterStr = text.split(' ')[ 2..-1 ].join(' ')
 			parameters = parameterStr.scan(/(?:"(?:\\.|[^"])*"|[^" ])+/)
@@ -1492,7 +1493,7 @@ class Bot
 
 		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
 	
-			text = convert_html_symbols( message.message )
+			text = convert_symbols_from_html( message.message )
 			param = text.split(' ')[ 2..-1 ]
 			unless param.length.eql?( 1 )
 				client.send_user_message message.actor, "Please specify exactly one mumble nick to make admin." 
@@ -1556,7 +1557,7 @@ class Bot
 			displayPlayers = false
 			displayMatches = false
 
-			text = convert_html_symbols( message.message )
+			text = convert_symbols_from_html( message.message )
 			command = text.split(' ')[2]
 
 			if command.nil?
@@ -1641,7 +1642,7 @@ class Bot
 
 	def cmd_mute client, message 
 
-		text = convert_html_symbols( message.message )
+		text = convert_symbols_from_html( message.message )
 		mumbleNick = client.find_user( message.actor ).name
 
 		if !@players[ client ] || !@players[ client ].has_key?( mumbleNick )
@@ -1704,7 +1705,7 @@ class Bot
 	end
 
 	def cmd_result client, message
-		text = convert_html_symbols( message.message )
+		text = convert_symbols_from_html( message.message )
 		scores = text.split(' ')[ 1..-1 ]
 
 		if scores.empty?
@@ -1777,7 +1778,7 @@ class Bot
 	end
 
 	def cmd_admin_result client, message
-		text = convert_html_symbols( message.message )
+		text = convert_symbols_from_html( message.message )
 		matchId = text.split(' ')[ 2 ]
 		scores = text.split(' ')[ 3..-1 ]
 
@@ -1858,7 +1859,7 @@ class Bot
 	end
 
 	def cmd_admin_delete client, message
-		text = convert_html_symbols( message.message )
+		text = convert_symbols_from_html( message.message )
 		matchId = text.split(' ')[ 2 ]
 
 		if matchId.nil?
@@ -1928,7 +1929,7 @@ class Bot
 	end
 
 	def cmd_list client, message
-		text = convert_html_symbols( message.message )
+		text = convert_symbols_from_html( message.message )
 		params = text.split(' ')[ 1..-1 ]
 
 
@@ -1990,7 +1991,7 @@ class Bot
 		mumbleNick = client.find_user( message.actor ).name
 
 		if @players[ client ].has_key?( mumbleNick ) && @players[ client ][ mumbleNick ].admin.eql?( "SuperUser" )
-			cmd = convert_html_symbols(message.message).split[ 2..-1 ].join(' ')
+			cmd = convert_symbols_from_html(message.message).split[ 2..-1 ].join(' ')
 			unless cmd.empty?
 				if cmd[ "system" ] || cmd[ "`" ] || cmd[ "%x" ]
 					client.send_user_message message.actor, "System calls not allowed."
@@ -2400,7 +2401,7 @@ class Bot
 		end
 	end
 
-	def convert_html_symbols text
+	def convert_symbols_from_html text
 		raise 'Not a String' unless text.class.eql?( String )
 		text.gsub!( "&quot;", "\"" )
 		text.gsub!( "&lt;", "<" )
@@ -2458,4 +2459,14 @@ class Bot
 		return text
 	end
 
+	def convert_symbols_to_html text
+		raise 'Not a String' unless text.class.eql?( String )
+		text.gsub!( "&", "&amp;" )
+		text.gsub!( "\"", "&quot;" )
+		text.gsub!( "<", "&lt;" )
+		text.gsub!( ">", "&gt;" )
+		text.gsub!( " ", "&nbsp;" )
+		text.gsub!( "-", "&shy;" )
+		return text
+	end
 end
