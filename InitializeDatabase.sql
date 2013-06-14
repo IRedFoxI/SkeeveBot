@@ -5,7 +5,7 @@ SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO';
 
 
-CREATE TABLE `Map` (
+CREATE TABLE IF NOT EXISTS `Map` (
   `ID` int(10) unsigned NOT NULL,
   `Name` varchar(128) COLLATE utf8_bin NOT NULL,
   PRIMARY KEY (`ID`),
@@ -13,7 +13,7 @@ CREATE TABLE `Map` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 ALTER TABLE `Map` DISABLE KEYS;
-INSERT INTO `Map` (`ID`, `Name`) VALUES
+REPLACE INTO `Map` (`ID`, `Name`) VALUES
 	(1447, 'Katabatic'),
 	(1456, 'Arx Novena'),
 	(1457, 'Drydock'),
@@ -33,7 +33,7 @@ INSERT INTO `Map` (`ID`, `Name`) VALUES
 ALTER TABLE `Map` ENABLE KEYS;
 
 
-CREATE TABLE `Match` (
+CREATE TABLE IF NOT EXISTS `Match` (
   `ID` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `State` enum('Signup','Picking','Started','Finished','Deleted') COLLATE utf8_bin NOT NULL DEFAULT 'Signup',
   `Date` datetime NOT NULL,
