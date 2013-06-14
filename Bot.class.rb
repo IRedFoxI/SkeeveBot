@@ -211,7 +211,7 @@ class Bot
 
 				match.teams.each do |team|
 					players = match.players.select{ |pN, t| t.eql?( team ) }.keys
-					playersStr = convert_symbols_to_html( players.join(',') )
+					playersStr = convert_symbols_to_html( players.join(', ') )
 					comment << "<TD>#{playersStr}</TD>"
 				end
 
@@ -2465,8 +2465,8 @@ class Bot
 		text.gsub!( "\"", "&quot;" )
 		text.gsub!( "<", "&lt;" )
 		text.gsub!( ">", "&gt;" )
-		text.gsub!( " ", "&ensp;" )
-		text.gsub!( "-", "&shy;" )
+		text.gsub!( " ", "&thinsp;" )
+		# text.gsub!( "-", "&shy;" )
 		return text
 	end
 end
