@@ -160,8 +160,7 @@ class Bot
 
 	def create_comment client
 		comment = String.new
-		comment << "<center>-=[ SkeeveBot ]=-</center>"
-		comment << "<code>---------------------------------------------------------------</code><BR>"
+		comment << "<center>-=[ SkeeveBot ]=-</center><HR>"
 		comment << "<code>!mute 0/1/2/3</code> [ from 0 (no mute) to 3 (all muted) ]<BR>"
 		comment << "<code>!result map1 map2 map3</code> [ use BE-DS for each map ]<BR>"
 		comment << "<code>!list</code> [ shows all matches in the last 24h ]"
@@ -212,7 +211,7 @@ class Bot
 
 				match.teams.each do |team|
 					players = match.players.select{ |pN, t| t.eql?( team ) }.keys
-					playersStr = convert_symbols_to_html( players.join(', ') )
+					playersStr = convert_symbols_to_html( players.join(',') )
 					comment << "<TD>#{playersStr}</TD>"
 				end
 
