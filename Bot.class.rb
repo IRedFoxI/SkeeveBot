@@ -2465,7 +2465,7 @@ class Bot
 		text.gsub!( "\"", "&quot;" )
 		text.gsub!( "<", "&lt;" )
 		text.gsub!( ">", "&gt;" )
-		text.gsub!( " ", "&nbsp;" )
+		# text.gsub!( " ", "&nbsp;" )
 		text.gsub!( "-", "&shy;" )
 		return text
 	end
