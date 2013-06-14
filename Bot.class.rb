@@ -1593,7 +1593,8 @@ class Bot
 			if displayPlayers
 				if @players[ client ]
 					@players[ client ].each_pair do |session, player|
-						client.send_user_message message.actor, "Player: #{player.playerName}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
+						name = convert_symbols_to_html( player.playerName )
+						client.send_user_message message.actor, "Player: #{name}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 					end
 				else
 					client.send_user_message message.actor, "No players registered"
@@ -1608,7 +1609,7 @@ class Bot
 						playerStr = []
 						match.teams.each do |team|
 							players = match.players.select{ |pN, t| t.eql?( team ) }.keys
-							playerStr << "#{players.join(', ')} (#{team})"
+							playerStr << convert_symbols_to_html( "#{players.join(', ')} (#{team})" )
 						end
 						teamStr = ""
 						if playerStr.length > 0
@@ -1959,7 +1960,7 @@ class Bot
 				playerStr = []
 				match.teams.each do |team|
 					players = match.players.select{ |pN, t| t.eql?( team ) }.keys
-					playerStr << "#{players.join(', ')} (#{team})"
+					playerStr << convert_symbols_to_html( "#{players.join(', ')} (#{team})" )
 				end
 				teamStr = ""
 				if playerStr.length > 0
