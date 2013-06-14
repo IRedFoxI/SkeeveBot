@@ -5,7 +5,7 @@ SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO';
 
 
-CREATE TABLE `Map` (
+CREATE TABLE IF NOT EXISTS `Map` (
   `ID` int(10) unsigned NOT NULL,
   `Name` varchar(128) COLLATE utf8_bin NOT NULL,
   PRIMARY KEY (`ID`),
@@ -13,7 +13,7 @@ CREATE TABLE `Map` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 ALTER TABLE `Map` DISABLE KEYS;
-INSERT INTO `Map` (`ID`, `Name`) VALUES
+REPLACE INTO `Map` (`ID`, `Name`) VALUES
 	(1447, 'Katabatic'),
 	(1456, 'Arx Novena'),
 	(1457, 'Drydock'),
@@ -33,7 +33,7 @@ INSERT INTO `Map` (`ID`, `Name`) VALUES
 ALTER TABLE `Map` ENABLE KEYS;
 
 
-CREATE TABLE `Match` (
+CREATE TABLE IF NOT EXISTS `Match` (
   `ID` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `State` enum('Signup','Picking','Started','Finished','Deleted') COLLATE utf8_bin NOT NULL DEFAULT 'Signup',
   `Date` datetime NOT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE `Match` (
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 
-CREATE TABLE `MatchResult` (
+CREATE TABLE IF NOT EXISTS `MatchResult` (
   `MatchID` int(10) unsigned NOT NULL,
   `MapID` int(10) unsigned NOT NULL,
   `Score` varchar(32) COLLATE utf8_bin NOT NULL,
@@ -55,7 +55,7 @@ CREATE TABLE `MatchResult` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 
-CREATE TABLE `MatchTeam` (
+CREATE TABLE IF NOT EXISTS `MatchTeam` (
   `MatchID` int(10) unsigned NOT NULL,
   `TeamID` int(10) unsigned NOT NULL,
   PRIMARY KEY (`MatchID`,`TeamID`),
@@ -65,7 +65,7 @@ CREATE TABLE `MatchTeam` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 
-CREATE TABLE `Player` (
+CREATE TABLE IF NOT EXISTS `Player` (
 	`ID` int(10) unsigned NOT NULL AUTO_INCREMENT,
 	`MumbleNick` varchar(64) COLLATE utf8_bin NOT NULL,
 
@@ -75,14 +75,14 @@ CREATE TABLE `Player` (
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 
-CREATE TABLE `Team` (
+CREATE TABLE IF NOT EXISTS `Team` (
   `ID` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `Comment` text COLLATE utf8_bin NOT NULL,
   PRIMARY KEY (`ID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 
-CREATE TABLE `TeamPlayer` (
+CREATE TABLE IF NOT EXISTS `TeamPlayer` (
   `TeamID` int(10) unsigned NOT NULL,
   `PlayerID` int(10) unsigned NOT NULL,
   PRIMARY KEY (`TeamID`,`PlayerID`),
