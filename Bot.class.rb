@@ -2391,7 +2391,7 @@ class Bot
 
 	def cleanup_players client
 		disappeared = [] 
-		@players[ client ].each_key do mumbleNick
+		@players[ client ].each_key do |mumbleNick|
 			if client.find_user( mumbleNick ).nil?
 				disappeared << mumbleNick
 			end
@@ -2407,6 +2407,7 @@ class Bot
 		text.gsub!( "&lt;", "<" )
 		text.gsub!( "&gt;", ">" )
 		text.gsub!( "&nbsp;", " " )
+		text.gsub!( "&thinsp;", " " )
 		# text.gsub!( "&iexcl;", "¡" )
 		# text.gsub!( "&cent;", "¢" )
 		# text.gsub!( "&pound;", "£" )
