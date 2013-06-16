@@ -2404,6 +2404,7 @@ class Bot
 
 	def convert_symbols_from_html text
 		raise 'Not a String' unless text.class.eql?( String )
+		text.gsub!( /<br[\/\\]?>/, "\n" )
 		text.gsub!( "&quot;", "\"" )
 		text.gsub!( "&lt;", "<" )
 		text.gsub!( "&gt;", ">" )
@@ -2468,6 +2469,7 @@ class Bot
 		text.gsub!( "<", "&lt;" )
 		text.gsub!( ">", "&gt;" )
 		text.gsub!( " ", "&thinsp;" )
+		text.gsub!( /(?:\r\n|\r|\n)/, "<br/>" )
 		# text.gsub!( "-", "&shy;" )
 		return text
 	end
