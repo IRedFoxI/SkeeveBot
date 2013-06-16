@@ -1,4 +1,5 @@
 require 'time'
+require 'cgi'
 # require 'speech'
 # require 'celt-ruby'
 
@@ -799,8 +800,8 @@ class Bot
 					found = false
 					client.users.values.each do |u|
 						break if found
-						if section.hasValue?( u.name )
-							playerName = section.getValue( u.name )
+						if section.hasValue?( CGI::escape(u.name) )
+							playerName = section.getValue( CGI::escape(u.name) )
 							if playerName.downcase.eql?( nick.downcase )
 								user = u
 								found = true
@@ -1123,7 +1124,7 @@ class Bot
 				end
 
 				sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}:admin"
-				ini.setValue( sectionName, player.mumbleNick, player.admin )
+				ini.setValue( sectionName, CGI::escape(player.mumbleNick), player.admin )
 
 				ini.writeToFile( 'players.ini' )
 
@@ -1452,23 +1453,23 @@ class Bot
 			sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}:aliases"
 
 			if player.aliasNick
-				ini.setValue( sectionName, player.mumbleNick, player.aliasNick )
+				ini.setValue( sectionName, CGI::escape(player.mumbleNick), CGI::escape(player.aliasNick) )
 			else
-				ini.removeValue( sectionName, player.mumbleNick )
+				ini.removeValue( sectionName, CGI::escape(player.mumbleNick) )
 			end
 
 			sectionName = "Muted"
 
 			unless player.muted.eql?( @defaultMute )
-				ini.removeValue( sectionName, oldPlayerName )
-				ini.setValue( sectionName, player.aliasNick ? player.aliasNick : player.mumbleNick, player.muted.to_s )
+				ini.removeValue( sectionName, CGI::escape(oldPlayerName) )
+				ini.setValue( sectionName, CGI::escape(player.aliasNick ? player.aliasNick : player.mumbleNick), player.muted.to_s )
 			end
 
 			sectionName = "ELO"
 
 			if !player.elo.nil? && !player.elo.eql?( 1000 )
-				ini.removeValue( sectionName, oldPlayerName )
-				ini.setValue( sectionName, player.aliasNick ? player.aliasNick : player.mumbleNick, player.elo.to_s )
+				ini.removeValue( sectionName, CGI::escape(oldPlayerName) )
+				ini.setValue( sectionName, CGI::escape(player.aliasNick ? player.aliasNick : player.mumbleNick), player.elo.to_s )
 			end
 
 			ini.writeToFile( 'players.ini' )
@@ -1525,7 +1526,7 @@ class Bot
 				end
 
 				sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}:admin"
-				ini.setValue( sectionName, player.mumbleNick, player.admin )
+				ini.setValue( sectionName, CGI::escape(player.mumbleNick), player.admin )
 
 				ini.writeToFile( 'players.ini' )
 
@@ -1688,9 +1689,9 @@ class Bot
 		sectionName = "Muted"
 
 		if player.muted.eql?( @defaultMute )
-			ini.removeValue( sectionName, nick )
+			ini.removeValue( sectionName, CGI::escape(nick) )
 		else
-			ini.setValue( sectionName, nick, player.muted.to_s )
+			ini.setValue( sectionName, CGI::escape(nick), player.muted.to_s )
 		end
 
 		ini.writeToFile( 'players.ini' )
@@ -2282,15 +2283,15 @@ class Bot
 			sectionNameBase = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
 
 			sectionName = "#{sectionNameBase}:admin"
-			admin = ini.getValue( sectionName, mumbleNick )
+			admin = ini.getValue( sectionName, CGI::escape(mumbleNick) )
 
 			sectionName = "#{sectionNameBase}:aliases"
-			aliasNick = ini.getValue( sectionName, mumbleNick )
+			aliasNick = ini.getValue( sectionName, CGI::escape(mumbleNick) )
 
-			nick = aliasNick ? aliasNick : mumbleNick
+			nick = aliasNick ? CGI::unescape(aliasNick) : mumbleNick
 
 			sectionName = "Muted"
-			muted = ini.getValue( sectionName, nick )
+			muted = ini.getValue( sectionName, CGI::escape(nick) )
 			if muted
 				muted = muted.to_i
 			else
@@ -2298,7 +2299,7 @@ class Bot
 			end
 
 			sectionName = "ELO"
-			elo = ini.getValue( sectionName, nick )
+			elo = ini.getValue( sectionName, CGI::escape(nick) )
 
 		else
 
