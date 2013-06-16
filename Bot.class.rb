@@ -1593,8 +1593,7 @@ class Bot
 			if displayPlayers
 				if @players[ client ]
 					@players[ client ].each_pair do |session, player|
-						name = convert_symbols_to_html( player.playerName )
-						client.send_user_message message.actor, "Player: #{name}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
+						client.send_user_message message.actor, "Player: #{convert_symbols_to_html( player.playerName )}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 					end
 				else
 					client.send_user_message message.actor, "No players registered"
@@ -2152,10 +2151,7 @@ class Bot
 			match.teams.each do |team|
 				playerNames = match.players.select{ |pN, t| t.eql?( team ) }.keys
 				playerNames.each_index do |i|
-					if playerNames[ i ].include?(' ')
-						name = playerNames[ i ]
-						playerNames[ i ] = "\"#{name}\""
-					end
+					playerNames[ i ] = CGI::escape(playerNames[ i ])
 				end
 				ini.setValue( sectionName, "#{team}", playerNames.join( " " ) )
 			end
@@ -2221,11 +2217,9 @@ class Bot
 						playerNamesStr = section.getValue( "#{team}" )
 
 						unless playerNamesStr.nil?
-							# playerNames = playerNamesStr.split( ' ' )
-							playerNames = playerNamesStr.scan(/(?:"(?:\\.|[^"])*"|[^" ])+/)
+							playerNames = playerNamesStr.split( ' ' )
 							playerNames.each do |pN|
-								name = pN.gsub( "\"", "" )
-								players[ name ] = team
+								players[ CGI::unescape( pN ) ] = team
 							end
 						end
 
