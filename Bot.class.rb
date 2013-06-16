@@ -16,7 +16,7 @@ class Bot
 	def initialize options
 		@shutdown = false
 		@restart = false
-		@clientcount = 0
+		@clientCount = 0
 		@options = options
 		@connections = Hash.new
 		@chanRoles = Hash.new
@@ -105,7 +105,7 @@ class Bot
 	def run servers
 		servers.each do |server|
 
-			@clientcount += 1
+			@clientCount += 1
 
 			client = Kesh::Mumble::MumbleClient.new( server[:host], server[:port], server[:nick], @options )
 			@connections[ client ] = server
@@ -1986,6 +1986,7 @@ class Bot
 		client.send_user_message message.actor, "Shows the latest matches that have been registered on the bot."
 	end
 
+	# @param message [TextMessage]
 	def cmd_admin_eval client, message
 
 		mumbleNick = client.find_user( message.actor ).name
