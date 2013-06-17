@@ -25,7 +25,7 @@ module Kesh
 			# Start reading from the Stream.
 			def start()
 				@stopReading = false
-				@thread = Thread.new do					
+				@thread = Thread.new do
 					begin
 						until @stopReading
 							readFromStream()
@@ -54,13 +54,13 @@ module Kesh
 				
 				string.each_char { |char|
 					
-					if ( char == "\n" )
-						if ( @buffer != "" )
+					if char == "\n"
+						if @buffer != ""
 							@asyncMethod.call( @stream, @buffer )
 							@buffer = ""
 						end
 						
-					elsif ( char != "\r" )
+					elsif char != "\r"
 						@buffer += char
 
 					end
