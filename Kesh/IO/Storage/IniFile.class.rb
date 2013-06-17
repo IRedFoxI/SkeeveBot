@@ -65,7 +65,7 @@ module Kesh
 					i = getSectionIndex( section )
 					added = false
 					
-					if ( i == -1 )
+					if i == -1
 						i = @sections.length
 						@sections.push( IniSection.new( section ) )
 						added = true
@@ -103,10 +103,11 @@ module Kesh
 					
 					ini = IniFile.new()
 					
-					begin
+					loop do
 						section = IniSection.deserialise( stream )
-						ini.sections.push( section ) if ( section != nil )
-					end until ( section == nil )
+						ini.sections.push( section ) unless section.nil?
+						break if section.nil?
+					end
 					
 					return ini
 				end
