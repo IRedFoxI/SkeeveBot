@@ -4,6 +4,7 @@ require 'rubygems'
 require 'fileutils'
 require 'date'
 require 'gruff'
+require 'cgi'
 
 require File.expand_path( File.dirname( __FILE__ ) + '/Loader.library.rb' )
 
@@ -406,7 +407,7 @@ class ELOCalculator
 
 					teams.each do |team|
 
-						playerNames = section.getValue( "#{team}" )
+						playerNamesStr = section.getValue( "#{team}" )
 
 						unless playerNamesStr.nil?
 							playerNames = playerNamesStr.split( ' ' )

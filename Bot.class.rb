@@ -274,12 +274,9 @@ class Bot
 
 		match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
 
-		if defined?( chanPath )
-			chanPath = chanPath.first
-		end
-
 		monitoredChannel = false
-		if defined?( chanPath )
+		unless chanPath.empty?
+			chanPath = chanPath.first
 			if @chanRoles[ client ].has_key?( chanPath )
 				monitoredChannel = true
 			else
