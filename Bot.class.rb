@@ -2401,7 +2401,8 @@ class Bot
 		end
 	end
 
-	def convert_symbols_from_html text
+	def convert_symbols_from_html param
+		text = param.clone
 		raise 'Not a String' unless text.class.eql?( String )
 		text.gsub!( "&quot;", "\"" )
 		text.gsub!( "&lt;", "<" )
@@ -2459,7 +2460,8 @@ class Bot
 		return text
 	end
 
-	def convert_symbols_to_html text
+	def convert_symbols_to_html param
+		text = param.clone
 		raise 'Not a String' unless text.class.eql?( String )
 		text.gsub!( "&", "&amp;" )
 		text.gsub!( "\"", "&quot;" )
