@@ -1,4 +1,5 @@
 require 'time'
+require 'cgi'
 # require 'speech'
 # require 'celt-ruby'
 
@@ -16,7 +17,7 @@ class Bot
 	def initialize options
 		@shutdown = false
 		@restart = false
-		@clientcount = 0
+		@clientCount = 0
 		@options = options
 		@connections = Hash.new
 		@chanRoles = Hash.new
@@ -105,7 +106,7 @@ class Bot
 	def run servers
 		servers.each do |server|
 
-			@clientcount += 1
+			@clientCount += 1
 
 			client = Kesh::Mumble::MumbleClient.new( server[:host], server[:port], server[:nick], @options )
 			@connections[ client ] = server
@@ -817,8 +818,8 @@ class Bot
 					found = false
 					client.users.values.each do |u|
 						break if found
-						if section.hasValue?( u.name )
-							playerName = section.getValue( u.name )
+						if section.hasValue?( CGI::escape(u.name) )
+							playerName = section.getValue( CGI::escape(u.name) )
 							if playerName.downcase.eql?( nick.downcase )
 								user = u
 								found = true
@@ -1141,7 +1142,7 @@ class Bot
 				end
 
 				sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}:admin"
-				ini.setValue( sectionName, player.mumbleNick, player.admin )
+				ini.setValue( sectionName, CGI::escape(player.mumbleNick), player.admin )
 
 				ini.writeToFile( 'players.ini' )
 
@@ -1470,23 +1471,23 @@ class Bot
 			sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}:aliases"
 
 			if player.aliasNick
-				ini.setValue( sectionName, player.mumbleNick, player.aliasNick )
+				ini.setValue( sectionName, CGI::escape(player.mumbleNick), CGI::escape(player.aliasNick) )
 			else
-				ini.removeValue( sectionName, player.mumbleNick )
+				ini.removeValue( sectionName, CGI::escape(player.mumbleNick) )
 			end
 
 			sectionName = "Muted"
 
 			unless player.muted.eql?( @defaultMute )
-				ini.removeValue( sectionName, oldPlayerName )
-				ini.setValue( sectionName, player.aliasNick ? player.aliasNick : player.mumbleNick, player.muted.to_s )
+				ini.removeValue( sectionName, CGI::escape(oldPlayerName) )
+				ini.setValue( sectionName, CGI::escape(player.aliasNick ? player.aliasNick : player.mumbleNick), player.muted.to_s )
 			end
 
 			sectionName = "ELO"
 
 			if !player.elo.nil? && !player.elo.eql?( 1000 )
-				ini.removeValue( sectionName, oldPlayerName )
-				ini.setValue( sectionName, player.aliasNick ? player.aliasNick : player.mumbleNick, player.elo.to_s )
+				ini.removeValue( sectionName, CGI::escape(oldPlayerName) )
+				ini.setValue( sectionName, CGI::escape(player.aliasNick ? player.aliasNick : player.mumbleNick), player.elo.to_s )
 			end
 
 			ini.writeToFile( 'players.ini' )
@@ -1543,7 +1544,7 @@ class Bot
 				end
 
 				sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}:admin"
-				ini.setValue( sectionName, player.mumbleNick, player.admin )
+				ini.setValue( sectionName, CGI::escape(player.mumbleNick), player.admin )
 
 				ini.writeToFile( 'players.ini' )
 
@@ -1610,8 +1611,7 @@ class Bot
 			if displayPlayers
 				if @players[ client ]
 					@players[ client ].each_pair do |session, player|
-						name = convert_symbols_to_html( player.playerName )
-						client.send_user_message message.actor, "Player: #{name}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
+						client.send_user_message message.actor, "Player: #{convert_symbols_to_html( player.playerName )}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 					end
 				else
 					client.send_user_message message.actor, "No players registered"
@@ -1706,9 +1706,9 @@ class Bot
 		sectionName = "Muted"
 
 		if player.muted.eql?( @defaultMute )
-			ini.removeValue( sectionName, nick )
+			ini.removeValue( sectionName, CGI::escape(nick) )
 		else
-			ini.setValue( sectionName, nick, player.muted.to_s )
+			ini.setValue( sectionName, CGI::escape(nick), player.muted.to_s )
 		end
 
 		ini.writeToFile( 'players.ini' )
@@ -2004,6 +2004,7 @@ class Bot
 		client.send_user_message message.actor, "Shows the latest matches that have been registered on the bot."
 	end
 
+	# @param message [TextMessage]
 	def cmd_admin_eval client, message
 
 		mumbleNick = client.find_user( message.actor ).name
@@ -2168,10 +2169,7 @@ class Bot
 			match.teams.each do |team|
 				playerNames = match.players.select{ |pN, t| t.eql?( team ) }.keys
 				playerNames.each_index do |i|
-					if playerNames[ i ].include?(' ')
-						name = playerNames[ i ]
-						playerNames[ i ] = "\"#{name}\""
-					end
+					playerNames[ i ] = CGI::escape(playerNames[ i ])
 				end
 				ini.setValue( sectionName, "#{team}", playerNames.join( " " ) )
 			end
@@ -2237,11 +2235,9 @@ class Bot
 						playerNamesStr = section.getValue( "#{team}" )
 
 						unless playerNamesStr.nil?
-							# playerNames = playerNamesStr.split( ' ' )
-							playerNames = playerNamesStr.scan(/(?:"(?:\\.|[^"])*"|[^" ])+/)
+							playerNames = playerNamesStr.split( ' ' )
 							playerNames.each do |pN|
-								name = pN.gsub( "\"", "" )
-								players[ name ] = team
+								players[ CGI::unescape( pN ) ] = team
 							end
 						end
 
@@ -2299,15 +2295,15 @@ class Bot
 			sectionNameBase = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
 
 			sectionName = "#{sectionNameBase}:admin"
-			admin = ini.getValue( sectionName, mumbleNick )
+			admin = ini.getValue( sectionName, CGI::escape(mumbleNick) )
 
 			sectionName = "#{sectionNameBase}:aliases"
-			aliasNick = ini.getValue( sectionName, mumbleNick )
+			aliasNick = ini.getValue( sectionName, CGI::escape(mumbleNick) )
 
-			nick = aliasNick ? aliasNick : mumbleNick
+			nick = aliasNick ? CGI::unescape(aliasNick) : mumbleNick
 
 			sectionName = "Muted"
-			muted = ini.getValue( sectionName, nick )
+			muted = ini.getValue( sectionName, CGI::escape(nick) )
 			if muted
 				muted = muted.to_i
 			else
@@ -2315,7 +2311,7 @@ class Bot
 			end
 
 			sectionName = "ELO"
-			elo = ini.getValue( sectionName, nick )
+			elo = ini.getValue( sectionName, CGI::escape(nick) )
 
 		else
 
@@ -2409,7 +2405,7 @@ class Bot
 
 	def cleanup_players client
 		disappeared = [] 
-		@players[ client ].each_key do mumbleNick
+		@players[ client ].each_key do |mumbleNick|
 			if client.find_user( mumbleNick ).nil?
 				disappeared << mumbleNick
 			end
@@ -2422,10 +2418,12 @@ class Bot
 	def convert_symbols_from_html param
 		text = param.clone
 		raise 'Not a String' unless text.class.eql?( String )
+		text.gsub!( /<br[\/\\]?>/, "\n" )
 		text.gsub!( "&quot;", "\"" )
 		text.gsub!( "&lt;", "<" )
 		text.gsub!( "&gt;", ">" )
 		text.gsub!( "&nbsp;", " " )
+		text.gsub!( "&thinsp;", " " )
 		# text.gsub!( "&iexcl;", "¡" )
 		# text.gsub!( "&cent;", "¢" )
 		# text.gsub!( "&pound;", "£" )
@@ -2486,6 +2484,7 @@ class Bot
 		text.gsub!( "<", "&lt;" )
 		text.gsub!( ">", "&gt;" )
 		text.gsub!( " ", "&thinsp;" )
+		text.gsub!( /(?:\r\n|\r|\n)/, "<br/>" )
 		# text.gsub!( "-", "&shy;" )
 		return text
 	end
