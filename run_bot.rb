@@ -46,13 +46,13 @@ while exitflag
 		exit 0
 	end
 
-	#Thread.abort_on_exception = true
+	Thread.abort_on_exception = true
 
 	begin
 		exitflag = bot.run $servers
 	rescue => e
 		# TODO: Message all connected superusers when this occurs
-		puts( "The handler for '#{prefix}' threw an exception '#{e}'!\nTRACE:\n#{e.backtrace.join('\n')}" )
+		puts( "The run_bot.rb script threw an exception '#{e}'!\nTRACE:\n#{e.backtrace.join('\n')}" )
  	end
 	
 	if exitflag

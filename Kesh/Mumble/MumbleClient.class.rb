@@ -220,7 +220,7 @@ module Kesh
 						log "handle #{message.class} with #{h.name}" if @options[:debug]
 						begin
 							h.call(self, message)
-						rescue
+						rescue => e
 							log "The handler for '#{message.class}' threw an exception '#{e}'!"
 							exception_handler( "The handler for '#{message.class}' threw an exception '#{e}'!" )
 						end
