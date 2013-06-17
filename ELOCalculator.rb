@@ -408,10 +408,10 @@ class ELOCalculator
 
 						playerNames = section.getValue( "#{team}" )
 
-						unless playerNames.nil?
-							playerNames = playerNames.split( ' ' )
+						unless playerNamesStr.nil?
+							playerNames = playerNamesStr.split( ' ' )
 							playerNames.each do |pN|
-								players[ pN ] = team
+								players[ CGI::unescape( pN ) ] = team
 							end
 						end
 
