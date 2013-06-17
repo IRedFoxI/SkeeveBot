@@ -29,7 +29,7 @@ module Kesh
 					return nil if ( line == nil )
 					return nil if ( line.length == 0 )
 					
-					if ( !line[ /^([^=]+)=(.+)?$/ ] )
+					unless line[ /^([^=]+)=(.+)?$/ ]
 						puts line
 						raise SyntaxError
 					end

@@ -8,7 +8,7 @@ module Kesh
 				raise NotImplementedError
 			end
 
-			def self.deserialize( stream )
+			def self.deserialise( stream )
 				raise NotImplementedError
 			end
 			
