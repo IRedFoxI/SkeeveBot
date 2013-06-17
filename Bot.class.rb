@@ -428,7 +428,7 @@ class Bot
 
 					# Clean up emtpy teams
 					match.teams.each do |team|
-						if !match.players.has_value?( team )
+						unless match.players.has_value?( team )
 							match.teams.delete( team )
 						end
 					end
@@ -577,13 +577,13 @@ class Bot
 
 			# Clean up emtpy teams
 			match.teams.each do |team|
-				if !match.players.has_value?( team )
+				unless match.players.has_value?( team )
 					match.teams.delete( team )
 				end
 			end
 
 			# If leaving a match, check if it is over
-			if !id.nil?
+			unless id.nil?
 				check_match_over( client, id )
 			end
 
