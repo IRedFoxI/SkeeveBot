@@ -27,14 +27,14 @@ module Kesh
 					
 					line = stream.readLine()
 					return nil if line.nil?
-					return nil if ( line.length == 0 )
+					return nil if line.length == 0
 					
 					unless line[ /^([^=]+)=(.+)?$/ ]
 						puts line
 						raise SyntaxError
 					end
 					
-					return IniValue.new( $1, ( $2 != nil ? $2.chomp : nil ) )
+					return IniValue.new( $1, ( $2 == nil ? nil : $2.chomp ) )
 				end
 				
 			end

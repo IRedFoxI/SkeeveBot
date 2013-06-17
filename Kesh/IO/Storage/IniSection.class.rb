@@ -19,9 +19,9 @@ module Kesh
 				
 				private
 				def getNameIndex( name )
-					@values.each_index { |i|
+					@values.each_index do |i|
 						return i if ( @values[ i ].name == name )
-					}
+					end
 					return -1
 				end
 				
@@ -65,9 +65,9 @@ module Kesh
 					
 					stream.writeLine( "[" + name + "]" )
 					
-					@values.each { |value|
+					@values.each do |value|
 						value.serialise( stream )
-					}
+					end
 					
 					stream.writeLine( "" )
 				end

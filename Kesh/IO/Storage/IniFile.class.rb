@@ -19,9 +19,9 @@ module Kesh
 				
 				private
 				def getSectionIndex( name )
-					@sections.each_index { |s|
+					@sections.each_index do |s|
 						return s if ( @sections[ s ].name == name )
-					}					
+					end
 					return -1
 				end
 
