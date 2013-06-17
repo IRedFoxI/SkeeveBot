@@ -30,10 +30,10 @@ class ELOCalculator
 		load_matches_ini
 	end
 
-	def make_plots param
-		plot_elo_history param * 10
-		plot_elo_performance param * 10
-		plot_number_of_matches param * 10
+	def make_plots minMatches
+		plot_elo_history minMatches * 10
+		plot_elo_performance minMatches * 10
+		plot_number_of_matches minMatches * 10
 	end
 
 	def calculate_elos *params
@@ -44,10 +44,10 @@ class ELOCalculator
 			monthOffset = params.shift
 		end
 
-		if params.first.nil?
-			weightedAverage = false
-		elsif params.shift
+		if !params.first.nil? && params.shift
 			weightedAverage = true
+		else
+			weightedAverage = false
 		end
 
 		@matches.each do |match|
@@ -232,7 +232,7 @@ class ELOCalculator
 
 	end
 
-	def plot_elo_performance param
+	def plot_elo_performance minMatches
 
 		g = Gruff::Line.new(1600)
 		g.title = "ELO Performance"
@@ -270,7 +270,7 @@ class ELOCalculator
 
 	end
 
-	def plot_elo_history param
+	def plot_elo_history minMatches
 
 		g = Gruff::Line.new(1600)
 		g.title = "ELO History"
@@ -279,7 +279,7 @@ class ELOCalculator
 		g.title_font_size = 25
 
 		@players.each_pair do |pN, data|
-			next if data.keys.length < param
+			next if data.keys.length < minMatches
 			dataset = Array.new
 			@dates.each do |date|
 				dataset << data[ date ]
