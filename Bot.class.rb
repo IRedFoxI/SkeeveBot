@@ -277,7 +277,25 @@ class Bot
 			chanPath = chanPath.first
 		end
 
-		if defined?( chanPath ) && @chanRoles[ client ].has_key?( chanPath )
+		monitoredChannel = false
+		if defined?( chanPath )
+			if @chanRoles[ client ].has_key?( chanPath )
+				monitoredChannel = true
+			else
+				baseChannel = ""
+				@chanRoles[ client ].each_key do |channel|
+					if chanPath.include?( channel )
+						if channel.length > baseChannel.length
+							baseChannel = channel
+							monitoredChannel = true
+						end
+					end
+				end
+				chanPath = baseChannel if monitoredChannel
+			end				
+		end
+
+		if monitoredChannel
 			# In a monitored channel
 
 			roles = @chanRoles[ client ][ chanPath ]
