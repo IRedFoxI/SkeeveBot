@@ -37,7 +37,7 @@ module Kesh
 				def setValue( name, value )
 					i = getNameIndex( name )
 					
-					if ( i == -1 )
+					if i == -1
 						@values.push( IniValue.new( name, value ) )
 						return true
 					end
@@ -77,21 +77,21 @@ module Kesh
 					ArgTest::type( "stream", stream, Kesh::IO::Stream )
 					
 					line = stream.readLine()		
-					return nil if ( line == nil )
+					return nil if line.nil?
 					line.strip!
 					
-					if ( line[ /^\[([^\]]+)\]$/ ] == nil )
+					unless line[ /^\[([^\]]+)\]$/ ]
 						puts line
 						raise SyntaxError
-						return nil
 					end
 						
 					section = IniSection.new( $1 )
 					
-					begin
+					loop do
 						value = IniValue.deserialise( stream )
-						section.values.push( value ) if ( value != nil )
-					end until ( value == nil )
+						section.values.push( value ) unless value.nil?
+						break if value.nil?
+					end
 					
 					return section
 				end

@@ -26,7 +26,7 @@ module Kesh
 					ArgTest::type( "stream", stream, Kesh::IO::Stream )
 					
 					line = stream.readLine()
-					return nil if ( line == nil )
+					return nil if line.nil?
 					return nil if ( line.length == 0 )
 					
 					unless line[ /^([^=]+)=(.+)?$/ ]
