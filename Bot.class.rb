@@ -1778,6 +1778,7 @@ class Bot
 
 			client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
 			message_all( client, "#{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", [ match.id ], 2, message.actor )
+			create_comment( client )
 
 		else
 
@@ -1855,6 +1856,7 @@ class Bot
 
 				client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
 				message_all( client, "Admin #{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", [ match.id ], 2, message.actor )
+				create_comment( client )
 
 			else
 
@@ -1925,6 +1927,7 @@ class Bot
 				write_matches_ini
 
 				client.send_user_message message.actor, "The match (id: #{match.id}) has been deleted."
+				create_comment( client )
 
 			else
 
