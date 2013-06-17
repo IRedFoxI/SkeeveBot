@@ -259,7 +259,7 @@ module Kesh
 			protected
 			# SSL Setup
 			def ssl_key_setup
-				if ( File.exists? File.join( "Identities", @username, 'private_key.pem' ) )
+				if File.exists?( File.join( "Identities", @username, 'private_key.pem' ) )
 					@key = OpenSSL::PKey::RSA.new File.read File.join( "Identities", @username, 'private_key.pem' )
 				else
 					@key = OpenSSL::PKey::RSA.new 2048
@@ -267,7 +267,7 @@ module Kesh
 					open File.join( "Identities", @username, 'public_key.pem' ), 'w' do |io| io.write @key.public_key.to_pem end
 				end
 
-				if (File.exists? File.join( "Identities", @username, 'cert.pem' ) )
+				if File.exists?( File.join( "Identities", @username, 'cert.pem' ) )
 					@cert = OpenSSL::X509::Certificate.new File.read( File.join( "Identities", @username, 'cert.pem' ) )
 				else
 					subject = "/C=#{@options[:country_code]}/O=#{@options[:organisation]}/OU=#{@options[:organisation_unit]}/CN=#{@username}"

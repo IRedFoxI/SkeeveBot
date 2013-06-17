@@ -45,7 +45,7 @@ module Kesh
 						result = p1 << 24 | packet[index + 1] << 16 | packet[index + 2] << 8 | packet[index + 3]
 					when 0xF4
 						new_index = index + 8
-						result = p1 << 56 | packet[index + 1] << 48 | packet[index + 2] << 40 | packet[nindex + 3] << 32 |
+						result = p1 << 56 | packet[index + 1] << 48 | packet[index + 2] << 40 | packet[index + 3] << 32 |
 							packet[index + 4] << 24 | packet[index + 5] << 16 | packet[index + 6] << 8 | packet[index + 7]
 					when 0xF8
 						temp = decode_varint packet, index + 1
@@ -57,7 +57,7 @@ module Kesh
 						result = ~result
 					else
 						raise "Decode Varint failed"
-						new_index = 0
+						#new_index = 0
 					end
 				elsif (p1 & 0xF0) == 0xE0
 					new_index = index + 4
@@ -65,6 +65,8 @@ module Kesh
 				elsif (p1 & 0xE0) == 0xC0
 					new_index = index + 3
 					result = (p1 & 0x1F) << 16 |  packet[index + 1] << 8 | packet[index + 2]
+				else
+					raise "Decode Varint failed"
 				end
 				return { :result => result, :index => index, :new_index => new_index + 1}
 			end
@@ -74,25 +76,25 @@ module Kesh
 				packet = []
 				#quint64 i = value
 
-				if (value < 0x80)
+				if value < 0x80
 					# Need top bit clear
 					packet <<  value
-				elsif (value < 0x4000)
+				elsif value < 0x4000
 					# Need top two bits clear
 					packet << ((value >> 8) | 0x80)
 					packet << (value & 0xFF)
-				elsif (value < 0x200000)
+				elsif value < 0x200000
 					# Need top three bits clear
 					packet << ((value >> 16) | 0xC0)
 					packet << ((value >> 8) & 0xFF)
 					packet << (value & 0xFF)
-				elsif (value < 0x10000000)
+				elsif value < 0x10000000
 					# Need top four bits clear
 					packet << ((value >> 24) | 0xE0)
 					packet << ((value >> 16) & 0xFF)
 					packet << ((value >> 8) & 0xFF)
 					packet << (value & 0xFF);
-				elsif (value < 0x100000000)
+				elsif value < 0x100000000
 					# It's a full 32-bit integer.
 					packet << (0xF0)
 					packet << ((value >> 24) & 0xFF)
