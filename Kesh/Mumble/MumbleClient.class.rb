@@ -244,8 +244,8 @@ module Kesh
 						client.send_user_message message.actor, "An error occurred while processing your request."
 						client.send_user_message message.actor, "Please try again later."
 					end
-				# else
-				# 	client.send_user_message message.actor, "Unknown command '#{prefix}'!"
+				else
+					client.send_user_message message.actor, "Unknown command '#{prefix}'!" if prefix[0].eql?( '!' )
 				end
 			end
 
