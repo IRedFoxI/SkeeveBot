@@ -192,6 +192,8 @@ class ELOCalculator
 		# factor *= 1 + 1.1 ** ( -2 * matchNumber )
 		# factor *= 1 + 1.2 ** ( 10 - 2 * matchNumber )
 		# factor *= 1 + 1.2 ** ( 10 - matchNumber )
+		# factor *= 1 + 1.258925412 ** ( 3.080105496E-21 - matchNumber ) # 2 to 1.01 between 0 to 20
+		factor *= 1 + 1.303321321 ** ( 2.616480413 - matchNumber ) # 3 to 1.01 between 0 to 20
 		factor *= @multiplier
 		return factor
 	end
@@ -468,10 +470,10 @@ calc = ELOCalculator.new( multiplier )
 
 calc.load_matches
 
-weightedAverage = true
+weightedAverage = false
 
 repeat = 0
-while repeat < 3
+while repeat < 1
 	calc.calculate_elos( repeat, weightedAverage )
 	repeat += 1
 end
