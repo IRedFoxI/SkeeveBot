@@ -206,22 +206,22 @@ class Bot
 			comment << "<HR>Recent matches:<TABLE BORDER=\"0\"><TR><TD>Id</TD><TD>Date</TD><TD>Time</TD><TD>Status</TD>"
 			comment << "<TD>#{selection.first.teams.join('</TD><TD>')}</TD><TD>Result</TD></TR>"
 
-			selection.each do |match|
-				comment << "<TR><TD>#{match.id}</TD><TD>#{match.date.strftime("%d/%m")}</TD><TD>#{match.date.strftime("%H:%M")}</TD>"
-				comment << "<TD>#{match.status}</TD>"
+			selection.each do |recentMatch|
+				comment << "<TR><TD>#{recentMatch.id}</TD><TD>#{recentMatch.date.strftime("%d/%m")}</TD><TD>#{recentMatch.date.strftime("%H:%M")}</TD>"
+				comment << "<TD>#{recentMatch.status}</TD>"
 
-				match.teams.each do |team|
-					players = match.players.select{ |pN, t| t.eql?( team ) }.keys
+				recentMatch.teams.each do |team|
+					players = recentMatch.players.select{ |pN, t| t.eql?( team ) }.keys
 					playersStr = convert_symbols_to_html( players.join(', ') )
 					comment << "<TD>#{playersStr}</TD>"
 				end
 
 				
-				if match.results.empty?
+				if recentMatch.results.empty?
 					comment << "<TD>pending</TD>"
 				else
 					results = Array.new
-					match.results.each do |res|
+					recentMatch.results.each do |res|
 						results << "#{res.scores.join('-')}"
 					end
 					comment << "<TD>#{results.join(' ')}</TD>"
