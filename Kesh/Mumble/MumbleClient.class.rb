@@ -221,8 +221,8 @@ module Kesh
 						begin
 							h.call(self, message)
 						rescue => e
-							log "The handler for '#{message.class}' threw an exception '#{e}'!"
-							exception_handler( "The handler for '#{message.class}' threw an exception '#{e}'!" )
+							log "The handler for '#{message.class}' threw an exception '#{e}'!\nTRACE:\n#{e.backtrace.join('\n')}"
+							exception_handler( "The handler for '#{message.class}' threw an exception '#{e}'!\nTRACE:\n#{e.backtrace.join('\n')}" )
 						end
 					end
 				end
