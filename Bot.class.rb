@@ -167,7 +167,18 @@ class Bot
 		comment << "<code>!list</code> [ shows all matches in the last 24h ]"
 
 		match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
-		comment << "<HR>Current status: #{match.status}"
+		comment << "<HR>Current status: #{match.status}<BR>"
+
+		rolesNeeded = check_requirements client
+		playersNeeded = rolesNeeded.shift
+
+		if playersNeeded > 0
+			comment << "Not enough players to start a match."
+		elsif rolesNeeded.empty?
+			comment << "Enough players and all required roles are most likely covered. Start picking!"
+		else
+			comment << "Enough players but missing #{rolesNeeded.join(' and ')}"
+		end
 
 		unless @players[ client ].nil? || @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }.empty?
 			comment << "<HR><TABLE BORDER=\"0\"><TR><TD>Signups</TD>"
@@ -314,14 +325,18 @@ class Bot
 
 					firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
+					name = String.new
+					name << "[#{player.tag}]" if ( player.tag  && !player.tag.eql?( "" ) )
+					name << convert_symbols_to_html( player.playerName )					
+
 					if  firstRoleReq.to_i < 0
 						# Became spectator
 
 						player.roles = roles
 						player.team = nil
 						player.match = nil
-						messagePlayer = "You became a spectator."
-						messageAll = "Player #{player.playerName} (level: #{player.level}) became a spectator."
+						messagePlayer = "You became a spectator."						
+						messageAll = "Player #{name} (level: #{player.level}) became a spectator."
 
 					elsif firstRoleReq.eql? "T"
 						# Joined a team channel
@@ -369,7 +384,7 @@ class Bot
 
 							match.players[ player.playerName ] = player.team
 							messagePlayer = "You joined team '#{player.team}'."
-							messageAll = "Player #{player.playerName} (level: #{player.level}) joined team '#{player.team}'."
+							messageAll = "Player #{name} (level: #{player.level}) joined team '#{player.team}'."
 
 						else
 
@@ -377,7 +392,7 @@ class Bot
 							match.teams = match.teams.sort
 							match.players[ player.playerName ] = player.team
 							messagePlayer = "You became captain of team '#{player.team}'."
-							messageAll = "Player #{player.playerName} (level: #{player.level}) became captain of team '#{player.team}'."
+							messageAll = "Player #{name} (level: #{player.level}) became captain of team '#{player.team}'."
 							if match.teams.length >= noTeams
 								match.status = "Picking"
 								messageAll << " Picking has started!"
@@ -396,9 +411,9 @@ class Bot
 
 						player.roles = roles
 						player.team = nil
-						player.match = nil
+						player.match = @currentMatch[ client ]
 						messagePlayer = "You joined the queue."
-						messageAll = "Player #{player.playerName} (level: #{player.level}) joined the queue."
+						messageAll = "Player #{name} (level: #{player.level}) joined the queue."
 
 					else
 						# Joined one of the roles channels
@@ -410,10 +425,10 @@ class Bot
 
 						if match.status.eql?( "Picking" ) && !@moveQueue[ client ] && jumpingQueue
 							messagePlayer = "Picking has already started. Please join the queue."
-							messageAll = "Player #{player.playerName} (level: #{player.level}) jumped the queue."
+							messageAll = "Player #{name} (level: #{player.level}) jumped the queue."
 						else
 							messagePlayer = "Your role(s) changed to '#{roles.join(' ')}'."
-							messageAll = "Player #{player.playerName} (level: #{player.level}) changed role(s) to '#{roles.join(' ')}'."
+							messageAll = "Player #{name} (level: #{player.level}) changed role(s) to '#{roles.join(' ')}'."
 						end
 
 					end
@@ -459,11 +474,15 @@ class Bot
 
 				firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
+				name = String.new
+				name << "[#{player.tag}]" if ( player.tag  && !player.tag.eql?( "" ) )
+				name << convert_symbols_to_html( player.playerName )
+
 				if  firstRoleReq.to_i < 0
 					# Became spectator
 
 					messagePlayer = "You became a spectator."
-					messageAll = "Player #{player.playerName} (level: #{player.level}) became a spectator."
+					messageAll = "Player #{name} (level: #{player.level}) became a spectator."
 
 				elsif firstRoleReq.eql? "T"
 
@@ -502,7 +521,7 @@ class Bot
 
 						match.players[ player.playerName ] = player.team
 						messagePlayer = "You joined team '#{player.team}'. You should probably join one of the roles channels first."
-						messageAll = "Player #{player.playerName} (level: #{player.level}) joined team '#{player.team}'."
+						messageAll = "Player #{name} (level: #{player.level}) joined team '#{player.team}'."
 
 					else
 
@@ -510,7 +529,7 @@ class Bot
 						match.teams = match.teams.sort
 						match.players[ player.playerName ] = player.team
 						messagePlayer = "You became captain of team '#{player.team}'. You should probably join one of the roles channels first."
-						messageAll = "Player #{player.playerName} (level: #{player.level}) became captain of team '#{player.team}'."
+						messageAll = "Player #{name} (level: #{player.level}) became captain of team '#{player.team}'."
 						noTeams = @teamNum[ client ] ? @teamNum[ client ] : @defaultTeamNum
 						if match.teams.length >= noTeams
 							match.status = "Picking"
@@ -525,9 +544,9 @@ class Bot
 
 					player.roles = roles
 					player.team = nil
-					player.match = nil
+					player.match = @currentMatch[ client ]
 					messagePlayer = "You joined the queue."
-					messageAll = "Player #{player.playerName} (level: #{player.level}) joined the queue."
+					messageAll = "Player #{name} (level: #{player.level}) joined the queue."
 
 				else
 					#Joined one of the roles channels
@@ -538,10 +557,10 @@ class Bot
 
 					if match.status.eql?( "Picking" ) && !@moveQueue[ client ]
 						messagePlayer = "Picking has already started. Please join the queue."
-						messageAll = "Player #{player.playerName} (level: #{player.level}) jumped the queue."
+						messageAll = "Player #{name} (level: #{player.level}) jumped the queue."
 					else
 						messagePlayer = "You signed up with role(s) '#{roles.join(' ')}'."
-						messageAll = "Player #{player.playerName} (level: #{player.level}) signed up with role(s) '#{roles.join(' ')}'."
+						messageAll = "Player #{name} (level: #{player.level}) signed up with role(s) '#{roles.join(' ')}'."
 					end
 
 				end
@@ -587,8 +606,11 @@ class Bot
 				check_match_over( client, id )
 			end
 
+			name = String.new
+			name << "[#{player.tag}]" if ( player.tag  && !player.tag.eql?( "" ) )
+			name << convert_symbols_to_html( player.playerName )
 			messagePlayer = "You left the PuG/mixed channels."
-			messageAll = "Player #{player.playerName} (level: #{player.level}) left."
+			messageAll = "Player #{name} (level: #{player.level}) left."
 
 		end
 
