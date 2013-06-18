@@ -169,15 +169,15 @@ class Bot
 		match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
 		comment << "<HR>Current status: #{match.status}<BR>"
 
-		rolesNeeded = check_requirements client
+		rolesNeeded = check_requirements( client )
 		playersNeeded = rolesNeeded.shift
 
 		if playersNeeded > 0
-			comment << "Not enough players to start a match."
+			comment << "Not enough players to start a match. Missing #{playersNeeded} player(s)."
 		elsif rolesNeeded.empty?
 			comment << "Enough players and all required roles are most likely covered. Start picking!"
 		else
-			comment << "Enough players but missing #{rolesNeeded.join(' and ')}"
+			comment << "Enough players but missing #{rolesNeeded.join(' and ')}."
 		end
 
 		unless @players[ client ].nil? || @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }.empty?
@@ -278,7 +278,7 @@ class Bot
 
 		mumbleNick = client.find_user( session ).name
 
-		prevRolesNeeded = check_requirements client
+		prevRolesNeeded = check_requirements( client )
 		prevPlayersNeeded = prevRolesNeeded.shift
 
 		noTeams = @teamNum[ client ] ? @teamNum[ client ] : @defaultTeamNum
@@ -661,7 +661,7 @@ class Bot
 
 		if match.status.eql?( "Signup" )
 
-			rolesNeeded = check_requirements client
+			rolesNeeded = check_requirements( client )
 			playersNeeded = rolesNeeded.shift
 
 			if prevPlayersNeeded >0 && playersNeeded > 0
