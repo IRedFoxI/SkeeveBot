@@ -1,13 +1,14 @@
 module Kesh
 	module IO
-	
+
+		# @abstract
 		class Serialisable
 		
 			def serialise( stream )
 				raise NotImplementedError
 			end
-			
-			def Serialisable.deserialize( stream )
+
+			def self.deserialise( stream )
 				raise NotImplementedError
 			end
 			

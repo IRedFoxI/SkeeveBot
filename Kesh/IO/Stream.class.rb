@@ -20,10 +20,11 @@ module Kesh
 			def readLine()
 				buffer = ""
 
-				begin
+				loop do
 					char = read( 1 )
 					buffer << char if ( char != "\n" && char != nil )
-				end until ( char == "\n" || char == nil )
+					break if (char == "\n" || char.nil?)
+				end
 				
 				return nil if ( buffer == "" )
 				
