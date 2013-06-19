@@ -1497,6 +1497,8 @@ class Bot
 						raise SyntaxError
 					end
 
+					next unless section.getValue( "Label" ).eql?( @connections[ client ][ :label ] )
+
 					teams = section.getValue( "Teams" )
 					next if teams.nil?
 
