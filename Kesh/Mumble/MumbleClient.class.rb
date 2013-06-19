@@ -308,8 +308,10 @@ module Kesh
 			end
 
 			def remove_user(client, message)
-				user = @users[message.session]
-				user.remove
+				if @users.has_key?( message.session )
+					user = @users[message.session]
+					user.remove
+				end
 			end
 
 			def update_channel(client, message)

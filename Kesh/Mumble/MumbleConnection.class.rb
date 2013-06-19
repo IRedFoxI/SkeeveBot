@@ -310,6 +310,10 @@ module Kesh
 					ret = @ssl_socket.write(type_string + message_string)
 					$stderr.puts "--> message type #{buffer.class}, sent #{ret} bytes." if @options[:debug]
 				rescue IOError => e
+					$stderr.puts "The mumble_write method threw an exception '#{e}'!\nTRACE:\n#{e.backtrace.join('\n')}"
+				rescue Errno::EPIPE => e
+					$stderr.puts "The mumble_write method threw an exception '#{e}'!\nTRACE:\n#{e.backtrace.join('\n')}"
+					@connected = false
 				end
 			end
 
