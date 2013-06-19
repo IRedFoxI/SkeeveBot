@@ -1430,7 +1430,7 @@ class Bot
 			aliasValue = parameters[1].gsub( "\"", "" )
 			aliasValue = aliasValue ? aliasValue : player.mumbleNick
 
-			statsVals = get_player_stats( aliasValue, [ "Name", "Level" ] )
+			statsVals = get_player_stats( aliasValue, [ "Name", "Level", "Tag" ] )
 
 			if statsVals.nil?
 				client.send_user_message message.actor, "Player #{aliasValue} not found or unable to connect to TribesAPI, alias not set."
@@ -1439,6 +1439,7 @@ class Bot
 
 			aliasValue = statsVals.shift
 			level = statsVals.shift
+			tag = statsVals.shift
 
 			oldPlayerName = player.playerName
 
@@ -1469,6 +1470,7 @@ class Bot
 
 			player.playerName = aliasValue
 			player.level = level
+			player.tag = tag
 
 			@players[ client ][ player.mumbleNick ] = player
 
@@ -1480,6 +1482,45 @@ class Bot
 			end
 
 			write_matches_ini
+
+			if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/matches.ini' ) )
+				ini = Kesh::IO::Storage::IniFile.loadFromFile( 'matches.ini' )
+
+				updated = false
+
+				ini.sections.each do |section|
+
+					id = section.name
+
+					if id[ /^\d+$/ ].nil?
+						puts "Invalid ID: " + id.to_s
+						raise SyntaxError
+					end
+
+					teams = section.getValue( "Teams" )
+					next if teams.nil?
+
+					players = Hash.new
+
+					teams = teams.split( ' ' )
+					teams.each do |team|
+
+						playerNamesStr = section.getValue( "#{team}" )
+
+						if playerNamesStr.include?( CGI::escape( oldPlayerName ) )
+							playerNamesStr.gsub!( CGI::escape( oldPlayerName ), CGI::escape(player.aliasNick ? player.aliasNick : player.mumbleNick) )
+							section.removeValue( "#{team}" )
+							section.setValue( "#{team}", playerNamesStr )
+							updated = true
+						end
+
+					end
+
+				end
+
+				ini.writeToFile( 'matches.ini' ) if updated
+
+			end
 
 			if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
 				ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
