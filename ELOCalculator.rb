@@ -31,9 +31,9 @@ class ELOCalculator
 	end
 
 	def make_plots minMatches
-		plot_elo_history minMatches * 10
-		plot_elo_performance minMatches * 10
-		plot_number_of_matches minMatches * 10
+		plot_elo_history minMatches
+		plot_elo_performance minMatches
+		plot_number_of_matches minMatches
 	end
 
 	def calculate_elos *params
@@ -92,6 +92,33 @@ class ELOCalculator
 			end
 
 		end
+
+	end
+
+	def write_elo
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
+			FileUtils.cp( 'players.ini', 'players.bak' )
+		else
+			ini = Kesh::IO::Storage::IniFile.new
+		end
+
+		sectionName = "ELO"
+
+		@players.each_pair  do |pN, data|
+
+			elo = @currentELOs[ pN ]
+			noMatches = data.keys.length
+
+			unless ( elo.eql?( 1000 ) && noMatches.eql?( 0 ) )
+				ini.removeValue( sectionName, CGI::escape( pN ) )
+				eloStr = "#{elo} #{noMatches}"
+				ini.setValue( sectionName, CGI::escape( pN ), eloStr )
+			end
+
+		end
+
+		ini.writeToFile( 'players.ini' )
 
 	end
 
@@ -156,7 +183,7 @@ class ELOCalculator
 		return k
 	end
 
-	def plot_player_elo playerName
+	def plot_player_elo playerName, minMatches
 
 		g = Gruff::Line.new(1600)
 		g.title = "ELO History #{playerName}"
@@ -166,8 +193,10 @@ class ELOCalculator
 
 		data = @players[ playerName ]
 		dataset = Array.new
+		matchNo = 0
 		@dates.each do |date|
-			dataset << data[ date ]
+			matchNo += 1
+			dataset << ( matchNo < minMatches ? nil : data[ date ] )
 		end
 
 		g.data( "#{playerName}", dataset )
@@ -207,7 +236,7 @@ class ELOCalculator
 
 		@players.each_pair do |pN, data|
 			g.data( pN, data.keys.length )
-			plot_player_elo( pN ) if data.keys.length >= minMatches
+			plot_player_elo( pN, minMatches ) if data.keys.length >= minMatches
 		end
 
 		g.marker_font_size = 10
@@ -469,6 +498,8 @@ end
 multiplier = 7
 calc = ELOCalculator.new( multiplier )
 
+minMatches = 20
+
 calc.load_matches
 
 weightedAverage = false
@@ -479,5 +510,7 @@ while repeat < 1
 	repeat += 1
 end
 
-calc.make_plots repeat
+calc.make_plots repeat * minMatches
+
+calc.write_elo
 

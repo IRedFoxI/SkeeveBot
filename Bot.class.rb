@@ -8,7 +8,7 @@ requireLibrary 'Mumble'
 requireLibrary 'TribesAPI'
 
 
-Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :playerName, :level, :tag, :noCaps, :noMaps, :match, :roles, :team )
+Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :noMatches, :playerName, :level, :tag, :noCaps, :noMaps, :match, :roles, :team )
 Match = Struct.new( :id, :label, :status, :date, :teams, :players, :comment, :results )
 Result = Struct.new( :map, :teams, :scores, :comment )
 
@@ -467,10 +467,11 @@ class Bot
 				aliasNick = playerData[ "aliasNick" ]
 				muted = playerData[ "muted" ]
 				elo = playerData[ "elo" ]
+				noMatches = playerData[ "noMatches" ]
 				playerName = playerData[ "playerName" ]
 				level = playerData[ "level" ]
 				tag = playerData[ "tag" ]
-				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, roles, nil )
+				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, noMatches, playerName, level, tag, nil, nil, nil, roles, nil )
 
 				firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
@@ -1000,10 +1001,11 @@ class Bot
 			aliasNick = playerData[ "aliasNick" ]
 			muted = playerData[ "muted" ]
 			elo = playerData[ "elo" ]
+			noMatches = playerData[ "noMatches" ]
 			playerName = playerData[ "playerName" ]
 			level = playerData[ "level" ]
 			tag = playerData[ "tag" ]
-			player = Player.new( message.actor, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, nil, nil )
+			player = Player.new( message.actor, mumbleNick, admin, aliasNick, muted, elo, noMatches, playerName, level, tag, nil, nil, nil, nil, nil )
 			@players[ client ][ mumbleNick ] = player
 		end
 
@@ -1547,9 +1549,10 @@ class Bot
 
 			sectionName = "ELO"
 
-			if !player.elo.nil? && !player.elo.eql?( 1000 )
+			unless ( player.elo.eql?( 1000 ) && player.noMatches.eql?( 0 ) )
 				ini.removeValue( sectionName, CGI::escape(oldPlayerName) )
-				ini.setValue( sectionName, CGI::escape(player.aliasNick ? player.aliasNick : player.mumbleNick), player.elo.to_s )
+				eloStr = "#{player.elo} #{player.noMatches}"
+				ini.setValue( sectionName, CGI::escape(player.aliasNick ? player.aliasNick : player.mumbleNick), eloStr )
 			end
 
 			ini.writeToFile( 'players.ini' )
@@ -1673,7 +1676,7 @@ class Bot
 			if displayPlayers
 				if @players[ client ]
 					@players[ client ].each_pair do |session, player|
-						client.send_user_message message.actor, "Player: #{convert_symbols_to_html( player.playerName )}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
+						client.send_user_message message.actor, "Player: #{convert_symbols_to_html( player.playerName )}, level: #{player.level}, elo: #{player.elo}, number of matches: #{player.noMatches}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 					end
 				else
 					client.send_user_message message.actor, "No players registered"
@@ -2376,7 +2379,13 @@ class Bot
 			end
 
 			sectionName = "ELO"
-			elo = ini.getValue( sectionName, CGI::escape(nick) )
+			eloStr = ini.getValue( sectionName, CGI::escape(nick) )
+			elo = nil
+			noMatches = nil
+			unless eloStr.nil?
+				elo = eloStr.split(' ')[0].to_i
+				noMatches = eloStr.split(' ')[1].to_i
+			end
 
 		else
 
@@ -2387,6 +2396,9 @@ class Bot
 			elo = nil
 
 		end
+
+		elo = 1000 if elo.nil?
+		noMatches = 0 if noMatches.nil?
 
 		stats = Array.new
 		stats << "Name"
