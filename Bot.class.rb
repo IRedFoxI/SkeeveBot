@@ -41,8 +41,8 @@ class Bot
 	end
 
 	def exit_by_user
-		puts ""
-		puts "user exited bot."
+		puts ''
+		puts 'user exited bot.'
 		if @connections.keys.first
 			@connections.keys.first.debug
 		end
@@ -66,7 +66,7 @@ class Bot
 		return if client.find_user( message.session ).name.eql? @connections[ client ][ :nick ]
 
 		# Check if there is a channel change
-		return unless message.instance_variable_get( "@values").has_key?( :channel_id )
+		return unless message.instance_variable_get( '@values' ).has_key?( :channel_id )
 
 		session = message.session
 		chanPath = client.channels[ message.channel_id ].path
@@ -116,15 +116,15 @@ class Bot
 			client.register_handler :UserRemove, method( :on_user_remove )
 			# client.register_handler :UDPTunnel, method( :on_audio )
 
-			client.register_text_handler "!help", method( :cmd_help )
-			client.register_text_handler "!find", method( :cmd_find )
-			client.register_text_handler "!goto", method( :cmd_goto )
-			client.register_text_handler "!test", method( :cmd_test )
-			client.register_text_handler "!info", method( :cmd_info )
-			client.register_text_handler "!admin", method( :cmd_admin )
-			client.register_text_handler "!mute", method( :cmd_mute )
-			client.register_text_handler "!result", method( :cmd_result )
-			client.register_text_handler "!list", method( :cmd_list )
+			client.register_text_handler '!help', method( :cmd_help )
+			client.register_text_handler '!find', method( :cmd_find )
+			client.register_text_handler '!goto', method( :cmd_goto )
+			client.register_text_handler '!test', method( :cmd_test )
+			client.register_text_handler '!info', method( :cmd_info )
+			client.register_text_handler '!admin', method( :cmd_admin )
+			client.register_text_handler '!mute', method( :cmd_mute )
+			client.register_text_handler '!result', method( :cmd_result )
+			client.register_text_handler '!list', method( :cmd_list )
 
 			client.register_exception_handler method( :on_exception )
 
@@ -161,10 +161,10 @@ class Bot
 
 	def create_comment client
 		comment = String.new
-		comment << "<center>-=[ SkeeveBot ]=-</center><HR>"
-		comment << "<code>!mute 0/1/2/3</code> [ from 0 (no mute) to 3 (all muted) ]<BR>"
-		comment << "<code>!result map1 map2 map3</code> [ use BE-DS for each map ]<BR>"
-		comment << "<code>!list</code> [ shows all matches in the last 24h ]"
+		comment << '<center>-=[ SkeeveBot ]=-</center><HR>'
+		comment << '<code>!mute 0/1/2/3</code> [ from 0 (no mute) to 3 (all muted) ]<BR>'
+		comment << '<code>!result map1 map2 map3</code> [ use BE-DS for each map ]<BR>'
+		comment << '<code>!list</code> [ shows all matches in the last 24h ]'
 
 		match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
 		comment << "<HR>Current status: #{match.status}<BR>"
@@ -175,7 +175,7 @@ class Bot
 		if playersNeeded > 0
 			comment << "Not enough players to start a match. Missing #{playersNeeded} player(s)."
 		elsif rolesNeeded.empty?
-			comment << "Enough players and all required roles are most likely covered. Start picking!"
+			comment << 'Enough players and all required roles are most likely covered. Start picking!'
 		else
 			comment << "Enough players but missing #{rolesNeeded.join(' and ')}."
 		end
@@ -188,37 +188,37 @@ class Bot
 				comment << "<TD>#{t}</TD>"
 				noCols += 1
 			end
-			comment << "</TR>"
+			comment << '</TR>'
 			signups.each_value do |pl|
-				comment << "<TR>"
+				comment << '<TR>'
 				name = String.new
-				name << "[#{pl.tag}]" if ( pl.tag  && !pl.tag.eql?( "" ) )
+				name << "[#{pl.tag}]" if ( pl.tag  && !pl.tag.eql?( '' ) )
 				name << convert_symbols_to_html( pl.playerName )
 				roles = convert_symbols_to_html( pl.roles.join('/') )
 				comment << "<TD>#{name}(level: #{pl.level}): #{roles}</TD>"
 				i = 2
 				while i <= noCols
 					if pl.team.eql?( match.teams[ i - 2 ] )
-						comment << "<TD><CENTER>*</CENTER></TD>"
+						comment << '<TD><CENTER>*</CENTER></TD>'
 					else
-						comment << "<TD></TD>"
+						comment << '<TD></TD>'
 					end
 					i += 1
 				end
-				comment << "</TR>"
+				comment << '</TR>'
 			end
-			comment << "</TABLE>"
+			comment << '</TABLE>'
 		end
 
 		selection = Array.new
-		selection = selection | @matches.select{ |m| m.label.eql?( @connections[ client ][ :label ] ) && !m.status.eql?( "Deleted" ) && !m.id.eql?( @currentMatch[ client ] ) }
+		selection = selection | @matches.select{ |m| m.label.eql?( @connections[ client ][ :label ] ) && !m.status.eql?( 'Deleted' ) && !m.id.eql?( @currentMatch[ client ] ) }
 		unless selection.empty?
 			
 			comment << "<HR>Recent matches:<TABLE BORDER=\"0\"><TR><TD>Id</TD><TD>Date</TD><TD>Time</TD><TD>Status</TD>"
 			comment << "<TD>#{selection.first.teams.join('</TD><TD>')}</TD><TD>Result</TD></TR>"
 
 			selection.each do |recentMatch|
-				comment << "<TR><TD>#{recentMatch.id}</TD><TD>#{recentMatch.date.strftime("%d/%m")}</TD><TD>#{recentMatch.date.strftime("%H:%M")}</TD>"
+				comment << "<TR><TD>#{recentMatch.id}</TD><TD>#{recentMatch.date.strftime('%d/%m')}</TD><TD>#{recentMatch.date.strftime('%H:%M')}</TD>"
 				comment << "<TD>#{recentMatch.status}</TD>"
 
 				recentMatch.teams.each do |team|
@@ -229,7 +229,7 @@ class Bot
 
 				
 				if recentMatch.results.empty?
-					comment << "<TD>pending</TD>"
+					comment << '<TD>pending</TD>'
 				else
 					results = Array.new
 					recentMatch.results.each do |res|
@@ -237,9 +237,9 @@ class Bot
 					end
 					comment << "<TD>#{results.join(' ')}</TD>"
 				end
-				comment << "</TR>"
+				comment << '</TR>'
 			end
-			comment << "</TABLE>"
+			comment << '</TABLE>'
 		end
 		comment << "<HR>Documentation: <A HREF='http://iredfoxi.github.io/SkeeveBot/'><CODE>http://iredfoxi.github.io/SkeeveBot/</CODE></A>"
 
@@ -252,7 +252,7 @@ class Bot
 
 		@connections.keys.each do |cl|
 
-			admins = @players[ cl ].select{ |mN, pl| pl.admin.eql?( "SuperUser" ) }
+			admins = @players[ cl ].select{ |mN, pl| pl.admin.eql?( 'SuperUser' ) }
 
 			unless admins.empty?
 				admins.each_value do |pl|
@@ -291,7 +291,7 @@ class Bot
 			if @chanRoles[ client ].has_key?( chanPath )
 				monitoredChannel = true
 			else
-				baseChannel = ""
+				baseChannel = ''
 				@chanRoles[ client ].each_key do |channel|
 					if chanPath.include?( channel )
 						if channel.length > baseChannel.length
@@ -326,7 +326,7 @@ class Bot
 					firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
 					name = String.new
-					name << "[#{player.tag}]" if ( player.tag  && !player.tag.eql?( "" ) )
+					name << "[#{player.tag}]" if ( player.tag  && !player.tag.eql?( '' ) )
 					name << convert_symbols_to_html( player.playerName )					
 
 					if  firstRoleReq.to_i < 0
@@ -335,10 +335,10 @@ class Bot
 						player.roles = roles
 						player.team = nil
 						player.match = nil
-						messagePlayer = "You became a spectator."						
+						messagePlayer = 'You became a spectator.'
 						messageAll = "Player #{name} (level: #{player.level}) became a spectator."
 
-					elsif firstRoleReq.eql? "T"
+					elsif firstRoleReq.eql? 'T'
 						# Joined a team channel
 
 						if player.team.eql?( roles.first )
@@ -353,7 +353,7 @@ class Bot
 
 						# Player returning to a running game
 						@matches.each do |match|
-							next unless match.status.eql?( "Started" )
+							next unless match.status.eql?( 'Started' )
 							if match.players.select{ |pN, t| pN.downcase.eql?( player.playerName.downcase ) }.length > 0
 								@players[ client ][ mumbleNick ].team = roles.first
 								@players[ client ][ mumbleNick ].match = match.id
@@ -394,25 +394,25 @@ class Bot
 							messagePlayer = "You became captain of team '#{player.team}'."
 							messageAll = "Player #{name} (level: #{player.level}) became captain of team '#{player.team}'."
 							if match.teams.length >= noTeams
-								match.status = "Picking"
-								messageAll << " Picking has started!"
+								match.status = 'Picking'
+								messageAll << ' Picking has started!'
 							end
 
 						end
 
-						if !@moveQueue[ client ] && match.status.eql?( "Picking" )
+						if !@moveQueue[ client ] && match.status.eql?( 'Picking' )
 							if @players[ client ].select{ |mN, pl| pl.match.eql?( match.id ) && pl.team.nil? }.length == 0
 								@moveQueue[ client ] = true
 							end
 						end
 
-					elsif firstRoleReq.eql? "Q"
+					elsif firstRoleReq.eql? 'Q'
 						# Joined a queue channel
 
 						player.roles = roles
 						player.team = nil
 						player.match = @currentMatch[ client ]
-						messagePlayer = "You joined the queue."
+						messagePlayer = 'You joined the queue.'
 						messageAll = "Player #{name} (level: #{player.level}) joined the queue."
 
 					else
@@ -423,8 +423,8 @@ class Bot
 						player.team = nil
 						player.match = @currentMatch[ client ]
 
-						if match.status.eql?( "Picking" ) && !@moveQueue[ client ] && jumpingQueue
-							messagePlayer = "Picking has already started. Please join the queue."
+						if match.status.eql?( 'Picking' ) && !@moveQueue[ client ] && jumpingQueue
+							messagePlayer = 'Picking has already started. Please join the queue.'
 							messageAll = "Player #{name} (level: #{player.level}) jumped the queue."
 						else
 							messagePlayer = "Your role(s) changed to '#{roles.join(' ')}'."
@@ -475,20 +475,20 @@ class Bot
 				firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
 				name = String.new
-				name << "[#{player.tag}]" if ( player.tag  && !player.tag.eql?( "" ) )
+				name << "[#{player.tag}]" if ( player.tag  && !player.tag.eql?( '' ) )
 				name << convert_symbols_to_html( player.playerName )
 
 				if  firstRoleReq.to_i < 0
 					# Became spectator
 
-					messagePlayer = "You became a spectator."
+					messagePlayer = 'You became a spectator.'
 					messageAll = "Player #{name} (level: #{player.level}) became a spectator."
 
-				elsif firstRoleReq.eql? "T"
+				elsif firstRoleReq.eql? 'T'
 
 					# Player returning to a running game
 					@matches.each do |match|
-						next unless match.status.eql?( "Started" )
+						next unless match.status.eql?( 'Started' )
 						if match.players.select{ |pN, t| pN.downcase.eql?( player.playerName.downcase ) }.length > 0
 							player.team = roles.first
 							player.match = match.id
@@ -532,20 +532,20 @@ class Bot
 						messageAll = "Player #{name} (level: #{player.level}) became captain of team '#{player.team}'."
 						noTeams = @teamNum[ client ] ? @teamNum[ client ] : @defaultTeamNum
 						if match.teams.length >= noTeams
-							match.status = "Picking"
-							messagePlayer << " Picking has started!"
-							messageAll << " Picking has started!"
+							match.status = 'Picking'
+							messagePlayer << ' Picking has started!'
+							messageAll << ' Picking has started!'
 						end
 
 					end
 
-				elsif firstRoleReq.eql? "Q"
+				elsif firstRoleReq.eql? 'Q'
 					# Joined a queue channel
 
 					player.roles = roles
 					player.team = nil
 					player.match = @currentMatch[ client ]
-					messagePlayer = "You joined the queue."
+					messagePlayer = 'You joined the queue.'
 					messageAll = "Player #{name} (level: #{player.level}) joined the queue."
 
 				else
@@ -555,8 +555,8 @@ class Bot
 					player.team = nil
 					player.match = @currentMatch[ client ]
 
-					if match.status.eql?( "Picking" ) && !@moveQueue[ client ]
-						messagePlayer = "Picking has already started. Please join the queue."
+					if match.status.eql?( 'Picking' ) && !@moveQueue[ client ]
+						messagePlayer = 'Picking has already started. Please join the queue.'
 						messageAll = "Player #{name} (level: #{player.level}) jumped the queue."
 					else
 						messagePlayer = "You signed up with role(s) '#{roles.join(' ')}'."
@@ -607,9 +607,9 @@ class Bot
 			end
 
 			name = String.new
-			name << "[#{player.tag}]" if ( player.tag  && !player.tag.eql?( "" ) )
+			name << "[#{player.tag}]" if ( player.tag  && !player.tag.eql?( '' ) )
 			name << convert_symbols_to_html( player.playerName )
-			messagePlayer = "You left the PuG/mixed channels."
+			messagePlayer = 'You left the PuG/mixed channels.'
 			messageAll = "Player #{name} (level: #{player.level}) left."
 
 		end
@@ -620,10 +620,10 @@ class Bot
 
 		message_all( client, messageAll, [ nil, @currentMatch[ client ] ], 1, player.session )
 
-		if match.status.eql?( "Picking" )
+		if match.status.eql?( 'Picking' )
 
 			if match.players.length < noTeams
-				@matches.select{ |m| m.id.eql?( match.id ) }.first.status = "Signup"
+				@matches.select{ |m| m.id.eql?( match.id ) }.first.status = 'Signup'
 			end
 
 			teamsPicked = 0
@@ -638,7 +638,7 @@ class Bot
 			if teamsPicked >= noTeams
 
 				index = @matches.index{ |m| m.id.eql?( @currentMatch[ client ] ) }
-				@matches[ index ].status = "Started"
+				@matches[ index ].status = 'Started'
 				@matches[ index ].date = Time.now
 				message_all( client, "The teams are picked, match (id: #{match.id}) started.", [ nil, @currentMatch[ client ] ], 2 )
 
@@ -659,7 +659,7 @@ class Bot
 
 		end
 
-		if match.status.eql?( "Signup" )
+		if match.status.eql?( 'Signup' )
 
 			rolesNeeded = check_requirements( client )
 			playersNeeded = rolesNeeded.shift
@@ -668,12 +668,12 @@ class Bot
 				# Still needing more players
 
 			elsif prevPlayersNeeded <= 0 && playersNeeded > 0
-				message_all( client, "No longer enough players to start a match.", [ nil, @currentMatch[ client ] ], 2 )
+				message_all( client, 'No longer enough players to start a match.', [ nil, @currentMatch[ client ] ], 2 )
 
 			elsif ( prevPlayersNeeded > 0 && playersNeeded <= 0 ) || !rolesNeeded.eql?( prevRolesNeeded ) 
 
 				if rolesNeeded.empty?
-					message_all( client, "Enough players and all required roles are most likely covered. Start picking!", [ nil, @currentMatch[ client ] ], 2 )
+					message_all( client, 'Enough players and all required roles are most likely covered. Start picking!', [ nil, @currentMatch[ client ] ], 2 )
 				else
 					message_all( client, "Enough players but missing #{rolesNeeded.join(' and ')}", [ nil, @currentMatch[ client ] ], 2 )
 				end
@@ -693,7 +693,7 @@ class Bot
 		index = @matches.index{ |m| m.id.eql?( matchId ) }
 		match = @matches[ index ]
 
-		return unless match.status.eql?( "Started" )
+		return unless match.status.eql?( 'Started' )
 
 		stillPlaying = 0
 
@@ -706,7 +706,7 @@ class Bot
 
 		return if stillPlaying > match.players.keys.length / 2
 
-		@matches[ index ].status = "Pending"
+		@matches[ index ].status = 'Pending'
 
 		message_all( client, "Your match (id: #{match.id}) seems to be over. Please report the result (check my comment for help).", [ matchId ], 2 )
 
@@ -718,11 +718,11 @@ class Bot
 		id = @nextMatchId
 		@nextMatchId += 1
 		label = @connections[ client ][ :label ]
-		status = "Signup"
+		status = 'Signup'
 		date = nil
 		teams = Array.new
 		players = Hash.new
-		comment= ""
+		comment= ''
 		result = Array.new
 		match = Match.new( id, label, status, date, teams, players, comment, result )
 		@matches << match
@@ -773,25 +773,25 @@ class Bot
 		unless command.nil?
 
 			case command.downcase
-			when "find"
+			when 'find'
 				help_msg_find( client, message )
 				return
-			when "goto"
+			when 'goto'
 				help_msg_goto( client, message )
 				return
-			when "info"
+			when 'info'
 				help_msg_info( client, message )
 				return
-			when "mute"
+			when 'mute'
 				help_msg_mute( client, message )
 				return
-			when "result"
+			when 'result'
 				help_msg_result( client, message )
 				return
-			when "list"
+			when 'list'
 				help_msg_list( client, message )
 				return
-			when "admin"
+			when 'admin'
 				help_msg_admin( client, message )
 				return
 			else
@@ -800,14 +800,14 @@ class Bot
 
 		end
 
-		client.send_user_message message.actor, "The following commands are available:"
+		client.send_user_message message.actor, 'The following commands are available:'
 		client.send_user_message message.actor, "!help \"command\" - detailed help on the command"
 		client.send_user_message message.actor, "!find \"mumble_nick\" - find which channel someone is in"
 		client.send_user_message message.actor, "!goto \"mumble_nick\" - move yourself to someone's channel"
 		client.send_user_message message.actor, "!info \"tribes_nick\" \"stat\" - detailed stats on player"
-		client.send_user_message message.actor, "!mute - 0/1/2/3 - mute the bots spam messages from 0 (no mute) to 3 (all muted)"
+		client.send_user_message message.actor, '!mute - 0/1/2/3 - mute the bots spam messages from 0 (no mute) to 3 (all muted)'
 		client.send_user_message message.actor, "!result \"map1\" \"map2\" \"map3\"- sets the result of your last match"
-		client.send_user_message message.actor, "!list - shows the latest matches"
+		client.send_user_message message.actor, '!list - shows the latest matches'
 		client.send_user_message message.actor, "!admin \"command\" - admin commands"	end
 
 	def cmd_find client, message
@@ -914,11 +914,11 @@ class Bot
 		end
 
 		stats = Array.new
-		stats << "Name"
-		stats << "Level"
-		stats << "Tag"
+		stats << 'Name'
+		stats << 'Level'
+		stats << 'Tag'
 		noDefaultStats = stats.length
-		stats.push( *text.split(" ")[ 2..-1 ] )
+		stats.push( *text.split(' ')[ 2..-1 ] )
 		stats.map! do |stat|
 			stat.split('_').map!( &:capitalize ).join('_')
 		end
@@ -968,8 +968,8 @@ class Bot
 	end
 
 	def help_msg_info client, message
-		client.send_user_message message.actor, "Syntax !info"
-		client.send_user_message message.actor, "Returns your tag, playername and level based on your mumble nick"
+		client.send_user_message message.actor, 'Syntax !info'
+		client.send_user_message message.actor, 'Returns your tag, playername and level based on your mumble nick'
 		client.send_user_message message.actor, "Syntax !info \"stat\""
 		client.send_user_message message.actor, "As above but also shows your additional statistic \"stat\""
 		client.send_user_message message.actor, "Syntax !info \"tribes_nick\""
@@ -977,9 +977,9 @@ class Bot
 		client.send_user_message message.actor, "Syntax !info \"tribes_nick\" \"stat\""
 		client.send_user_message message.actor, "As above but also shows \"tribes_nick\"'s \"stat\""
 		client.send_user_message message.actor, "\"stat\" can be a space delimited list of these stats:"
-		stats = get_player_stats "SomeFakePlayerName"
+		stats = get_player_stats 'SomeFakePlayerName'
 		stats.each do |stat|
-			client.send_user_message message.actor, stat unless stat.eql? "ret_msg"
+			client.send_user_message message.actor, stat unless stat.eql? 'ret_msg'
 		end
 	end
 
@@ -1009,38 +1009,38 @@ class Bot
 
 		if command.nil?
 
-			client.send_user_message message.actor, "Please specify an admin command."
+			client.send_user_message message.actor, 'Please specify an admin command.'
 
 		else
 
 			case command.downcase
-			when "login"
+			when 'login'
 				cmd_admin_login( client, message )
-			when "setchan"
+			when 'setchan'
 				cmd_admin_setchan( client, message )
-			when "setrole"
+			when 'setrole'
 				cmd_admin_setrole( client, message )
-			when "delrole"
+			when 'delrole'
 				cmd_admin_delrole( client, message )
-			when "playernum"
+			when 'playernum'
 				cmd_admin_playernum( client, message )
-			when "alias"
+			when 'alias'
 				cmd_admin_alias( client, message )
-			when "come"
+			when 'come'
 				cmd_admin_come( client, message )
-			when "op"
+			when 'op'
 				cmd_admin_op( client, message )
-			when "result"
+			when 'result'
 				cmd_admin_result( client, message )
-			when "delete"
+			when 'delete'
 				cmd_admin_delete( client, message )
-			when "shutdown"
+			when 'shutdown'
 				cmd_admin_shutdown( client, message )
-			when "restart"
+			when 'restart'
 				cmd_admin_restart( client, message )
-			when "eval"
+			when 'eval'
 				cmd_admin_eval( client, message )
-			when "debug"
+			when 'debug'
 				cmd_admin_debug( client, message )
 			else
 				client.send_user_message message.actor, "Unknown admin command '#{command}'."
@@ -1057,34 +1057,34 @@ class Bot
 		unless command.nil?
 
 			case command.downcase
-			when "login"
+			when 'login'
 				help_msg_admin_login( client, message )
 				return
-			when "setchan"
+			when 'setchan'
 				help_msg_admin_setchan( client, message )
 				return
-			when "setrole"
+			when 'setrole'
 				help_msg_admin_setrole( client, message )
 				return
-			when "delrole"
+			when 'delrole'
 				help_msg_admin_delrole( client, message )
 				return
-			when "playernum"
+			when 'playernum'
 				help_msg_admin_playernum( client, message )
 				return
-			when "alias"
+			when 'alias'
 				help_msg_admin_alias( client, message )
 				return
-			when "come"
+			when 'come'
 				help_msg_admin_come( client, message )
 				return
-			when "op"
+			when 'op'
 				help_msg_admin_op( client, message )
 				return
-			when "result"
+			when 'result'
 				help_msg_admin_result( client, message )
 				return
-			when "delete"
+			when 'delete'
 				help_msg_admin_delete( client, message )
 				return
 			else
@@ -1093,7 +1093,7 @@ class Bot
 
 		end
 
-		client.send_user_message message.actor, "The following admin commands are available:"
+		client.send_user_message message.actor, 'The following admin commands are available:'
 		client.send_user_message message.actor, "!help admin \"command\" - detailed help on the admin command"
 		client.send_user_message message.actor, "!admin login \"password\" - login as SuperUser"
 		client.send_user_message message.actor, "!admin setchan \"role\" - set a channel's role"
@@ -1101,7 +1101,7 @@ class Bot
 		client.send_user_message message.actor, "!admin delrole \"role\" - delete a role"
 		client.send_user_message message.actor, "!admin playernum \"number\" - set the required number of players per team"
 		client.send_user_message message.actor, "!admin alias \"player\" \"alias\" - set a player's alias"
-		client.send_user_message message.actor, "!admin come - make the bot move to your channel"
+		client.send_user_message message.actor, '!admin come - make the bot move to your channel'
 		client.send_user_message message.actor, "!admin op \"player\" - make \"player\" an admin"
 		client.send_user_message message.actor, "!admin result \"match_id\" \"scores\"- set the result of a match"
 		client.send_user_message message.actor, "!admin delete \"match_id\" - delete a match"
@@ -1109,12 +1109,12 @@ class Bot
 	end
 
 	def cmd_admin_shutdown client, message
-		client.send_user_message message.actor, "Shutting down..."
+		client.send_user_message message.actor, 'Shutting down...'
 		@shutdown = true
 	end
 
 	def cmd_admin_restart client, message
-		client.send_user_message message.actor, "Restarting..."
+		client.send_user_message message.actor, 'Restarting...'
 		@restart = true
 		@shutdown = true
 	end
@@ -1125,7 +1125,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
+		if @players[ client ][ mumbleNick ].admin.eql?('SuperUser')
 			client.send_user_message message.actor, "Raising an exception: #{exception}"
 			raise exception
 		end
@@ -1141,16 +1141,16 @@ class Bot
 
 		if password.eql? @connections[ client ][ :pass ]
 
-			client.send_user_message message.actor, "Login accepted."
+			client.send_user_message message.actor, 'Login accepted.'
 
-			if player.admin.eql? "SuperUser"
+			if player.admin.eql? 'SuperUser'
 
-				client.send_user_message message.actor, "Already a SuperUser."
+				client.send_user_message message.actor, 'Already a SuperUser.'
 				return
 
 			else
 
-				player.admin = "SuperUser"
+				player.admin = 'SuperUser'
 
 				@players[ client ][ mumbleNick ] = player
 
@@ -1169,7 +1169,7 @@ class Bot
 
 		else
 
-			client.send_user_message message.actor, "Wrong password."
+			client.send_user_message message.actor, 'Wrong password.'
 
 		end
 
@@ -1177,7 +1177,7 @@ class Bot
 
 	def help_msg_admin_login client, message
 		client.send_user_message message.actor, "Syntax: !admin login \"password\""
-		client.send_user_message message.actor, "Logs you in to the bot as a SuperUser"
+		client.send_user_message message.actor, 'Logs you in to the bot as a SuperUser'
 	end
 
 	def cmd_admin_setchan client, message 
@@ -1191,7 +1191,7 @@ class Bot
 			roles = text.split(' ')[ 2..-1 ]
 
 			unless @rolesRequired[ client ]
-				client.send_user_message message.actor, "No roles defined."
+				client.send_user_message message.actor, 'No roles defined.'
 				return
 			end
 
@@ -1236,7 +1236,7 @@ class Bot
 			end
 
 		else
-			client.send_user_message message.actor, "No admin privileges."
+			client.send_user_message message.actor, 'No admin privileges.'
 		end
 
 	end
@@ -1244,7 +1244,7 @@ class Bot
 	def help_msg_admin_setchan client, message
 		client.send_user_message message.actor, "Syntax: !admin setchan \"role\""
 		client.send_user_message message.actor, "Sets the channel you are in to \"role\""
-		client.send_user_message message.actor, "You can set multiple roles by separating them with a space"
+		client.send_user_message message.actor, 'You can set multiple roles by separating them with a space'
 	end
 
 	def cmd_admin_setrole client, message
@@ -1264,13 +1264,13 @@ class Bot
 			end
 
 			if required.nil?
-				client.send_user_message message.actor, "Missing argument."
+				client.send_user_message message.actor, 'Missing argument.'
 				return
 			end
 
 			required.upcase!
 
-			if required.to_i.to_s != required && required != "T" && required != "Q"
+			if required.to_i.to_s != required && required != 'T' && required != 'Q'
 				client.send_user_message message.actor, "Argument must be numeric, 'T' or 'Q'."
 				return
 			end
@@ -1299,7 +1299,7 @@ class Bot
 			end
 
 		else
-			client.send_user_message message.actor, "No admin privileges."
+			client.send_user_message message.actor, 'No admin privileges.'
 		end
 
 	end
@@ -1308,7 +1308,7 @@ class Bot
 		client.send_user_message message.actor, "Syntax: !admin setrole \"role\" \"requirement\""
 		client.send_user_message message.actor, "Create a new role with or sets an existing role to \"requirement\""
 		client.send_user_message message.actor, "The \"requirement\" is:"
-		client.send_user_message message.actor, "- the number of players with that role required per team"
+		client.send_user_message message.actor, '- the number of players with that role required per team'
 		client.send_user_message message.actor, "- '-1' if the channel holds spectators"
 		client.send_user_message message.actor, "- 'T' if the channel is a team channel"
 		client.send_user_message message.actor, "- 'Q' if the channel is a queuing channel"
