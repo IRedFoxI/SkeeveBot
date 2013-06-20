@@ -463,14 +463,14 @@ class Bot
 				end
 
 				playerData = get_player_data( client, mumbleNick )
-				admin = playerData[ "admin" ]
-				aliasNick = playerData[ "aliasNick" ]
-				muted = playerData[ "muted" ]
-				elo = playerData[ "elo" ]
-				noMatches = playerData[ "noMatches" ]
-				playerName = playerData[ "playerName" ]
-				level = playerData[ "level" ]
-				tag = playerData[ "tag" ]
+				admin = playerData[ :admin ]
+				aliasNick = playerData[ :aliasNick ]
+				muted = playerData[ :muted ]
+				elo = playerData[ :elo ]
+				noMatches = playerData[ :noMatches ]
+				playerName = playerData[ :playerName ]
+				level = playerData[ :level ]
+				tag = playerData[ :tag ]
 				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, noMatches, playerName, level, tag, nil, nil, nil, roles, nil )
 
 				firstRoleReq = @rolesRequired[ client ][ roles.first ]
@@ -997,14 +997,14 @@ class Bot
 
 		unless @players[ client ].has_key?( mumbleNick )
 			playerData = get_player_data( client, mumbleNick )
-			admin = playerData[ "admin" ]
-			aliasNick = playerData[ "aliasNick" ]
-			muted = playerData[ "muted" ]
-			elo = playerData[ "elo" ]
-			noMatches = playerData[ "noMatches" ]
-			playerName = playerData[ "playerName" ]
-			level = playerData[ "level" ]
-			tag = playerData[ "tag" ]
+			admin = playerData[ :admin ]
+			aliasNick = playerData[ :aliasNick ]
+			muted = playerData[ :muted ]
+			elo = playerData[ :elo ]
+			noMatches = playerData[ :noMatches ]
+			playerName = playerData[ :playerName ]
+			level = playerData[ :level ]
+			tag = playerData[ :tag ]
 			player = Player.new( message.actor, mumbleNick, admin, aliasNick, muted, elo, noMatches, playerName, level, tag, nil, nil, nil, nil, nil )
 			@players[ client ][ mumbleNick ] = player
 		end
@@ -2418,15 +2418,16 @@ class Bot
 		end
 
 		return {
-				"session" => session,
-				"mumbleNick" => mumbleNick,
-				"admin" => admin,
-				"aliasNick" => aliasNick,
-				"muted" => muted,
-				"elo" => elo,
-				"playerName" => playerName,
-				"level" => level,
-				"tag" => tag
+				:session => session,
+				:mumbleNick => mumbleNick,
+				:admin => admin,
+				:aliasNick => aliasNick,
+				:muted => muted,
+				:elo => elo,
+				:noMatches => noMatches,
+				:playerName => playerName,
+				:level => level,
+				:tag => tag
 		}
 
 	end
