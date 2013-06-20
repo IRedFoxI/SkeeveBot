@@ -1,4 +1,4 @@
-requireLibrary '../../TribesAPI'
+# requireLibrary '../../TribesAPI'
 
 require 'digest/md5'
 require 'json'
