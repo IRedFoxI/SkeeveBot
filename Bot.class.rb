@@ -2029,7 +2029,9 @@ class Bot
 			end
 		end
 
-		unless selection.empty?
+		if selection.empty?
+			client.send_user_message message.actor, "No matches found."
+		else
 			selection.each do |match|
 
 				statusStr = ", Status: #{match.status}"
@@ -2059,8 +2061,6 @@ class Bot
 
 				client.send_user_message message.actor, "Id: #{match.id}#{dateStr}#{statusStr}#{teamStr}#{resultStr}"
 			end
-		else
-			client.send_user_message message.actor, "No matches found."
 		end
 	end
 
