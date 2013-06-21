@@ -181,7 +181,7 @@ class Bot
 		end
 
 		unless @players[ client ].nil? || @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }.empty?
-			comment << "<HR><TABLE BORDER=\"0\"><TR><TD>Signups</TD>"
+			comment << '<HR><TABLE BORDER="0"><TR><TD>Signups</TD>'
 			signups = @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }
 			noCols = 1
 			match.teams.each do |t|
@@ -214,7 +214,7 @@ class Bot
 		selection = selection | @matches.select{ |m| m.label.eql?( @connections[ client ][ :label ] ) && !m.status.eql?( 'Deleted' ) && !m.id.eql?( @currentMatch[ client ] ) }
 		unless selection.empty?
 			
-			comment << "<HR>Recent matches:<TABLE BORDER=\"0\"><TR><TD>Id</TD><TD>Date</TD><TD>Time</TD><TD>Status</TD>"
+			comment << '<HR>Recent matches:<TABLE BORDER="0"><TR><TD>Id</TD><TD>Date</TD><TD>Time</TD><TD>Status</TD>'
 			comment << "<TD>#{selection.first.teams.join('</TD><TD>')}</TD><TD>Result</TD></TR>"
 
 			selection.each do |recentMatch|
@@ -241,7 +241,7 @@ class Bot
 			end
 			comment << '</TABLE>'
 		end
-		comment << "<HR>Documentation: <A HREF='http://iredfoxi.github.io/SkeeveBot/'><CODE>http://iredfoxi.github.io/SkeeveBot/</CODE></A>"
+		comment << '<HR>Documentation: <A HREF="http://iredfoxi.github.io/SkeeveBot/"><CODE>http://iredfoxi.github.io/SkeeveBot/</CODE></A>'
 
 		client.set_comment( comment )
 	end		
@@ -570,7 +570,7 @@ class Bot
 				end
 
 				if player.muted < 2
-					client.send_user_message( player.session, "Welcome to the PUG channels. Message me \"!help\" for an overview of commands. Mute me with \"!mute\"" )
+					client.send_user_message( player.session, 'Welcome to the PUG channels. Message me "!help" for an overview of commands. Mute me with "!mute"' )
 				end
 
 				if player.muted < 3
@@ -801,14 +801,15 @@ class Bot
 		end
 
 		client.send_user_message message.actor, 'The following commands are available:'
-		client.send_user_message message.actor, "!help \"command\" - detailed help on the command"
-		client.send_user_message message.actor, "!find \"mumble_nick\" - find which channel someone is in"
+		client.send_user_message message.actor, '!help "command" - detailed help on the command'
+		client.send_user_message message.actor, '!find "mumble_nick" - find which channel someone is in'
 		client.send_user_message message.actor, "!goto \"mumble_nick\" - move yourself to someone's channel"
-		client.send_user_message message.actor, "!info \"tribes_nick\" \"stat\" - detailed stats on player"
+		client.send_user_message message.actor, '!info "tribes_nick" "stat" - detailed stats on player'
 		client.send_user_message message.actor, '!mute - 0/1/2/3 - mute the bots spam messages from 0 (no mute) to 3 (all muted)'
-		client.send_user_message message.actor, "!result \"map1\" \"map2\" \"map3\"- sets the result of your last match"
+		client.send_user_message message.actor, '!result "map1" "map2" "map3"- sets the result of your last match'
 		client.send_user_message message.actor, '!list - shows the latest matches'
-		client.send_user_message message.actor, "!admin \"command\" - admin commands"	end
+		client.send_user_message message.actor, '!admin "command" - admin commands'
+	end
 
 	def cmd_find client, message
 		text = convert_symbols_from_html( message.message )
@@ -868,7 +869,7 @@ class Bot
 	end
 
 	def help_msg_find client, message
-		client.send_user_message message.actor, "Syntax: !find \"nick\""
+		client.send_user_message message.actor, 'Syntax: !find "nick"'
 		client.send_user_message message.actor, "Returns \"nick\"'s channel. \"nick\" can be a mumble nick or a player name."
 	end
 
@@ -881,7 +882,7 @@ class Bot
 	end
 
 	def help_msg_goto client, message
-		client.send_user_message message.actor, "Syntax: !goto \"mumble_nick\""
+		client.send_user_message message.actor, 'Syntax: !goto "mumble_nick"'
 		client.send_user_message message.actor, "The bot tries to move you to \"mumble_nick\"'s. Fails if the bot doesn't have sufficient rights"
 	end
 
@@ -970,13 +971,13 @@ class Bot
 	def help_msg_info client, message
 		client.send_user_message message.actor, 'Syntax !info'
 		client.send_user_message message.actor, 'Returns your tag, playername and level based on your mumble nick'
-		client.send_user_message message.actor, "Syntax !info \"stat\""
-		client.send_user_message message.actor, "As above but also shows your additional statistic \"stat\""
-		client.send_user_message message.actor, "Syntax !info \"tribes_nick\""
+		client.send_user_message message.actor, 'Syntax !info "stat"'
+		client.send_user_message message.actor, 'As above, but also shows your additional statistic "stat"'
+		client.send_user_message message.actor, 'Syntax !info "tribes_nick"'
 		client.send_user_message message.actor, "Returns \"nick\"'s tag, playername and level, searching for his alias if set"
-		client.send_user_message message.actor, "Syntax !info \"tribes_nick\" \"stat\""
+		client.send_user_message message.actor, 'Syntax !info "tribes_nick" "stat"'
 		client.send_user_message message.actor, "As above but also shows \"tribes_nick\"'s \"stat\""
-		client.send_user_message message.actor, "\"stat\" can be a space delimited list of these stats:"
+		client.send_user_message message.actor, '"stat" can be a space delimited list of these stats:'
 		stats = get_player_stats 'SomeFakePlayerName'
 		stats.each do |stat|
 			client.send_user_message message.actor, stat unless stat.eql? 'ret_msg'
@@ -1094,17 +1095,17 @@ class Bot
 		end
 
 		client.send_user_message message.actor, 'The following admin commands are available:'
-		client.send_user_message message.actor, "!help admin \"command\" - detailed help on the admin command"
-		client.send_user_message message.actor, "!admin login \"password\" - login as SuperUser"
+		client.send_user_message message.actor, '!help admin "command" - detailed help on the admin command'
+		client.send_user_message message.actor, '!admin login "password" - login as SuperUser'
 		client.send_user_message message.actor, "!admin setchan \"role\" - set a channel's role"
-		client.send_user_message message.actor, "!admin setrole \"role\" \"parameter\" - set a role"
-		client.send_user_message message.actor, "!admin delrole \"role\" - delete a role"
-		client.send_user_message message.actor, "!admin playernum \"number\" - set the required number of players per team"
+		client.send_user_message message.actor, '!admin setrole "role" "parameter" - set a role'
+		client.send_user_message message.actor, '!admin delrole "role" - delete a role'
+		client.send_user_message message.actor, '!admin playernum "number" - set the required number of players per team'
 		client.send_user_message message.actor, "!admin alias \"player\" \"alias\" - set a player's alias"
 		client.send_user_message message.actor, '!admin come - make the bot move to your channel'
-		client.send_user_message message.actor, "!admin op \"player\" - make \"player\" an admin"
-		client.send_user_message message.actor, "!admin result \"match_id\" \"scores\"- set the result of a match"
-		client.send_user_message message.actor, "!admin delete \"match_id\" - delete a match"
+		client.send_user_message message.actor, '!admin op "player" - make "player" an admin'
+		client.send_user_message message.actor, '!admin result "match_id" "scores"- set the result of a match'
+		client.send_user_message message.actor, '!admin delete "match_id" - delete a match'
 
 	end
 
@@ -1176,7 +1177,7 @@ class Bot
 	end
 
 	def help_msg_admin_login client, message
-		client.send_user_message message.actor, "Syntax: !admin login \"password\""
+		client.send_user_message message.actor, 'Syntax: !admin login "password"'
 		client.send_user_message message.actor, 'Logs you in to the bot as a SuperUser'
 	end
 
@@ -1242,8 +1243,8 @@ class Bot
 	end
 
 	def help_msg_admin_setchan client, message
-		client.send_user_message message.actor, "Syntax: !admin setchan \"role\""
-		client.send_user_message message.actor, "Sets the channel you are in to \"role\""
+		client.send_user_message message.actor, 'Syntax: !admin setchan "role"'
+		client.send_user_message message.actor, 'Sets the channel you are in to "role"'
 		client.send_user_message message.actor, 'You can set multiple roles by separating them with a space'
 	end
 
@@ -1305,9 +1306,9 @@ class Bot
 	end
 
 	def help_msg_admin_setrole client, message
-		client.send_user_message message.actor, "Syntax: !admin setrole \"role\" \"requirement\""
-		client.send_user_message message.actor, "Create a new role with or sets an existing role to \"requirement\""
-		client.send_user_message message.actor, "The \"requirement\" is:"
+		client.send_user_message message.actor, 'Syntax: !admin setrole "role" "requirement"'
+		client.send_user_message message.actor, 'Create a new role with or sets an existing role to "requirement"'
+		client.send_user_message message.actor, 'Where "requirement" is one of:'
 		client.send_user_message message.actor, '- the number of players with that role required per team'
 		client.send_user_message message.actor, "- '-1' if the channel holds spectators"
 		client.send_user_message message.actor, "- 'T' if the channel is a team channel"
@@ -1349,7 +1350,7 @@ class Bot
 	end
 
 	def help_msg_admin_delrole client, message
-		client.send_user_message message.actor, "Syntax: !admin delrole \"role\""
+		client.send_user_message message.actor, 'Syntax: !admin delrole "role"'
 		client.send_user_message message.actor, 'Removes an existing role'
 	end
 
@@ -1398,7 +1399,7 @@ class Bot
 	end
 
 	def help_msg_admin_playernum client, message
-		client.send_user_message message.actor, "Syntax: !admin playernum \"number\""
+		client.send_user_message message.actor, 'Syntax: !admin playernum "number"'
 		client.send_user_message message.actor, 'Sets the required number of players per team'
 	end
 
@@ -1563,7 +1564,7 @@ class Bot
 	end
 
 	def help_msg_admin_alias client, message
-		client.send_user_message message.actor, "Syntax: !admin alias \"mumble_nick\" \"alias\""
+		client.send_user_message message.actor, 'Syntax: !admin alias "mumble_nick" "alias"'
 		client.send_user_message message.actor, "Sets \"mumble_nick\"'s alias to \"alias\""
 	end
 
@@ -1623,8 +1624,8 @@ class Bot
 	end
 
 	def help_msg_admin_op client, message
-		client.send_user_message message.actor, "Syntax: !admin op \"mumble_nick\""
-		client.send_user_message message.actor, "Makes \"mumble_nick\" an admin if you are a SuperUser"
+		client.send_user_message message.actor, 'Syntax: !admin op "mumble_nick"'
+		client.send_user_message message.actor, 'Makes "mumble_nick" an admin if you are a SuperUser'
 	end
 
 	def cmd_admin_debug client, message
@@ -1815,7 +1816,7 @@ class Bot
 			scores.each do |score|
 
 				if score.split('-').length != match.teams.length
-					client.send_user_message message.actor, "Malformed result: please use \"BE\"-\"DS\" for each map."
+					client.send_user_message message.actor, 'Malformed result: please use "BE"-"DS" for each map.'
 					return
 				end
 
@@ -1854,8 +1855,8 @@ class Bot
 	end
 
 	def help_msg_result client, message
-		client.send_user_message message.actor, "Syntax: !result \"map1\" \"map2\" \"map3\""
-		client.send_user_message message.actor, "Report the results of a match with the scores for each maps in the form \"BE\"-\"DS\"."
+		client.send_user_message message.actor, 'Syntax: !result "map1" "map2" "map3"'
+		client.send_user_message message.actor, 'Report the results of a match with the scores for each maps in the form "BE"-"DS".'
 	end
 
 	def cmd_admin_result client, message
@@ -1892,7 +1893,7 @@ class Bot
 				scores.each do |score|
 
 					if score.split('-').length != match.teams.length
-						client.send_user_message message.actor, "Malformed result: please use \"BE\"-\"DS\" for each map."
+						client.send_user_message message.actor, 'Malformed result: please use "BE"-"DS" for each map.'
 						return
 					end
 
@@ -1936,8 +1937,8 @@ class Bot
 	end
 
 	def help_msg_admin_result client, message
-		client.send_user_message message.actor, "Syntax: !admin result \"match_id\" \"scores\""
-		client.send_user_message message.actor, "Sets the \"scores\" of \"match_id\" for all maps in form \"ourcaps\"-\"theircaps\" separated by a space."
+		client.send_user_message message.actor, 'Syntax: !admin result "match_id" "scores"'
+		client.send_user_message message.actor, 'Sets the "scores" of "match_id" for all maps in form "ourcaps"-"theircaps" separated by a space.'
 	end
 
 	def cmd_admin_delete client, message
@@ -2007,8 +2008,8 @@ class Bot
 	end
 
 	def help_msg_admin_delete client, message
-		client.send_user_message message.actor, "Syntax: !admin delete \"match_id\""
-		client.send_user_message message.actor, "Delete match with id \"match_id\"."
+		client.send_user_message message.actor, 'Syntax: !admin delete "match_id"'
+		client.send_user_message message.actor, 'Delete match with id "match_id".'
 	end
 
 	def cmd_list client, message
