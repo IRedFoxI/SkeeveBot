@@ -1329,7 +1329,7 @@ class Bot
 			end
 
 			if role.nil?
-				client.send_user_message message.actor, "Missing argument."
+				client.send_user_message message.actor, 'Missing argument.'
 				return
 			end
 
@@ -1350,7 +1350,7 @@ class Bot
 
 	def help_msg_admin_delrole client, message
 		client.send_user_message message.actor, "Syntax: !admin delrole \"role\""
-		client.send_user_message message.actor, "Removes an existing role"
+		client.send_user_message message.actor, 'Removes an existing role'
 	end
 
 	def cmd_admin_come client, message
@@ -1363,14 +1363,14 @@ class Bot
 			client.switch_channel chanPath
 
 		else
-			client.send_user_message message.actor, "No admin privileges."
+			client.send_user_message message.actor, 'No admin privileges.'
 		end
 
 	end
 
 	def help_msg_admin_come client, message
-		client.send_user_message message.actor, "Syntax: !admin come"
-		client.send_user_message message.actor, "Makes the bot join the channel you are in"
+		client.send_user_message message.actor, 'Syntax: !admin come'
+		client.send_user_message message.actor, 'Makes the bot join the channel you are in'
 	end
 
 	def cmd_admin_playernum client, message 
@@ -1392,14 +1392,14 @@ class Bot
 			end
 
 		else
-			client.send_user_message message.actor, "No admin privileges."
+			client.send_user_message message.actor, 'No admin privileges.'
 		end
 
 	end
 
 	def help_msg_admin_playernum client, message
 		client.send_user_message message.actor, "Syntax: !admin playernum \"number\""
-		client.send_user_message message.actor, "Sets the required number of players per team"
+		client.send_user_message message.actor, 'Sets the required number of players per team'
 	end
 
 	def cmd_admin_alias client, message
@@ -1414,11 +1414,11 @@ class Bot
 			parameters = parameterStr.scan(/(?:"(?:\\.|[^"])*"|[^" ])+/)
 
 			unless parameters.length.eql?( 2 )
-				client.send_user_message message.actor, "This command needs two parameters: the mumble nick and the alias you want to set."
+				client.send_user_message message.actor, 'This command needs two parameters: the mumble nick and the alias you want to set.'
 				return
 			end
 
-			target = parameters[0].gsub( "\"", "" )
+			target = parameters[0].gsub( "\"", '' )
 
 			player = @players[ client ].values.select{ |v| v.mumbleNick.downcase.eql?( target.downcase ) }.first
 
@@ -1427,10 +1427,10 @@ class Bot
 				return
 			end
 
-			aliasValue = parameters[1].gsub( "\"", "" )
+			aliasValue = parameters[1].gsub( "\"", '' )
 			aliasValue = aliasValue ? aliasValue : player.mumbleNick
 
-			statsVals = get_player_stats( aliasValue, [ "Name", "Level", "Tag" ] )
+			statsVals = get_player_stats( aliasValue, [ 'Name', 'Level', 'Tag' ] )
 
 			if statsVals.nil?
 				client.send_user_message message.actor, "Player #{aliasValue} not found or unable to connect to TribesAPI, alias not set."
@@ -1458,7 +1458,7 @@ class Bot
 			else
 
 				if aliasValue.downcase.eql? player.mumbleNick.downcase
-					client.send_user_message message.actor, "Alias not set: equal to mumble username."
+					client.send_user_message message.actor, 'Alias not set: equal to mumble username.'
 					return
 				else
 					player.aliasNick = aliasValue
@@ -1493,13 +1493,13 @@ class Bot
 					id = section.name
 
 					if id[ /^\d+$/ ].nil?
-						puts "Invalid ID: " + id.to_s
+						puts 'Invalid ID: ' + id.to_s
 						raise SyntaxError
 					end
 
-					next unless section.getValue( "Label" ).eql?( @connections[ client ][ :label ] )
+					next unless section.getValue( 'Label' ).eql?( @connections[ client ][ :label ] )
 
-					teams = section.getValue( "Teams" )
+					teams = section.getValue( 'Teams' )
 					next if teams.nil?
 
 					players = Hash.new
@@ -1538,14 +1538,14 @@ class Bot
 				ini.removeValue( sectionName, CGI::escape(player.mumbleNick) )
 			end
 
-			sectionName = "Muted"
+			sectionName = 'Muted'
 
 			unless player.muted.eql?( @defaultMute )
 				ini.removeValue( sectionName, CGI::escape(oldPlayerName) )
 				ini.setValue( sectionName, CGI::escape(player.aliasNick ? player.aliasNick : player.mumbleNick), player.muted.to_s )
 			end
 
-			sectionName = "ELO"
+			sectionName = 'ELO'
 
 			if !player.elo.nil? && !player.elo.eql?( 1000 )
 				ini.removeValue( sectionName, CGI::escape(oldPlayerName) )
@@ -1557,7 +1557,7 @@ class Bot
 			create_comment( client )
 
 		else
-			client.send_user_message message.actor, "No admin privileges."
+			client.send_user_message message.actor, 'No admin privileges.'
 		end
 
 	end
@@ -1571,12 +1571,12 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
+		if @players[ client ][ mumbleNick ].admin.eql?('SuperUser')
 	
 			text = convert_symbols_from_html( message.message )
 			param = text.split(' ')[ 2..-1 ]
 			unless param.length.eql?( 1 )
-				client.send_user_message message.actor, "Please specify exactly one mumble nick to make admin." 
+				client.send_user_message message.actor, 'Please specify exactly one mumble nick to make admin.'
 				return
 			end
 			param = param.first
@@ -1588,14 +1588,14 @@ class Bot
 				return
 			end
 
-			if player.admin.eql?( "SuperUser" ) || player.admin.eql?( "Admin" )
+			if player.admin.eql?( 'SuperUser' ) || player.admin.eql?( 'Admin' )
 
 				client.send_user_message message.actor, "Already a #{player.admin}."
 				return
 
 			else
 
-				player.admin = "Admin"
+				player.admin = 'Admin'
 
 				@players[ client ][ mumbleNick ] = player
 
@@ -1617,7 +1617,7 @@ class Bot
 
 
 		else
-			client.send_user_message message.actor, "No admin privileges."
+			client.send_user_message message.actor, 'No admin privileges.'
 		end
 
 	end
@@ -1631,7 +1631,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin.eql?("SuperUser")
+		if @players[ client ][ mumbleNick ].admin.eql?('SuperUser')
 
 			displayAPI = false
 			displayPlayers = false
@@ -1646,11 +1646,11 @@ class Bot
 				displayMatches = true
 			else
 				case command.downcase
-				when "api"
+				when 'api'
 					displayAPI = true
-				when "players"
+				when 'players'
 					displayPlayers = true
-				when "matches"
+				when 'matches'
 					displayMatches = true
 				else
 					client.send_user_message message.actor, "Unknown argument '#{command}'!"
@@ -1660,12 +1660,12 @@ class Bot
 			if displayAPI
 				result = @query.get_data_used
 				unless result.nil?
-					actSessions = result[ "Active_Sessions" ]
-					concSessions = result[ "Concurrent_Sessions" ]
-					todaySessions = result[ "Total_Sessions_Today" ]
-					capSessions = result[ "Session_Cap" ]
-					todayRequests = result[ "Total_Requests_Today" ]
-					capRequests = result[ "Request_Limit_Daily" ]
+					actSessions = result[ 'Active_Sessions' ]
+					concSessions = result[ 'Concurrent_Sessions' ]
+					todaySessions = result[ 'Total_Sessions_Today' ]
+					capSessions = result[ 'Session_Cap' ]
+					todayRequests = result[ 'Total_Requests_Today' ]
+					capRequests = result[ 'Request_Limit_Daily' ]
 					client.send_user_message message.actor, "TribesAPI: #{actSessions}/#{concSessions}(Cur. Sessions), #{todaySessions}/#{capSessions} (Tot. Sessions), #{todayRequests}/#{capRequests} (Tot. Requests)"
 				end
 			end
@@ -1676,7 +1676,7 @@ class Bot
 						client.send_user_message message.actor, "Player: #{convert_symbols_to_html( player.playerName )}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 					end
 				else
-					client.send_user_message message.actor, "No players registered"
+					client.send_user_message message.actor, 'No players registered'
 				end
 			end
 
@@ -1690,14 +1690,14 @@ class Bot
 							players = match.players.select{ |pN, t| t.eql?( team ) }.keys
 							playerStr << convert_symbols_to_html( "#{players.join(', ')} (#{team})" )
 						end
-						teamStr = ""
+						teamStr = ''
 						if playerStr.length > 0
 							teamStr << ", teams: #{playerStr.join( ' ')}"
 						end
 
-						resultStr = ""
+						resultStr = ''
 						if match.results.length > 0
-							resultStr << ", results:"
+							resultStr << ', results:'
 							match.results.each do |res|
 								resultStr << " #{res.scores.join('-')}"
 							end
@@ -1709,13 +1709,13 @@ class Bot
 
 				else
 
-					client.send_user_message message.actor, "No matches registered - this is not good!"
+					client.send_user_message message.actor, 'No matches registered - this is not good!'
 
 				end
 			end
 
 		else
-			client.send_user_message message.actor, "No admin privileges."
+			client.send_user_message message.actor, 'No admin privileges.'
 		end
 
 	end
@@ -1726,7 +1726,7 @@ class Bot
 		mumbleNick = client.find_user( message.actor ).name
 
 		if !@players[ client ] || !@players[ client ].has_key?( mumbleNick )
-			client.send_user_message message.actor, "You need to join one of the PUG channels set the mute level."
+			client.send_user_message message.actor, 'You need to join one of the PUG channels set the mute level.'
 			return
 		end
 
@@ -1738,7 +1738,7 @@ class Bot
 
 		if muteValue 
 			if muteValue.to_i.to_s != muteValue
-				client.send_user_message message.actor, "The mute level has to be numeric: 0(off), 1(default) or 2(all muted)."
+				client.send_user_message message.actor, 'The mute level has to be numeric: 0(off), 1(default) or 2(all muted).'
 				return
 			else
 				muteValue = muteValue.to_i
@@ -1751,7 +1751,7 @@ class Bot
 		end
 
 		if muteValue.eql?( player.muted )
-			client.send_user_message message.actor, "No change in mute level."
+			client.send_user_message message.actor, 'No change in mute level.'
 			return
 		end
 
@@ -1765,7 +1765,7 @@ class Bot
 			ini = Kesh::IO::Storage::IniFile.new
 		end
 
-		sectionName = "Muted"
+		sectionName = 'Muted'
 
 		if player.muted.eql?( @defaultMute )
 			ini.removeValue( sectionName, CGI::escape(nick) )
@@ -1780,7 +1780,7 @@ class Bot
 	end
 
 	def help_msg_mute client, message
-		client.send_user_message message.actor, "Syntax: !mute 0/1/2/3"
+		client.send_user_message message.actor, 'Syntax: !mute 0/1/2/3'
 		client.send_user_message message.actor, "Mute the bot's spam messages from 0 (no mute) to 3 (all muted)"
 	end
 
@@ -1789,23 +1789,23 @@ class Bot
 		scores = text.split(' ')[ 1..-1 ]
 
 		if scores.empty?
-			client.send_user_message message.actor, "You need to enter at least one score."
+			client.send_user_message message.actor, 'You need to enter at least one score.'
 			return
 		end
 
 		mumbleNick = client.find_user( message.actor ).name
 
 		if !@players[ client ] || !@players[ client ].has_key?( mumbleNick )
-			client.send_user_message message.actor, "You need to join one of the PUG channels to set a result."
+			client.send_user_message message.actor, 'You need to join one of the PUG channels to set a result.'
 			return
 		end
 
 		player = @players[ client ][ mumbleNick ]
 
-		match = @matches.select{ |m| m.status.eql?( "Pending" ) && m.players.select{ |pN, t| pN.downcase.eql?( player.playerName.downcase ) }.length > 0 }.first
+		match = @matches.select{ |m| m.status.eql?( 'Pending' ) && m.players.select{ |pN, t| pN.downcase.eql?( player.playerName.downcase ) }.length > 0 }.first
 
 		if match.nil?
-			match = @matches.select{ |m| m.status.eql?( "Started" ) && m.players.select{ |pN, t| pN.downcase.eql?( player.playerName.downcase ) }.length > 0 }.first
+			match = @matches.select{ |m| m.status.eql?( 'Started' ) && m.players.select{ |pN, t| pN.downcase.eql?( player.playerName.downcase ) }.length > 0 }.first
 		end
 
 		if match
@@ -1828,13 +1828,13 @@ class Bot
 
 			match.results = results
 
-			match.status = "Finished" 
+			match.status = 'Finished'
 			index = @matches.index{ |m| m.id.eql?( match.id ) }
 			@matches[ index ] = match
 
 			write_matches_ini
 
-			resultStr = ""
+			resultStr = ''
 			if match.results.length > 0
 				match.results.each do |res|
 					resultStr << " #{res.scores.join('-')}"
@@ -1847,7 +1847,7 @@ class Bot
 
 		else
 
-			client.send_user_message message.actor, "No match found with results pending. Maybe the match has already been reported."
+			client.send_user_message message.actor, 'No match found with results pending. Maybe the match has already been reported.'
 
 		end
 
@@ -1864,18 +1864,18 @@ class Bot
 		scores = text.split(' ')[ 3..-1 ]
 
 		if matchId.nil?
-			client.send_user_message message.actor, "You need to enter a match id and at least one score."
+			client.send_user_message message.actor, 'You need to enter a match id and at least one score.'
 			return
 		end
 
 		if matchId.to_i.to_s != matchId
-			client.send_user_message message.actor, "The match id has to be numerical."
+			client.send_user_message message.actor, 'The match id has to be numerical.'
 			return
 		end
 		matchId = matchId.to_i
 
 		if scores.empty?
-			client.send_user_message message.actor, "You need to enter at least one score."
+			client.send_user_message message.actor, 'You need to enter at least one score.'
 			return
 		end
 
@@ -1906,13 +1906,13 @@ class Bot
 				match.results.clear
 				match.results = results
 
-				match.status = "Finished"
+				match.status = 'Finished'
 				index = @matches.index{ |m| m.id.eql?( match.id ) }
 				@matches[ index ] = match
 
 				write_matches_ini
 
-				resultStr = ""
+				resultStr = ''
 				if match.results.length > 0
 					match.results.each do |res|
 						resultStr << " #{res.scores.join('-')}"
@@ -1930,7 +1930,7 @@ class Bot
 			end
 
 		else
-			client.send_user_message message.actor, "No admin privileges."
+			client.send_user_message message.actor, 'No admin privileges.'
 		end
 
 	end
@@ -1945,12 +1945,12 @@ class Bot
 		matchId = text.split(' ')[ 2 ]
 
 		if matchId.nil?
-			client.send_user_message message.actor, "You need to enter a match id."
+			client.send_user_message message.actor, 'You need to enter a match id.'
 			return
 		end
 
 		if matchId.to_i.to_s != matchId
-			client.send_user_message message.actor, "The match id has to be numerical."
+			client.send_user_message message.actor, 'The match id has to be numerical.'
 			return
 		end
 		matchId = matchId.to_i
@@ -1964,7 +1964,7 @@ class Bot
 
 			if match
 
-				if match.status.eql?( "Signup" ) 
+				if match.status.eql?( 'Signup' )
 					client.send_user_message message.actor, "Can't delete the current signup match."
 					return
 				end
@@ -1973,7 +1973,7 @@ class Bot
 					@players[ client ][ mN ].match = @currentMatch[ client ]
 				end
 				
-				match.status = "Deleted"
+				match.status = 'Deleted'
 				@matches[ index ] = match
 
 				if match.id.eql?( @currentMatch[ client ] )
@@ -2001,7 +2001,7 @@ class Bot
 			end
 
 		else
-			client.send_user_message message.actor, "No admin privileges."
+			client.send_user_message message.actor, 'No admin privileges.'
 		end
 
 	end
@@ -2018,10 +2018,10 @@ class Bot
 
 		selection = Array.new
 		if params.empty?
-			selection = selection | @matches.select{ |m| !m.status.eql?( "Deleted" ) && m.label.eql?( @connections[ client ][ :label ] ) }
+			selection = selection | @matches.select{ |m| !m.status.eql?( 'Deleted' ) && m.label.eql?( @connections[ client ][ :label ] ) }
 		else
 			params.each do |param|
-				if param.downcase.eql?( "all" )
+				if param.downcase.eql?( 'all' )
 					selection = selection | @matches.select{ |m| true }
 				else
 					selection = selection |  @matches.select{ |m| m.status.downcase.eql?( param.downcase ) && m.label.eql?( @connections[ client ][ :label ] ) }
@@ -2030,15 +2030,15 @@ class Bot
 		end
 
 		if selection.empty?
-			client.send_user_message message.actor, "No matches found."
+			client.send_user_message message.actor, 'No matches found.'
 		else
 			selection.each do |match|
 
 				statusStr = ", Status: #{match.status}"
 
-				dateStr = ""
-				if match.status.eql?( "Started" ) || match.status.eql?( "Pending" ) || match.status.eql?( "Finished" ) || match.status.eql?( "Deleted" )
-					dateStr << ", Date: #{match.date.strftime("%d/%m %H:%M")}"
+				dateStr = ''
+				if match.status.eql?( 'Started' ) || match.status.eql?( 'Pending' ) || match.status.eql?( 'Finished' ) || match.status.eql?( 'Deleted' )
+					dateStr << ", Date: #{match.date.strftime('%d/%m %H:%M')}"
 				end
 
 				playerStr = []
@@ -2046,14 +2046,14 @@ class Bot
 					players = match.players.select{ |pN, t| t.eql?( team ) }.keys
 					playerStr << convert_symbols_to_html( "#{players.join(', ')} (#{team})" )
 				end
-				teamStr = ""
+				teamStr = ''
 				if playerStr.length > 0
 					teamStr << ", Teams: #{playerStr.join( ' ')}"
 				end
 
-				resultStr = ""
+				resultStr = ''
 				if match.results.length > 0
-					resultStr << ", Results:"
+					resultStr << ', Results:'
 					match.results.each do |res|
 						resultStr << " #{res.scores.join('-')}"
 					end
@@ -2065,8 +2065,8 @@ class Bot
 	end
 
 	def help_msg_list client, message
-		client.send_user_message message.actor, "Syntax: !list"
-		client.send_user_message message.actor, "Shows the latest matches that have been registered on the bot."
+		client.send_user_message message.actor, 'Syntax: !list'
+		client.send_user_message message.actor, 'Shows the latest matches that have been registered on the bot.'
 	end
 
 	# @param message [TextMessage]
@@ -2074,18 +2074,18 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ].has_key?( mumbleNick ) && @players[ client ][ mumbleNick ].admin.eql?( "SuperUser" )
+		if @players[ client ].has_key?( mumbleNick ) && @players[ client ][ mumbleNick ].admin.eql?( 'SuperUser' )
 			cmd = convert_symbols_from_html(message.message).split[ 2..-1 ].join(' ')
 			unless cmd.empty?
-				if cmd[ "system" ] || cmd[ "`" ] || cmd[ "%x" ]
-					client.send_user_message message.actor, "System calls not allowed."
+				if cmd[ 'system' ] || cmd[ '`' ] || cmd[ '%x' ]
+					client.send_user_message message.actor, 'System calls not allowed.'
 					return
 				else
 					Thread.new { eval_cmd( client, message.actor, cmd ) }
 				end
 			end
 		else
-			client.send_user_message message.actor, "No SuperUser privileges."
+			client.send_user_message message.actor, 'No SuperUser privileges.'
 		end
 
 	end
@@ -2100,7 +2100,7 @@ class Bot
 	end
 
 	def get_player_stats nick, *stats
-		if nick != "SomeFakePlayerName"
+		if nick != 'SomeFakePlayerName'
 
 			result = @query.get_player( nick )
 
@@ -2114,7 +2114,7 @@ class Bot
 
 		else
 
-			result = @query.get_player( "Player" )
+			result = @query.get_player( 'Player' )
 
 			stats = result.keys
 			return stats
@@ -2142,7 +2142,7 @@ class Bot
 		ini.addSection( sectionName )
 
 		if @playerNum[ client ]
-			ini.setValue( sectionName, "PlayerNum", @playerNum[ client ].to_s )
+			ini.setValue( sectionName, 'PlayerNum', @playerNum[ client ].to_s )
 		end
 
 		@rolesRequired[ client ].each_pair do |role, value|
@@ -2178,7 +2178,7 @@ class Bot
 				rolesHash = Hash.new
 
 				section.values.each do |value|
-					if value.name.eql? "PlayerNum"
+					if value.name.eql? 'PlayerNum'
 						@playerNum[ client ] = value.value.to_i
 					elsif !value.value.nil?
 						rolesHash[ value.name ] = value.value
@@ -2219,28 +2219,28 @@ class Bot
 
 		@matches.each do |match|
 
-			next if ( match.status.eql?( "Signup") || match.status.eql?( "Picking") )
+			next if ( match.status.eql?( 'Signup' ) || match.status.eql?( 'Picking' ) )
 
 			sectionName = "#{match.id}"
 			ini.removeSection( sectionName )
 
-			ini.setValue( sectionName, "Label", match.label )
-			ini.setValue( sectionName, "Status", match.status )
+			ini.setValue( sectionName, 'Label', match.label )
+			ini.setValue( sectionName, 'Status', match.status )
 			if match.date
-				ini.setValue( sectionName, "Date", match.date.utc.to_s )
+				ini.setValue( sectionName, 'Date', match.date.utc.to_s )
 			end
-			ini.setValue( sectionName, "Teams", match.teams.join( " " ) )
+			ini.setValue( sectionName, 'Teams', match.teams.join( ' ' ) )
 
 			match.teams.each do |team|
 				playerNames = match.players.select{ |pN, t| t.eql?( team ) }.keys
 				playerNames.each_index do |i|
 					playerNames[ i ] = CGI::escape(playerNames[ i ])
 				end
-				ini.setValue( sectionName, "#{team}", playerNames.join( " " ) )
+				ini.setValue( sectionName, "#{team}", playerNames.join( ' ' ) )
 			end
 
-			ini.setValue( sectionName, "Comment", match.comment )
-			ini.setValue( sectionName, "ResultCount", match.results.length.to_s )
+			ini.setValue( sectionName, 'Comment', match.comment )
+			ini.setValue( sectionName, 'ResultCount', match.results.length.to_s )
 
 			match.results.each_index do |r|
 				result = match.results[ r ]
@@ -2266,19 +2266,19 @@ class Bot
 				id = section.name
 
 				if id[ /^\d+$/ ].nil?
-					puts "Invalid ID: " + id.to_s
+					puts 'Invalid ID: ' + id.to_s
 					raise SyntaxError
 				end
 
 				idInt = id.to_i
 				@nextMatchId = ( idInt + 1 ) if ( idInt >= @nextMatchId )
 
-				label = section.getValue( "Label" )
+				label = section.getValue( 'Label' )
 
-				status = section.getValue( "Status" )
-				next unless ( status.eql?( "Started" ) || status.eql?( "Pending" ) || status.eql?( "Finished" ) )
+				status = section.getValue( 'Status' )
+				next unless ( status.eql?( 'Started' ) || status.eql?( 'Pending' ) || status.eql?( 'Finished' ) )
 
-				date = Time.parse( section.getValue( "Date" ) )
+				date = Time.parse( section.getValue( 'Date' ) )
 				next unless ( Time.now - date ) < 24 * 60 * 60
 
 				# if ( date == nil )
@@ -2288,7 +2288,7 @@ class Bot
 
 				players = Hash.new
 
-				teams = section.getValue( "Teams" )
+				teams = section.getValue( 'Teams' )
 
 				if teams.nil?
 					teams = Array.new
@@ -2310,11 +2310,11 @@ class Bot
 
 				end
 
-				comment = section.getValue( "Comment" )
-				resultCount = section.getValue( "ResultCount" )
+				comment = section.getValue( 'Comment' )
+				resultCount = section.getValue( 'ResultCount' )
 
 				if resultCount[ /^\d+$/ ].nil?
-					puts "Invalid Result Count: " + resultCount.to_s
+					puts "Invalid Result Count: #{resultCount.to_s}"
 					raise SyntaxError
 				end
 
@@ -2367,7 +2367,7 @@ class Bot
 
 			nick = aliasNick ? CGI::unescape(aliasNick) : mumbleNick
 
-			sectionName = "Muted"
+			sectionName = 'Muted'
 			muted = ini.getValue( sectionName, CGI::escape(nick) )
 			if muted
 				muted = muted.to_i
@@ -2375,7 +2375,7 @@ class Bot
 				muted = @defaultMute
 			end
 
-			sectionName = "ELO"
+			sectionName = 'ELO'
 			elo = ini.getValue( sectionName, CGI::escape(nick) )
 
 		else
@@ -2389,15 +2389,15 @@ class Bot
 		end
 
 		stats = Array.new
-		stats << "Name"
-		stats << "Level"
-		stats << "Tag"
+		stats << 'Name'
+		stats << 'Level'
+		stats << 'Tag'
 
 		statsVals = get_player_stats( nick, stats )
 
 		if statsVals.nil?
 			playerName = nick
-			level = "unknown"
+			level = 'unknown'
 			tag = nil
 		else
 			playerName = statsVals.shift
@@ -2406,15 +2406,15 @@ class Bot
 		end
 
 		return {
-				:session => session,
-				:mumbleNick => mumbleNick,
-				:admin => admin,
-				:aliasNick => aliasNick,
-				:muted => muted,
-				:elo => elo,
-				:playerName => playerName,
-				:level => level,
-				:tag => tag
+				session: session,
+				mumbleNick: mumbleNick,
+				admin: admin,
+				aliasNick: aliasNick,
+				muted: muted,
+				elo: elo,
+				playerName: playerName,
+				level: level,
+				tag: tag
 		}
 
 	end
@@ -2484,11 +2484,11 @@ class Bot
 		text = param.clone
 		raise 'Not a String' unless text.class.eql?( String )
 		text.gsub!( /<br[\/\\]?>/, "\n" )
-		text.gsub!( "&quot;", "\"" )
-		text.gsub!( "&lt;", "<" )
-		text.gsub!( "&gt;", ">" )
-		text.gsub!( "&nbsp;", " " )
-		text.gsub!( "&thinsp;", " " )
+		text.gsub!( '&quot;', "\"" )
+		text.gsub!( '&lt;', '<' )
+		text.gsub!( '&gt;', '>' )
+		text.gsub!( '&nbsp;', ' ' )
+		text.gsub!( '&thinsp;', ' ' )
 		# text.gsub!( "&iexcl;", "¡" )
 		# text.gsub!( "&cent;", "¢" )
 		# text.gsub!( "&pound;", "£" )
@@ -2501,7 +2501,7 @@ class Bot
 		# text.gsub!( "&ordf;", "ª" )
 		# text.gsub!( "&laquo;", "«" )
 		# text.gsub!( "&not;", "¬" )
-		text.gsub!( "&shy;", "-" )
+		text.gsub!( '&shy;', '-' )
 		# text.gsub!( "&reg;", "®" )
 		# text.gsub!( "&macr;", "¯" )
 		# text.gsub!( "&deg;", "°" )
@@ -2537,19 +2537,19 @@ class Bot
 		# text.gsub!( "&szlig;", "ß" )
 		# text.gsub!( "&Ntilde;", "Ñ" )
 		# text.gsub!( "&ntilde;", "ñ" )
-		text.gsub!( "&amp;", "&" )
+		text.gsub!( '&amp;', '&' )
 		return text
 	end
 
 	def convert_symbols_to_html param
 		text = param.clone
 		raise 'Not a String' unless text.class.eql?( String )
-		text.gsub!( "&", "&amp;" )
-		text.gsub!( "\"", "&quot;" )
-		text.gsub!( "<", "&lt;" )
-		text.gsub!( ">", "&gt;" )
-		text.gsub!( " ", "&thinsp;" )
-		text.gsub!( /(?:\r\n|\r|\n)/, "<br/>" )
+		text.gsub!( '&', '&amp;' )
+		text.gsub!( "\"", '&quot;' )
+		text.gsub!( '<', '&lt;' )
+		text.gsub!( '>', '&gt;' )
+		text.gsub!( ' ', '&thinsp;' )
+		text.gsub!( /(?:\r\n|\r|\n)/, '<br/>' )
 		# text.gsub!( "-", "&shy;" )
 		return text
 	end
