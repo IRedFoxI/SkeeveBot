@@ -1600,7 +1600,7 @@ class Bot
 
 						playerNamesStr = section.getValue( "#{team}" )
 
-						if playerNamesStr.include?( CGI::escape( oldPlayerName ) )
+						if playerNamesStr && playerNamesStr.include?( CGI::escape( oldPlayerName ) )
 							playerNamesStr.gsub!( CGI::escape( oldPlayerName ), CGI::escape(player.aliasNick ? player.aliasNick : player.mumbleNick) )
 							section.removeValue( "#{team}" )
 							section.setValue( "#{team}", playerNamesStr )
