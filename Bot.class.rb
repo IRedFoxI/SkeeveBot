@@ -12,91 +12,6 @@ Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :p
 Match = Struct.new( :id, :label, :status, :date, :teams, :players, :comment, :results )
 Result = Struct.new( :map, :teams, :scores, :comment )
 
-
-# Represents the level of admin access a user has.
-class AdminLevel
-
-public
-	None = AdminLevel.new(0)
-	Admin = AdminLevel.new(1)
-	SuperUser = AdminLevel.new(2)
-
-private
-	# @param innerVal [Integer] The inner value.
-	def initialize innerVal
-		@innerValue = innerVal
-	end
-
-public
-	# @param val [String] The value to parse
-	# @return [AdminLevel] The parsed admin level.
-	def self.parse val
-		if val.nil? || val.class.eql?(String)
-			return None
-		else
-			case val.downcase
-				when 'none'
-					return None
-				when 'admin'
-					return Admin
-				when 'superuser'
-					return SuperUser
-				else
-					return None
-			end
-		end
-	end
-
-	def inspect
-		return "#{self.to_s} (#{@innerValue})"
-	end
-
-	def to_s
-		case @innerValue
-			when 0
-				return 'None'
-			when 1
-				return 'Admin'
-			when 2
-				return 'SuperUser'
-			else
-				raise 'Unknown inner value for an AdminLevel!'
-		end
-	end
-
-	def > other
-		return @innerValue > other.innerValue unless other.nil? || !other.is_a?(AdminLevel)
-		return true
-	end
-	def >= other
-		return @innerValue >= other.innerValue unless other.nil? || !other.is_a?(AdminLevel)
-		return true
-	end
-	def < other
-		return @innerValue < other.innerValue unless other.nil? || !other.is_a?(AdminLevel)
-		return true
-	end
-	def <= other
-		return @innerValue <= other.innerValue unless other.nil? || !other.is_a?(AdminLevel)
-		return true
-	end
-	def != other
-		return @innerValue != other.innerValue unless other.nil? || !other.is_a?(AdminLevel)
-		return false
-	end
-	def == other
-		return @innerValue == other.innerValue unless other.nil? || !other.is_a?(AdminLevel)
-		return false
-	end
-	def === other
-		return self == other
-	end
-	def hash
-		return @innerValue.hash
-	end
-
-end
-
 class Bot
 
 	def initialize options
@@ -337,7 +252,7 @@ class Bot
 
 		@connections.keys.each do |cl|
 
-			admins = @players[ cl ].select{ |mN, pl| pl.admin.eql?( AdminLevel::SuperUser ) }
+			admins = @players[ cl ].select{ |mN, pl| pl.admin.eql?( 'SuperUser' ) }
 
 			unless admins.empty?
 				admins.each_value do |pl|
@@ -1136,7 +1051,6 @@ class Bot
 
 	end
 
-	# @param message [MumbleProto::TextMessage]
 	def help_msg_admin client, message
 		text = convert_symbols_from_html( message.message )
 		command = text.split(' ')[ 2 ]
@@ -1196,18 +1110,14 @@ class Bot
 	end
 
 	def cmd_admin_shutdown client, message
-		if @players[ client ][ client.find_user( message.actor ).name ].admin.eql?( AdminLevel::SuperUser )
-			client.send_user_message message.actor, 'Shutting down...'
-			@shutdown = true
-		end
+		client.send_user_message message.actor, 'Shutting down...'
+		@shutdown = true
 	end
 
 	def cmd_admin_restart client, message
-		if @players[ client ][ client.find_user( message.actor ).name ].admin.eql?( AdminLevel::SuperUser )
-			client.send_user_message message.actor, 'Restarting...'
-			@restart = true
-			@shutdown = true
-		end
+		client.send_user_message message.actor, 'Restarting...'
+		@restart = true
+		@shutdown = true
 	end
 
 	def cmd_admin_raise client, message
@@ -1216,7 +1126,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin.eql?( AdminLevel::SuperUser )
+		if @players[ client ][ mumbleNick ].admin.eql?('SuperUser')
 			client.send_user_message message.actor, "Raising an exception: #{exception}"
 			raise exception
 		end
@@ -1234,14 +1144,14 @@ class Bot
 
 			client.send_user_message message.actor, 'Login accepted.'
 
-			if player.admin.eql? AdminLevel::SuperUser
+			if player.admin.eql? 'SuperUser'
 
 				client.send_user_message message.actor, 'Already a SuperUser.'
 				return
 
 			else
 
-				player.admin = AdminLevel::SuperUser
+				player.admin = 'SuperUser'
 
 				@players[ client ][ mumbleNick ] = player
 
@@ -1252,7 +1162,7 @@ class Bot
 				end
 
 				sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}:admin"
-				ini.setValue( sectionName, CGI::escape(player.mumbleNick), player.admin.to_s )
+				ini.setValue( sectionName, CGI::escape(player.mumbleNick), player.admin )
 
 				ini.writeToFile( 'players.ini' )
 
@@ -1275,7 +1185,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin >= AdminLevel::Admin
+		if @players[ client ][ mumbleNick ].admin
 
 			text = convert_symbols_from_html( message.message )
 			chanPath = client.find_user( message.actor ).channel.path
@@ -1342,7 +1252,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin >= AdminLevel::Admin
+		if @players[ client ][ mumbleNick ].admin
 
 			text = convert_symbols_from_html( message.message )
 			chanPath = client.find_user( message.actor ).channel.path
@@ -1409,7 +1319,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin >= AdminLevel::Admin
+		if @players[ client ][ mumbleNick ].admin
 
 			text = convert_symbols_from_html( message.message )
 			chanPath = client.find_user( message.actor ).channel.path
@@ -1448,7 +1358,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin >= AdminLevel::Admin
+		if @players[ client ][ mumbleNick ].admin
 
 			chanPath = client.find_user( message.actor ).channel.path
 			client.switch_channel chanPath
@@ -1468,7 +1378,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 		
-		if @players[ client ][ mumbleNick ].admin >= AdminLevel::Admin
+		if @players[ client ][ mumbleNick ].admin
 
 			newPlayerNum = message.message.split(' ')[ 2 ].to_i
 
@@ -1497,7 +1407,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin >= AdminLevel::Admin
+		if @players[ client ][ mumbleNick ].admin
 
 			text = convert_symbols_from_html( message.message )
 
@@ -1662,7 +1572,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin.eql?(AdminLevel::SuperUser)
+		if @players[ client ][ mumbleNick ].admin.eql?('SuperUser')
 	
 			text = convert_symbols_from_html( message.message )
 			param = text.split(' ')[ 2..-1 ]
@@ -1679,14 +1589,14 @@ class Bot
 				return
 			end
 
-			if player.admin.eql?( AdminLevel::SuperUser ) || player.admin.eql?( AdminLevel::Admin )
+			if player.admin.eql?( 'SuperUser' ) || player.admin.eql?( 'Admin' )
 
 				client.send_user_message message.actor, "Already a #{player.admin}."
 				return
 
 			else
 
-				player.admin = AdminLevel::Admin
+				player.admin = 'Admin'
 
 				@players[ client ][ mumbleNick ] = player
 
@@ -1697,7 +1607,7 @@ class Bot
 				end
 
 				sectionName = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}:admin"
-				ini.setValue( sectionName, CGI::escape(player.mumbleNick), player.admin.to_s )
+				ini.setValue( sectionName, CGI::escape(player.mumbleNick), player.admin )
 
 				ini.writeToFile( 'players.ini' )
 
@@ -1722,7 +1632,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin.eql?( AdminLevel::SuperUser )
+		if @players[ client ][ mumbleNick ].admin.eql?('SuperUser')
 
 			displayAPI = false
 			displayPlayers = false
@@ -1972,7 +1882,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin >= AdminLevel::Admin
+		if @players[ client ][ mumbleNick ].admin
 
 			match = @matches.select{ |m| m.id.eql?( matchId ) }.first
 
@@ -2048,7 +1958,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ][ mumbleNick ].admin >= AdminLevel::Admin
+		if @players[ client ][ mumbleNick ].admin
 
 			index = @matches.index{ |m| m.id.eql?( matchId ) }
 			match = @matches[ index ]
@@ -2165,7 +2075,7 @@ class Bot
 
 		mumbleNick = client.find_user( message.actor ).name
 
-		if @players[ client ].has_key?( mumbleNick ) && @players[ client ][ mumbleNick ].admin.eql?( AdminLevel::SuperUser )
+		if @players[ client ].has_key?( mumbleNick ) && @players[ client ][ mumbleNick ].admin.eql?( 'SuperUser' )
 			cmd = convert_symbols_from_html(message.message).split[ 2..-1 ].join(' ')
 			unless cmd.empty?
 				if cmd[ 'system' ] || cmd[ '`' ] || cmd[ '%x' ]
@@ -2451,7 +2361,7 @@ class Bot
 			sectionNameBase = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
 
 			sectionName = "#{sectionNameBase}:admin"
-			admin = AdminLevel::parse( ini.getValue( sectionName, CGI::escape(mumbleNick) ) )
+			admin = ini.getValue( sectionName, CGI::escape(mumbleNick) )
 
 			sectionName = "#{sectionNameBase}:aliases"
 			aliasNick = ini.getValue( sectionName, CGI::escape(mumbleNick) )
@@ -2472,7 +2382,7 @@ class Bot
 		else
 
 			nick = mumbleNick
-			admin = AdminLevel::None
+			admin = nil
 			aliasNick = nil
 			muted = nil
 			elo = nil
@@ -2575,7 +2485,7 @@ class Bot
 		text = param.clone
 		raise 'Not a String' unless text.class.eql?( String )
 		text.gsub!( /<br[\/\\]?>/, "\n" )
-		text.gsub!( '&quot;', '"' )
+		text.gsub!( '&quot;', "\"" )
 		text.gsub!( '&lt;', '<' )
 		text.gsub!( '&gt;', '>' )
 		text.gsub!( '&nbsp;', ' ' )
