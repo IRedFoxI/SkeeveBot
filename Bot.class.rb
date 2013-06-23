@@ -1110,14 +1110,26 @@ class Bot
 	end
 
 	def cmd_admin_shutdown client, message
-		client.send_user_message message.actor, 'Shutting down...'
-		@shutdown = true
+		mumbleNick = client.find_user( message.actor ).name 
+
+		if @players[ client ][ mumbleNick ].admin.eql?('SuperUser')
+			client.send_user_message message.actor, 'Shutting down...'
+			@shutdown = true
+		else
+			client.send_user_message message.actor, 'Not enough admin privileges.'
+		end
 	end
 
 	def cmd_admin_restart client, message
-		client.send_user_message message.actor, 'Restarting...'
-		@restart = true
-		@shutdown = true
+		mumbleNick = client.find_user( message.actor ).name 
+
+		if @players[ client ][ mumbleNick ].admin.eql?('SuperUser')
+			client.send_user_message message.actor, 'Restarting...'
+			@restart = true
+			@shutdown = true
+		else
+			client.send_user_message message.actor, 'Not enough admin privileges.'
+		end
 	end
 
 	def cmd_admin_raise client, message
