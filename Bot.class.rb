@@ -2366,6 +2366,12 @@ class Bot
 
 		session = client.find_user( mumbleNick ).session
 
+		nick = mumbleNick
+		admin = nil
+		aliasNick = nil
+		muted = nil
+		elo = nil
+
 		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
 
 			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
@@ -2390,14 +2396,6 @@ class Bot
 
 			sectionName = 'ELO'
 			elo = ini.getValue( sectionName, CGI::escape(nick) )
-
-		else
-
-			nick = mumbleNick
-			admin = nil
-			aliasNick = nil
-			muted = nil
-			elo = nil
 
 		end
 
