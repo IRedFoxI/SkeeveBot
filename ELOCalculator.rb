@@ -195,7 +195,7 @@ class ELOCalculator
 		dataset = Array.new
 		matchNo = 0
 		@dates.each do |date|
-			matchNo += 1
+			matchNo += 1 unless data[ date ].nil?
 			dataset << ( matchNo < minMatches ? nil : data[ date ] )
 		end
 
@@ -512,5 +512,5 @@ end
 
 calc.make_plots repeat * minMatches
 
-calc.write_elo
+# calc.write_elo
 
