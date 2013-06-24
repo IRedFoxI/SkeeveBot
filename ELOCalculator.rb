@@ -222,8 +222,11 @@ class ELOCalculator
 		# factor *= 1 + 1.1 ** ( -2 * matchNumber )
 		# factor *= 1 + 1.2 ** ( 10 - 2 * matchNumber )
 		# factor *= 1 + 1.2 ** ( 10 - matchNumber )
-		# factor *= 1 + 1.258925412 ** ( 3.080105496E-21 - matchNumber ) # 2 to 1.01 between 0 to 20
-		factor *= 1 + 1.303321321 ** ( 2.616480413 - matchNumber ) # 3 to 1.01 between 0 to 20
+		factor *= 1 + 1.258925412 ** ( 3.080105496E-21 - matchNumber ) # 2 to 1.01 between 0 to 20
+		# factor *= 1 + 1.303321321 ** ( 2.616480413 - matchNumber ) # 3 to 1.01 between 0 to 20
+		# factor *= 1 + 1.330013541 ** ( 3.852223655 - matchNumber ) # 4 to 1.01 between 0 to 20
+		# factor *= 1 + 1.349282848 ** ( 4.627564263 - matchNumber ) # 5 to 1.01 between 0 to 20
+		# factor *= 1 + 1.36442133 ** ( 5.179531475 - matchNumber ) # 6 to 1.01 between 0 to 20
 		factor *= @multiplier
 		return factor
 	end
