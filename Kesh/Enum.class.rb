@@ -1,12 +1,10 @@
 
 class Enum
 
-	# Declare a new enum with the given name and the given values.
-	# @param enumName [String] The name of the enum to create.
+	# Declare a new enum with the given values.
 	# @param enumValues [Array<(Symbol)>] The values of the enum.
-	def initialize enumName, enumValues
+	def self.new *enumValues
 		klass = Class.new
-		Object.const_set enumName, klass
 
 		klass.class_eval <<-EOT.gsub(/^\s+\|/, ''), __FILE__, __LINE__ + 1
 		|	private
@@ -38,7 +36,7 @@ class Enum
 			i = 0
 			enumValues.each do |val|
 				a.push("when '#{val.to_s.downcase}'")
-				a.push("return #{enumName}::#{val.to_s}")
+				a.push("return self.new(#{i})")
 				i += 1
 			end
 			a.join("\n")
@@ -64,7 +62,7 @@ class Enum
 			a.join("\n")
 		}
 		|		else
-		|			fail "Invalid #{enumName}!"
+		|			fail "Invalid innerValue!"
 		|		end
 		|	end
 		EOT
@@ -89,7 +87,7 @@ class Enum
 		|			if other.is_a? self.class
 		|				return @innerValue == other.innerValue
 		|			elsif other.is_a? String
-		|				return @innerValue == #{enumName}::parse(other).innerValue
+		|				return @innerValue == self.class.parse(other).innerValue
 		|			elsif other.is_a? Numeric
 		|				return @innerValue == other
 		|			else
@@ -118,6 +116,7 @@ class Enum
 		|	end
 		EOT
 
+		return klass
 	end
 end
 

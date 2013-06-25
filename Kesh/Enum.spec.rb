@@ -1,7 +1,7 @@
 require 'rspec'
 require './Enum.class'
 
-Enum.new 'AdminLevel', [:None, :Admin, :SuperUser]
+AdminLevel = Enum.new(:None, :Admin, :SuperUser)
 
 describe AdminLevel do
 
