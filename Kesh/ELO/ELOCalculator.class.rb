@@ -177,32 +177,6 @@ module Kesh
 
 			end
 
-			# def write_ELO
-			# 	if File.exists?( 'players.ini' )
-			# 		ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
-			# 		FileUtils.cp( 'players.ini', 'players.bak' )
-			# 	else
-			# 		ini = Kesh::IO::Storage::IniFile.new
-			# 	end
-
-			# 	sectionName = "ELO"
-
-			# 	@currentELOs.each_key  do |pN|
-
-			# 		elo = @currentELOs[ pN ]
-			# 		noMatches = @currentNoMatches[ pN ]
-			# 		unless ( elo.eql?( 1000 ) && noMatches.eql?( 0 ) )
-			# 			ini.removeValue( sectionName, CGI::escape( pN ) )
-			# 			eloStr = "#{elo} #{noMatches}"
-			# 			ini.setValue( sectionName, CGI::escape( pN ), eloStr )
-			# 		end
-
-			# 	end
-
-			# 	ini.writeToFile( 'players.ini' )
-
-			# end
-
 		end
 	end
 end

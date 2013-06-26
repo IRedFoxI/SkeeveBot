@@ -1564,9 +1564,9 @@ class Bot
 
 			sectionName = 'ELO'
 
+			ini.removeValue( sectionName, CGI::escape(oldPlayerName) )
 			unless ( player.elo.eql?( 1000 ) && player.noMatches.eql?( 0 ) )
-				ini.removeValue( sectionName, CGI::escape(oldPlayerName) )
-				eloStr = '#{player.elo} #{player.noMatches}'
+				eloStr = "#{player.elo} #{player.noMatches}"
 				ini.setValue( sectionName, CGI::escape(player.aliasNick ? player.aliasNick : player.mumbleNick), eloStr )
 			end
 
@@ -1923,14 +1923,34 @@ class Bot
 		end
 
 		@eloCalculator.add_match( match )
+
+		if File.exists?( 'players.ini' )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
+			FileUtils.cp( 'players.ini', 'players.bak' )
+		else
+			ini = Kesh::IO::Storage::IniFile.new
+		end
+
+		sectionName = "ELO"
+
 		match.players.each_key do |pN|
 			if @eloCalculator.has_player?( pN )
+
 				player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
 				player.elo = @eloCalculator.get_elo( pN )
 				player.noMatches = @eloCalculator.get_noMatches( pN )
+
+				ini.removeValue( sectionName, CGI::escape( pN ) )
+				unless ( player.elo.eql?( 1000 ) && player.noMatches.eql?( 0 ) )
+					eloStr = "#{player.elo} #{player.noMatches}"
+					ini.setValue( sectionName, CGI::escape( pN ), eloStr )
+				end
+
 			end
 		end
-		
+
+		ini.writeToFile( 'players.ini' )
+
 		resultStr = ''
 		if match.results.length > 0
 			match.results.each do |res|

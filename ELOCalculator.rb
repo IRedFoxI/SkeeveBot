@@ -278,7 +278,7 @@ class ELOCalculator
 	def plot_elo_performance minMatches
 
 		unless File.exists?( 'Graphs' )
-			FileUtils.mkdir 'Graphs' )
+			FileUtils.mkdir 'Graphs'
 		end
 
 		g = Gruff::Line.new(1600)
@@ -319,7 +319,7 @@ class ELOCalculator
 
 	def plot_elo_history minMatches
 
-		unless File.exists?( 'Graphs' ) )
+		unless File.exists?( 'Graphs' )
 			FileUtils.mkdir 'Graphs'
 		end
 
