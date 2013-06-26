@@ -1,5 +1,3 @@
-requireLibrary '../../TribesAPI'
-
 require 'digest/md5'
 require 'json'
 require 'net/http'
