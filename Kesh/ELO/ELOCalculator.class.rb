@@ -11,6 +11,7 @@ module Kesh
 			def initialize
 				@currentELOs = Hash.new
 				@currentNoMatches = Hash.new
+				@multiplier = 7
 			end
 
 			def add_player playerName, elo, noMatches

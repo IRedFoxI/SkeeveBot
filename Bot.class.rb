@@ -36,6 +36,7 @@ class Bot
 		@defaultMute = 1
 		@moveQueue = Hash.new
 		@query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
+		@eloCalculator = Kesh::ELO::ELOCalculator.new
 		@lastCleanUp = Time.now
 
 		load_matches_ini
@@ -1914,6 +1915,22 @@ class Bot
 		write_matches_ini
 		create_comment( client )
 
+		match.players.each_key do |pN|
+			unless @eloCalculator.has_player?( pN )
+				player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+				@eloCalculator.add_player( pN, player.elo, player.noMatches )
+			end
+		end
+
+		@eloCalculator.add_match( match )
+		match.players.each_key do |pN|
+			if @eloCalculator.has_player?( pN )
+				player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+				player.elo = @eloCalculator.get_elo( pN )
+				player.noMatches = @eloCalculator.get_noMatches( pN )
+			end
+		end
+		
 		resultStr = ''
 		if match.results.length > 0
 			match.results.each do |res|
