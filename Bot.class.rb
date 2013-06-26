@@ -2420,15 +2420,15 @@ class Bot
 		end
 
 		return {
-				session: session,
-				mumbleNick: mumbleNick,
-				admin: admin,
-				aliasNick: aliasNick,
-				muted: muted,
-				elo: elo,
-				playerName: playerName,
-				level: level,
-				tag: tag
+			session: session,
+			mumbleNick: mumbleNick,
+			admin: admin,
+			aliasNick: aliasNick,
+			muted: muted,
+			elo: elo,
+			playerName: playerName,
+			level: level,
+			tag: tag
 		}
 
 	end
