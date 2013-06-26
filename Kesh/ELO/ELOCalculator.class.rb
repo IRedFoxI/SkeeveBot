@@ -37,25 +37,13 @@ module Kesh
 				teamELOs = calc_team_ELOs( match )
 
 				estimatedScores = calc_estimated_scores( teamELOs )
-
 				actualScores = calc_actual_scores( match.results )
 
 				match.teams.each do |team|
-
 					match.players.select{ |pN, t| t.eql?( team ) }.each_key do |pN|
-
 						k = calc_k_factor( pN )
-
 						@currentELOs[ pN ] = ( @currentELOs[ pN ] + k * ( actualScores[ team ] - estimatedScores[ team ] ) ).round
-
-						unless @players.has_key?( pN )
-							@players[ pN ] = Hash.new
-						end
-
-						@players[ pN ][ date ] = @currentELOs[ pN ]
-
 					end
-
 				end
 
 			end			
@@ -179,7 +167,7 @@ module Kesh
 			end
 
 			def write_ELO
-				if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
+				if File.exists?( 'players.ini' )
 					ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
 					FileUtils.cp( 'players.ini', 'players.bak' )
 				else

@@ -185,11 +185,11 @@ class ELOCalculator
 
 	def plot_player_elo playerName, minMatches
 
-		unless File.exists?( File.join( File.dirname( __FILE__ ), 'Graphs' ) )
-			FileUtils.mkdir File.join( File.dirname( __FILE__ ), 'Graphs' )
+		unless File.exists?( 'Graphs' )
+			FileUtils.mkdir 'Graphs'
 		end
-		unless File.exists?( File.join( File.dirname( __FILE__ ), 'Graphs', 'Players' ) )
-			FileUtils.mkdir File.join( File.dirname( __FILE__ ), 'Graphs', 'Players' )
+		unless File.exists?( File.join( 'Graphs', 'Players' ) )
+			FileUtils.mkdir File.join( 'Graphs', 'Players' )
 		end
 
 		g = Gruff::Line.new(1600)
@@ -240,8 +240,8 @@ class ELOCalculator
 
 	def plot_number_of_matches minMatches
 
-		unless File.exists?( File.join( File.dirname( __FILE__ ), 'Graphs' ) )
-			FileUtils.mkdir File.join( File.dirname( __FILE__ ), 'Graphs' )
+		unless File.exists?( 'Graphs' )
+			FileUtils.mkdir 'Graphs'
 		end
 
 		g = Gruff::Bar.new(1600)
@@ -277,8 +277,8 @@ class ELOCalculator
 
 	def plot_elo_performance minMatches
 
-		unless File.exists?( File.join( File.dirname( __FILE__ ), 'Graphs' ) )
-			FileUtils.mkdir File.join( File.dirname( __FILE__ ), 'Graphs' )
+		unless File.exists?( 'Graphs' )
+			FileUtils.mkdir 'Graphs' )
 		end
 
 		g = Gruff::Line.new(1600)
@@ -319,8 +319,8 @@ class ELOCalculator
 
 	def plot_elo_history minMatches
 
-		unless File.exists?( File.join( File.dirname( __FILE__ ), 'Graphs' ) )
-			FileUtils.mkdir File.join( File.dirname( __FILE__ ), 'Graphs' )
+		unless File.exists?( 'Graphs' ) )
+			FileUtils.mkdir 'Graphs'
 		end
 
 		g = Gruff::Line.new(1600)
