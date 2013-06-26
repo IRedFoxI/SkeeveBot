@@ -22,6 +22,16 @@ module Kesh
 				return @currentELOs.has_key?( playerName )
 			end
 
+			def get_elo playerName
+				raise 'Player not initialized' unless @currentELOs.has_key?( playerName )
+				return @currentELOs[ playerName ]
+			end
+
+			def get_noMatches playerName
+				raise 'Player not initialized' unless @currentNoMatches.has_key?( playerName )
+				return @currentNoMatches[ playerName ]
+			end
+
 			def add_match match
 				match.players.each_key do |pN|
 					raise 'Player not initialized' unless @currentELOs.has_key?( pN )
@@ -166,31 +176,31 @@ module Kesh
 
 			end
 
-			def write_ELO
-				if File.exists?( 'players.ini' )
-					ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
-					FileUtils.cp( 'players.ini', 'players.bak' )
-				else
-					ini = Kesh::IO::Storage::IniFile.new
-				end
+			# def write_ELO
+			# 	if File.exists?( 'players.ini' )
+			# 		ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
+			# 		FileUtils.cp( 'players.ini', 'players.bak' )
+			# 	else
+			# 		ini = Kesh::IO::Storage::IniFile.new
+			# 	end
 
-				sectionName = "ELO"
+			# 	sectionName = "ELO"
 
-				@currentELOs.each_key  do |pN|
+			# 	@currentELOs.each_key  do |pN|
 
-					elo = @currentELOs[ pN ]
-					noMatches = @currentNoMatches[ pN ]
-					unless ( elo.eql?( 1000 ) && noMatches.eql?( 0 ) )
-						ini.removeValue( sectionName, CGI::escape( pN ) )
-						eloStr = "#{elo} #{noMatches}"
-						ini.setValue( sectionName, CGI::escape( pN ), eloStr )
-					end
+			# 		elo = @currentELOs[ pN ]
+			# 		noMatches = @currentNoMatches[ pN ]
+			# 		unless ( elo.eql?( 1000 ) && noMatches.eql?( 0 ) )
+			# 			ini.removeValue( sectionName, CGI::escape( pN ) )
+			# 			eloStr = "#{elo} #{noMatches}"
+			# 			ini.setValue( sectionName, CGI::escape( pN ), eloStr )
+			# 		end
 
-				end
+			# 	end
 
-				ini.writeToFile( 'players.ini' )
+			# 	ini.writeToFile( 'players.ini' )
 
-			end
+			# end
 
 		end
 	end
