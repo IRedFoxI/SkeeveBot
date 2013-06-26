@@ -1,10 +1,7 @@
 require 'date'
 require 'fileutils'
 
-requireLibrary 'IO'
-
-# Match = Struct.new( :id, :status, :date, :teams, :players, :comment, :results )
-# Result = Struct.new( :map, :teams, :scores, :comment )
+requireLibrary '../../IO'
 
 module Kesh
 	module ELO

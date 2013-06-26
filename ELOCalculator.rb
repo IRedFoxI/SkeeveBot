@@ -103,7 +103,7 @@ class ELOCalculator
 			ini = Kesh::IO::Storage::IniFile.new
 		end
 
-		sectionName = "ELO"
+		sectionName = 'ELO'
 
 		@players.each_pair  do |pN, data|
 
@@ -185,6 +185,13 @@ class ELOCalculator
 
 	def plot_player_elo playerName, minMatches
 
+		unless File.exists?( File.join( File.dirname( __FILE__ ), 'Graphs' ) )
+			FileUtils.mkdir File.join( File.dirname( __FILE__ ), 'Graphs' )
+		end
+		unless File.exists?( File.join( File.dirname( __FILE__ ), 'Graphs', 'Players' ) )
+			FileUtils.mkdir File.join( File.dirname( __FILE__ ), 'Graphs', 'Players' )
+		end
+
 		g = Gruff::Line.new(1600)
 		g.title = "ELO History #{playerName}"
 		g.dot_radius = 2
@@ -203,7 +210,7 @@ class ELOCalculator
 
 		labels = Hash.new
 		@dates.each_index do |index|
-			labels[ index ] = @dates[ index ].strftime("%d/%m\n%H:%m")
+			labels[ index ] = @dates[ index ].strftime('%d/%m\n%H:%m')
 		end
 
 		# g.labels = labels
@@ -233,9 +240,13 @@ class ELOCalculator
 
 	def plot_number_of_matches minMatches
 
+		unless File.exists?( File.join( File.dirname( __FILE__ ), 'Graphs' ) )
+			FileUtils.mkdir File.join( File.dirname( __FILE__ ), 'Graphs' )
+		end
+
 		g = Gruff::Bar.new(1600)
 
-		g.title = "Number of matches"
+		g.title = 'Number of matches'
 
 		@players.each_pair do |pN, data|
 			g.data( pN, data.keys.length )
@@ -250,7 +261,7 @@ class ELOCalculator
 
 		g = Gruff::Bar.new(1600)
 
-		g.title = "Number of matches - Reduced"
+		g.title = 'Number of matches - Reduced'
 
 		@players.each_pair do |pN, data|
 			g.data( pN, data.keys.length ) if data.keys.length >= minMatches
@@ -266,8 +277,12 @@ class ELOCalculator
 
 	def plot_elo_performance minMatches
 
+		unless File.exists?( File.join( File.dirname( __FILE__ ), 'Graphs' ) )
+			FileUtils.mkdir File.join( File.dirname( __FILE__ ), 'Graphs' )
+		end
+
 		g = Gruff::Line.new(1600)
-		g.title = "ELO Performance"
+		g.title = "ELO Performance (#{@dates.length} matches, #{@currentELOs.keys.length} players)"
 		g.dot_radius = 2
 		g.line_width = 1
 		g.title_font_size = 25
@@ -283,14 +298,14 @@ class ELOCalculator
 			datasetNew << @ratioNew[ date ]
 		end
 
-		g.data("Estimated", datasetEst )
-		g.data("Actual", datasetAct )
-		g.data("Difference", datasetDiff )
-		g.data("New player ratio", datasetNew )
+		g.data('Estimated', datasetEst )
+		g.data('Actual', datasetAct )
+		g.data('Difference', datasetDiff )
+		g.data('New player ratio', datasetNew )
 
 		labels = Hash.new
 		@dates.each_index do |index|
-			labels[ index ] = @dates[ index ].strftime("%d/%m\n%H:%m")
+			labels[ index ] = @dates[ index ].strftime('%d/%m\n%H:%m')
 		end
 
 		# g.labels = labels
@@ -304,8 +319,12 @@ class ELOCalculator
 
 	def plot_elo_history minMatches
 
+		unless File.exists?( File.join( File.dirname( __FILE__ ), 'Graphs' ) )
+			FileUtils.mkdir File.join( File.dirname( __FILE__ ), 'Graphs' )
+		end
+
 		g = Gruff::Line.new(1600)
-		g.title = "ELO History"
+		g.title = 'ELO History'
 		g.dot_radius = 2
 		g.line_width = 1
 		g.title_font_size = 25
@@ -321,7 +340,7 @@ class ELOCalculator
 
 		labels = Hash.new
 		@dates.each_index do |index|
-			labels[ index ] = @dates[ index ].strftime("%d/%m\n%H:%m")
+			labels[ index ] = @dates[ index ].strftime('%d/%m\n%H:%m')
 		end
 
 		# g.labels = labels
@@ -417,20 +436,20 @@ class ELOCalculator
 				id = section.name
 
 				if id[ /^\d+$/ ].nil?
-					puts "Invalid ID: " + id.to_s
+					puts 'Invalid ID: ' + id.to_s
 					raise SyntaxError
 				end
 
 				idInt = id.to_i
 
-				status = section.getValue( "Status" )
-				next unless ( status.eql?( "Finished" ) )
+				status = section.getValue( 'Status' )
+				next unless ( status.eql?( 'Finished' ) )
 
-				date = DateTime.parse( section.getValue( "Date" ) )
+				date = DateTime.parse( section.getValue( 'Date' ) )
 
 				players = Hash.new
 
-				teams = section.getValue( "Teams" )
+				teams = section.getValue( 'Teams' )
 
 				if teams.nil?
 					teams = Array.new
@@ -452,11 +471,11 @@ class ELOCalculator
 
 				end
 
-				comment = section.getValue( "Comment" )
-				resultCount = section.getValue( "ResultCount" )
+				comment = section.getValue( 'Comment' )
+				resultCount = section.getValue( 'ResultCount' )
 
 				if resultCount[ /^\d+$/ ].nil?
-					puts "Invalid Result Count: " + resultCount.to_s
+					puts 'Invalid Result Count: ' + resultCount.to_s
 					raise SyntaxError
 				end
 
@@ -516,5 +535,5 @@ end
 
 calc.make_plots repeat * minMatches
 
-# calc.write_elo
+calc.write_elo
 

@@ -6,6 +6,7 @@ require 'cgi'
 requireLibrary 'IO'
 requireLibrary 'Mumble'
 requireLibrary 'TribesAPI'
+requireLibrary 'ELO'
 
 
 Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :noMatches, :playerName, :level, :tag, :noCaps, :noMaps, :match, :roles, :team )
@@ -471,7 +472,7 @@ class Bot
 				playerName = playerData[ :playerName ]
 				level = playerData[ :level ]
 				tag = playerData[ :tag ]
-				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, roles, nil )
+				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, noMatches, playerName, level, tag, nil, nil, nil, roles, nil )
 
 				firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
