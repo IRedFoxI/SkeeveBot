@@ -474,7 +474,8 @@ class Bot
 				playerName = playerData[ :playerName ]
 				level = playerData[ :level ]
 				tag = playerData[ :tag ]
-				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, roles, nil )
+				locale = playerData[ :locale ]
+				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, roles, nil, locale )
 
 				firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
@@ -1008,7 +1009,8 @@ class Bot
 			playerName = playerData[ :playerName ]
 			level = playerData[ :level ]
 			tag = playerData[ :tag ]
-			player = Player.new( message.actor, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, nil, nil )
+			locale = playerData[ :locale ]
+			player = Player.new( message.actor, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, nil, nil, locale )
 			@players[ client ][ mumbleNick ] = player
 		end
 
@@ -2375,6 +2377,7 @@ class Bot
 		aliasNick = nil
 		muted = nil
 		elo = nil
+		locale = nil
 
 		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
 
@@ -2400,6 +2403,9 @@ class Bot
 
 			sectionName = 'ELO'
 			elo = ini.getValue( sectionName, CGI::escape(nick) )
+
+			sectionName = 'Locale'
+			locale = ini.getValue( sectionName, CGI::escape(nick) )
 
 		end
 
@@ -2432,7 +2438,8 @@ class Bot
 				elo: elo,
 				playerName: playerName,
 				level: level,
-				tag: tag
+				tag: tag,
+				locale: locale,
 		}
 
 	end
