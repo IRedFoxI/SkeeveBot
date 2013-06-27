@@ -1093,7 +1093,7 @@ class Bot
 				help_msg_admin_delete( client, message )
 				return
 			else
-				message_user(client, message.actor, _("Unknown admin command '%{command}':"), command: command)
+				message_user(client, message.actor, _("Unknown admin command '%{command}'."), command: command)
 			end
 
 		end
