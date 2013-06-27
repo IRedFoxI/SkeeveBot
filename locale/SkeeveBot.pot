@@ -1,0 +1,533 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-06-26 19:26-0500\n"
+"PO-Revision-Date: 2013-06-26 19:26-0500\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: ../Bot.class.rb:802
+msgid "Unknown command '%{command}'"
+msgstr ""
+
+#: ../Bot.class.rb:807
+msgid "The following commands are available:"
+msgstr ""
+
+#: ../Bot.class.rb:808
+msgid "!help \"command\" - detailed help on the command"
+msgstr ""
+
+#: ../Bot.class.rb:809
+msgid "!find \"mumble_nick\" - find which channel someone is in"
+msgstr ""
+
+#: ../Bot.class.rb:810
+msgid "!goto \"mumble_nick\" - move yourself to someone's channel"
+msgstr ""
+
+#: ../Bot.class.rb:811
+msgid "!info \"tribes_nick\" \"stat\" - detailed stats on player"
+msgstr ""
+
+#: ../Bot.class.rb:812
+msgid "!mute - 0/1/2/3 - mute the bots spam messages from 0 (no mute) to 3 (all muted)"
+msgstr ""
+
+#: ../Bot.class.rb:813
+msgid "!result \"map1\" \"map2\" \"map3\"- sets the result of your last match"
+msgstr ""
+
+#: ../Bot.class.rb:814
+msgid "!list - shows the latest matches"
+msgstr ""
+
+#: ../Bot.class.rb:815
+msgid "!admin \"command\" - admin commands"
+msgstr ""
+
+#: ../Bot.class.rb:866
+msgid "Player '%{userName}' is in channel '%{userChannel}'"
+msgstr ""
+
+#: ../Bot.class.rb:868
+msgid "Player '%{playerName}' found using name '%{userName}' in channel '%{userChannel}'"
+msgstr ""
+
+#: ../Bot.class.rb:871
+msgid "There is no user '%{nick}' on the Server"
+msgstr ""
+
+#: ../Bot.class.rb:876
+msgid "Syntax: !find \"nick\""
+msgstr ""
+
+#: ../Bot.class.rb:877
+msgid "Returns \"nick\"'s channel. \"nick\" can be a mumble nick or a player name."
+msgstr ""
+
+#: ../Bot.class.rb:889
+msgid "Syntax: !goto \"mumble_nick\""
+msgstr ""
+
+#: ../Bot.class.rb:890
+msgid "The bot tries to move you to \"mumble_nick\"'s. Fails if the bot doesn't have sufficient rights"
+msgstr ""
+
+#: ../Bot.class.rb:939
+msgid "Player '%{nick}' not found. Also didn't find '%{ownNick}'."
+msgstr ""
+
+#: ../Bot.class.rb:942
+msgid "Player '%{nick}' not found. Trying '%{ownNick}' and looking for stat '%{nick}'."
+msgstr ""
+
+#: ../Bot.class.rb:948 ../Bot.class.rb:953
+msgid "Player '%{nick}' not found."
+msgstr ""
+
+#: ../Bot.class.rb:961
+msgid "Player '%{name}' has level '%{level}'."
+msgstr ""
+
+#: ../Bot.class.rb:968
+msgid "Unknown stat '%{stat}'."
+msgstr ""
+
+#: ../Bot.class.rb:976
+msgid "Syntax !info"
+msgstr ""
+
+#: ../Bot.class.rb:977
+msgid "Returns your tag, playername and level based on your mumble nick"
+msgstr ""
+
+#: ../Bot.class.rb:978
+msgid "Syntax !info \"stat\""
+msgstr ""
+
+#: ../Bot.class.rb:979
+msgid "As above, but also shows your additional statistic \"stat\""
+msgstr ""
+
+#: ../Bot.class.rb:980
+msgid "Syntax !info \"tribes_nick\""
+msgstr ""
+
+#: ../Bot.class.rb:981
+msgid "Returns \"nick\"'s tag, playername and level, searching for his alias if set"
+msgstr ""
+
+#: ../Bot.class.rb:982
+msgid "Syntax !info \"tribes_nick\" \"stat\""
+msgstr ""
+
+#: ../Bot.class.rb:983
+msgid "As above but also shows \"tribes_nick\"'s \"stat\""
+msgstr ""
+
+#: ../Bot.class.rb:984
+msgid "\"stat\" can be a space delimited list of these stats:"
+msgstr ""
+
+#: ../Bot.class.rb:1017
+msgid "Please specify an admin command."
+msgstr ""
+
+#: ../Bot.class.rb:1051
+msgid "Unknown admin command '%{command}'."
+msgstr ""
+
+#: ../Bot.class.rb:1096
+msgid "Unknown admin command '%{command}':"
+msgstr ""
+
+#: ../Bot.class.rb:1101
+msgid "The following admin commands are available:"
+msgstr ""
+
+#: ../Bot.class.rb:1102
+msgid "!help admin \"command\" - detailed help on the admin command"
+msgstr ""
+
+#: ../Bot.class.rb:1103
+msgid "!admin login \"password\" - login as SuperUser"
+msgstr ""
+
+#: ../Bot.class.rb:1104
+msgid "!admin setchan \"role\" - set a channel's role"
+msgstr ""
+
+#: ../Bot.class.rb:1105
+msgid "!admin setrole \"role\" \"parameter\" - set a role"
+msgstr ""
+
+#: ../Bot.class.rb:1106
+msgid "!admin delrole \"role\" - delete a role"
+msgstr ""
+
+#: ../Bot.class.rb:1107
+msgid "!admin playernum \"number\" - set the required number of players per team"
+msgstr ""
+
+#: ../Bot.class.rb:1108
+msgid "!admin alias \"player\" \"alias\" - set a player's alias"
+msgstr ""
+
+#: ../Bot.class.rb:1109
+msgid "!admin come - make the bot move to your channel"
+msgstr ""
+
+#: ../Bot.class.rb:1110
+msgid "!admin op \"player\" - make \"player\" an admin"
+msgstr ""
+
+#: ../Bot.class.rb:1111
+msgid "!admin result \"match_id\" \"scores\"- set the result of a match"
+msgstr ""
+
+#: ../Bot.class.rb:1112
+msgid "!admin delete \"match_id\" - delete a match"
+msgstr ""
+
+#: ../Bot.class.rb:1120
+msgid "Shutting down..."
+msgstr ""
+
+#: ../Bot.class.rb:1123 ../Bot.class.rb:1135
+msgid "Not enough admin privileges."
+msgstr ""
+
+#: ../Bot.class.rb:1131
+msgid "Restarting..."
+msgstr ""
+
+#: ../Bot.class.rb:1146
+msgid "Raising an exception: %{exception}"
+msgstr ""
+
+#: ../Bot.class.rb:1161
+msgid "Login accepted."
+msgstr ""
+
+#: ../Bot.class.rb:1165
+msgid "Already a SuperUser."
+msgstr ""
+
+#: ../Bot.class.rb:1189
+msgid "Wrong password."
+msgstr ""
+
+#: ../Bot.class.rb:1196
+msgid "Syntax: !admin login \"password\""
+msgstr ""
+
+#: ../Bot.class.rb:1197
+msgid "Logs you in to the bot as a SuperUser"
+msgstr ""
+
+#: ../Bot.class.rb:1211
+msgid "No roles defined."
+msgstr ""
+
+#: ../Bot.class.rb:1218 ../Bot.class.rb:1354
+msgid "Unknown role: '%{role}'."
+msgstr ""
+
+#: ../Bot.class.rb:1247
+msgid "Channel '%{channel}' removed (was '%{previousValue}')."
+msgstr ""
+
+#: ../Bot.class.rb:1249
+msgid "Channel '%{channel}' changed from '%{previousValue}' to '%{newValue}'."
+msgstr ""
+
+#: ../Bot.class.rb:1252
+msgid "Channel '%{channel}' set to '%{newRoles}'."
+msgstr ""
+
+#: ../Bot.class.rb:1256 ../Bot.class.rb:1319 ../Bot.class.rb:1383
+#: ../Bot.class.rb:1412 ../Bot.class.rb:1577 ../Bot.class.rb:1637
+#: ../Bot.class.rb:1735 ../Bot.class.rb:1950 ../Bot.class.rb:2021
+msgid "No admin privileges."
+msgstr ""
+
+#: ../Bot.class.rb:1262
+msgid "Syntax: !admin setchan \"role\""
+msgstr ""
+
+#: ../Bot.class.rb:1263
+msgid "Sets the channel you are in to \"role\""
+msgstr ""
+
+#: ../Bot.class.rb:1264
+msgid "You can set multiple roles by separating them with a space"
+msgstr ""
+
+#: ../Bot.class.rb:1284 ../Bot.class.rb:1349
+msgid "Missing argument."
+msgstr ""
+
+#: ../Bot.class.rb:1291
+msgid "Argument must be numeric, 'T' or 'Q'."
+msgstr ""
+
+#: ../Bot.class.rb:1313
+msgid "Role %{role} changed from '%{prevValue}' to '%{required}'."
+msgstr ""
+
+#: ../Bot.class.rb:1315
+msgid "Role %{role} set to '%{required}'."
+msgstr ""
+
+#: ../Bot.class.rb:1325
+msgid "Syntax: !admin setrole \"role\" \"requirement\""
+msgstr ""
+
+#: ../Bot.class.rb:1326
+msgid "Create a new role with or sets an existing role to \"requirement\""
+msgstr ""
+
+#: ../Bot.class.rb:1327
+msgid "Where \"requirement\" is one of:"
+msgstr ""
+
+#: ../Bot.class.rb:1328
+msgid "- the number of players with that role required per team"
+msgstr ""
+
+#: ../Bot.class.rb:1329
+msgid "- '-1' if the channel holds spectators"
+msgstr ""
+
+#: ../Bot.class.rb:1330
+msgid "- 'T' if the channel is a team channel"
+msgstr ""
+
+#: ../Bot.class.rb:1331
+msgid "- 'Q' if the channel is a queuing channel"
+msgstr ""
+
+#: ../Bot.class.rb:1362
+msgid "Role deleted ('%{role}')."
+msgstr ""
+
+#: ../Bot.class.rb:1369
+msgid "Syntax: !admin delrole \"role\""
+msgstr ""
+
+#: ../Bot.class.rb:1370
+msgid "Removes an existing role"
+msgstr ""
+
+#: ../Bot.class.rb:1389
+msgid "Syntax: !admin come"
+msgstr ""
+
+#: ../Bot.class.rb:1390
+msgid "Makes the bot join the channel you are in"
+msgstr ""
+
+#: ../Bot.class.rb:1404
+msgid "Required number of players set to default value ('%{defaultPlayerNumber}')."
+msgstr ""
+
+#: ../Bot.class.rb:1408
+msgid "Required number of players set to '%{newPlayerNumber}'."
+msgstr ""
+
+#: ../Bot.class.rb:1418
+msgid "Syntax: !admin playernum \"number\""
+msgstr ""
+
+#: ../Bot.class.rb:1419
+msgid "Sets the required number of players per team"
+msgstr ""
+
+#: ../Bot.class.rb:1434
+msgid "This command needs two parameters: the mumble nick and the alias you want to set."
+msgstr ""
+
+#: ../Bot.class.rb:1443
+msgid "Player '%{target}' has to be in one of the PUG channels."
+msgstr ""
+
+#: ../Bot.class.rb:1453
+msgid "Player '%{alias}' not found or unable to connect to TribesAPI, alias not set."
+msgstr ""
+
+#: ../Bot.class.rb:1467
+msgid "Alias of '%{playerMumbleNick}' removed."
+msgstr ""
+
+#: ../Bot.class.rb:1468
+msgid "Your alias has been reset to '%{playerMumbleNick}' by '%{mumbleNick}'."
+msgstr ""
+
+#: ../Bot.class.rb:1471 ../Bot.class.rb:1482
+msgid "Alias of '%{playerMumbleNick}' set to '%{aliasValue}'."
+msgstr ""
+
+#: ../Bot.class.rb:1472 ../Bot.class.rb:1483
+msgid "Your alias has been set to '%{aliasValue}' by '%{mumbleNick}'."
+msgstr ""
+
+#: ../Bot.class.rb:1478
+msgid "Alias not set: equal to mumble username."
+msgstr ""
+
+#: ../Bot.class.rb:1583
+msgid "Syntax: !admin alias \"mumble_nick\" \"alias\""
+msgstr ""
+
+#: ../Bot.class.rb:1584
+msgid "Sets \"mumble_nick\"'s alias to \"alias\""
+msgstr ""
+
+#: ../Bot.class.rb:1596
+msgid "Please specify exactly one mumble nick to make admin."
+msgstr ""
+
+#: ../Bot.class.rb:1610
+msgid "Already a %{admin}."
+msgstr ""
+
+#: ../Bot.class.rb:1630
+msgid "Player '%{playerMumbleNick}' made an admin."
+msgstr ""
+
+#: ../Bot.class.rb:1631
+msgid "You have been made an admin by %{adminName}."
+msgstr ""
+
+#: ../Bot.class.rb:1643
+msgid "Syntax: !admin op \"mumble_nick\""
+msgstr ""
+
+#: ../Bot.class.rb:1644
+msgid "Makes \"mumble_nick\" an admin if you are a SuperUser"
+msgstr ""
+
+#: ../Bot.class.rb:1673
+msgid "Unknown command '%{command}'!"
+msgstr ""
+
+#: ../Bot.class.rb:1696
+msgid "No players registered"
+msgstr ""
+
+#: ../Bot.class.rb:1729
+msgid "No matches registered - this is not good!"
+msgstr ""
+
+#: ../Bot.class.rb:1746
+msgid "You need to join one of the PUG channels set the mute level."
+msgstr ""
+
+#: ../Bot.class.rb:1758
+msgid "The mute level has to be numeric: 0(off), 1(default) or 2(all muted)."
+msgstr ""
+
+#: ../Bot.class.rb:1771
+msgid "No change in mute level."
+msgstr ""
+
+#: ../Bot.class.rb:1795
+msgid "Mute level set to %{muteLevel}."
+msgstr ""
+
+#: ../Bot.class.rb:1800
+msgid "Syntax: !mute 0/1/2/3"
+msgstr ""
+
+#: ../Bot.class.rb:1801
+msgid "Mute the bot's spam messages from 0 (no mute) to 3 (all muted)"
+msgstr ""
+
+#: ../Bot.class.rb:1809 ../Bot.class.rb:1895
+msgid "You need to enter at least one score."
+msgstr ""
+
+#: ../Bot.class.rb:1816
+msgid "You need to join one of the PUG channels to set a result."
+msgstr ""
+
+#: ../Bot.class.rb:1835 ../Bot.class.rb:1912
+msgid "Malformed result: please use \"BE\"-\"DS\" for each map."
+msgstr ""
+
+#: ../Bot.class.rb:1867
+msgid "No match found with results pending. Maybe the match has already been reported."
+msgstr ""
+
+#: ../Bot.class.rb:1874
+msgid "Syntax: !result \"map1\" \"map2\" \"map3\""
+msgstr ""
+
+#: ../Bot.class.rb:1875
+msgid "Report the results of a match with the scores for each maps in the form \"BE\"-\"DS\"."
+msgstr ""
+
+#: ../Bot.class.rb:1884
+msgid "You need to enter a match id and at least one score."
+msgstr ""
+
+#: ../Bot.class.rb:1889 ../Bot.class.rb:1970
+msgid "The match id has to be numerical."
+msgstr ""
+
+#: ../Bot.class.rb:1956
+msgid "Syntax: !admin result \"match_id\" \"scores\""
+msgstr ""
+
+#: ../Bot.class.rb:1957
+msgid "Sets the \"scores\" of \"match_id\" for all maps in form \"ourcaps\"-\"theircaps\" separated by a space."
+msgstr ""
+
+#: ../Bot.class.rb:1965
+msgid "You need to enter a match id."
+msgstr ""
+
+#: ../Bot.class.rb:1985
+msgid "Can't delete the current signup match."
+msgstr ""
+
+#: ../Bot.class.rb:2027
+msgid "Syntax: !admin delete \"match_id\""
+msgstr ""
+
+#: ../Bot.class.rb:2028
+msgid "Delete match with id \"match_id\"."
+msgstr ""
+
+#: ../Bot.class.rb:2050
+msgid "No matches found."
+msgstr ""
+
+#: ../Bot.class.rb:2085
+msgid "Syntax: !list"
+msgstr ""
+
+#: ../Bot.class.rb:2086
+msgid "Shows the latest matches that have been registered on the bot."
+msgstr ""
+
+#: ../Bot.class.rb:2098
+msgid "System calls not allowed."
+msgstr ""
+
+#: ../Bot.class.rb:2105
+msgid "No SuperUser privileges."
+msgstr ""
