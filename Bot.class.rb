@@ -39,6 +39,7 @@ class Bot
 			@query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
 		end
 		@lastCleanUp = Time.now
+		@localeAliases = Hash.new
 
 		load_matches_ini
 		load_locales
@@ -2456,11 +2457,37 @@ class Bot
 	def load_locales
 		FastGettext.add_text_domain('SkeeveBot', :path => 'locale', :type => :po)
 		FastGettext.default_text_domain = 'SkeeveBot'
-		FastGettext.default_locale = 'en-US'
+		FastGettext.default_locale = @options[ :default_locale ]
+
+		reload_locales
+	end
+
+	def reload_locales
+
+		localeDirectory = File.dirname( __FILE__ ) + '/locale/'
+		FastGettext.default_available_locales = Dir.entries(localeDirectory).select { |entry| File.directory?(File.join(localeDirectory, entry)) && entry != '.' && entry != '..' }
+		FastGettext.default_available_locales << 'en' # Add the language the source code is in.
+
+		@localeAliases.clear
+
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/locale.ini' ) )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'locale.ini' )
+
+			sec = ini.getSection('Alias')
+			sec.values.each do |val|
+				if FastGettext.default_available_locales.include?(val.value)
+					@localeAliases[val.name.downcase] = val.value
+				else
+					puts "ERROR: Unknown locale '#{val.value}'!"
+				end
+			end
+		end
+
+		FastGettext.reload!
+
 	end
 
 	def message_user client, actor, message, *formatArgs
-		# TODO: Make this a default that is configurable in config.rb
 		mumbleNick = client.find_user( actor ).name
 
 		if @players[ client ].has_key?( mumbleNick )
