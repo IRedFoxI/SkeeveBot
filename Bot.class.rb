@@ -805,7 +805,7 @@ class Bot
 				help_msg_locale( client, message )
 				return
 			else
-				message_user(client, message.actor, _("Unknown command '%{command}'"), command: command)
+				message_user(client, message.actor, _("Unknown command '%{command}'!"), command: command)
 			end
 
 		end
@@ -2503,6 +2503,7 @@ class Bot
 	def cmd_admin_locale_reload client, message
 		ensure_SuperUser(client, message) do
 			reload_locales
+			message_user(client, message.actor, _('Locales reloaded successfully.'))
 		end
 	end
 
@@ -2713,17 +2714,17 @@ class Bot
 					@players[ client ][ mumbleNick ].locale = targetLocale
 
 					ini = Kesh::IO::Storage::IniFile.loadFromFile('players.ini')
-					sec = ini.getSection('Locale')
-					if sec.hasValue?(CGI::escape(mumbleNick))
-						oldLocale = sec.getValue(CGI::escape(mumbleNick))
+					sectionName = 'Locale'
+					if ini.hasValue?(sectionName, CGI::escape(mumbleNick))
+						oldLocale = ini.getValue(sectionName, CGI::escape(mumbleNick))
 						if oldLocale.eql?(targetLocale)
 							message_user(client, message.actor, _("Your preferred locale is already set to '%{locale}'."), locale: targetLocale)
 						else
-							sec.setValue(CGI::escape(mumbleNick), targetLocale)
-							message_user(client, message.actor, _("Updated your preferred locale to '%{newLocale}' from '%{oldLocale}'."), newLocale: targetLocale, oldLocale: oldLocale)
+							ini.setValue(sectionName, CGI::escape(mumbleNick), targetLocale)
+							message_user(client, message.actor, _("Updated your preferred locale from '%{oldLocale}' to '%{newLocale}'."), oldLocale: oldLocale, newLocale: targetLocale)
 						end
 					else
-						sec.setValue(CGI::escape(mumbleNick), targetLocale)
+						ini.setValue(sectionName, CGI::escape(mumbleNick), targetLocale)
 						message_user(client, message.actor, _("Set your preferred locale to '%{locale}'."), locale: targetLocale)
 					end
 					ini.writeToFile('players.ini')
@@ -2742,7 +2743,7 @@ class Bot
 	end
 
 	def cmd_locale_list client, message
-		message_user(client, message.actor, _('The following locales are available: %{locales}'), locales: FastGettext.available_locales.join(', '))
+		message_user(client, message.actor, _('The following locales are available: %{locales}'), locales: FastGettext.available_locales.sort{ |a, b| a <=> b }.join(', '))
 	end
 
 	def help_msg_locale_list client, message
