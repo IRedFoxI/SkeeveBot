@@ -68,7 +68,12 @@ class Bot
 
 	def on_user_state client, message
 		# Check whether it is the bot itself
-		return if client.find_user( message.session ).name.eql? @connections[ client ][ :nick ]
+		if client.find_user( message.session ).name.eql? @connections[ client ][ :nick ]
+			if message.instance_variable_get( '@values' ).has_key?( :channel_id )
+				client.switch_channel @connections[ client ][ :channel ]
+				return
+			end
+		end
 
 		# Check if there is a channel change
 		return unless message.instance_variable_get( '@values' ).has_key?( :channel_id )
@@ -1385,10 +1390,8 @@ class Bot
 		mumbleNick = client.find_user( message.actor ).name
 
 		if @players[ client ][ mumbleNick ].admin
-
-			chanPath = client.find_user( message.actor ).channel.path
-			client.switch_channel chanPath
-
+			@connections[ client ][ :channel ] = client.find_user( message.actor ).channel.path
+			client.switch_channel @connections[ client ][ :channel ]
 		else
 			message_user(client, message.actor, _('No admin privileges.'))
 		end
@@ -2438,16 +2441,16 @@ class Bot
 		end
 
 		return {
-				session: session,
-				mumbleNick: mumbleNick,
-				admin: admin,
-				aliasNick: aliasNick,
-				muted: muted,
-				elo: elo,
-				playerName: playerName,
-				level: level,
-				tag: tag,
-				locale: locale,
+			session: session,
+			mumbleNick: mumbleNick,
+			admin: admin,
+			aliasNick: aliasNick,
+			muted: muted,
+			elo: elo,
+			playerName: playerName,
+			level: level,
+			tag: tag,
+			locale: locale,
 		}
 
 	end
