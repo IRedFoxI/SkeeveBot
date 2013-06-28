@@ -130,6 +130,7 @@ class Bot
 			client.register_text_handler '!mute', method( :cmd_mute )
 			client.register_text_handler '!result', method( :cmd_result )
 			client.register_text_handler '!list', method( :cmd_list )
+			client.register_text_handler '!locale', method( :cmd_locale )
 
 			client.register_exception_handler method( :on_exception )
 
@@ -800,6 +801,9 @@ class Bot
 			when 'admin'
 				help_msg_admin( client, message )
 				return
+			when 'locale'
+				help_msg_locale( client, message )
+				return
 			else
 				message_user(client, message.actor, _("Unknown command '%{command}'"), command: command)
 			end
@@ -815,6 +819,7 @@ class Bot
 		message_user(client, message.actor, _('!result "map1" "map2" "map3"- sets the result of your last match'))
 		message_user(client, message.actor, _('!list - shows the latest matches'))
 		message_user(client, message.actor, _('!admin "command" - admin commands'))
+		message_user(client, message.actor, _('!locale "command" - locale comamnds'))
 	end
 
 	def cmd_find client, message
@@ -2457,12 +2462,12 @@ class Bot
 				message_user(client, message.actor, _('Expected a locale admin command!'))
 			else
 				case command.downcase
-					when 'alias'
-						cmd_admin_locale_alias( client, message )
-					when 'reload'
-						cmd_admin_locale_reload( client, message )
-					else
-						message_user(client, message.actor, _("Unknown locale admin command '%{command}'!"), command: command)
+				when 'alias'
+					cmd_admin_locale_alias( client, message )
+				when 'reload'
+					cmd_admin_locale_reload( client, message )
+				else
+					message_user(client, message.actor, _("Unknown locale admin command '%{command}'!"), command: command)
 				end
 			end
 
@@ -2477,14 +2482,14 @@ class Bot
 
 			unless command.nil?
 				case command.downcase
-					when 'alias'
-						help_msg_admin_locale_alias( client, message )
-						return
-					when 'reload'
-						help_msg_admin_locale_reload( client, message )
-						return
-					else
-						message_user(client, message.actor, _("Unknown locale admin command '%{command}'!"), command: command)
+				when 'alias'
+					help_msg_admin_locale_alias( client, message )
+					return
+				when 'reload'
+					help_msg_admin_locale_reload( client, message )
+					return
+				else
+					message_user(client, message.actor, _("Unknown locale admin command '%{command}'!"), command: command)
 				end
 			end
 
@@ -2518,12 +2523,12 @@ class Bot
 				message_user(client, message.actor, _('Expected a locale alias admin command!'))
 			else
 				case command.downcase
-					when 'set'
-						cmd_admin_locale_alias_set(client, message)
-					when 'remove'
-						cmd_admin_locale_alias_remove(client, message)
-					else
-						message_user(client, message.actor, _("Unknown locale alias admin command '%{command}'!"), command: command)
+				when 'set'
+					cmd_admin_locale_alias_set(client, message)
+				when 'remove'
+					cmd_admin_locale_alias_remove(client, message)
+				else
+					message_user(client, message.actor, _("Unknown locale alias admin command '%{command}'!"), command: command)
 				end
 			end
 
@@ -2538,14 +2543,14 @@ class Bot
 
 			unless command.nil?
 				case command.downcase
-					when 'set'
-						help_msg_admin_locale_alias_set(client, message)
-						return
-					when 'remove'
-						help_msg_admin_locale_alias_remove(client, message)
-						return
-					else
-						message_user(client, message.actor, _("Unknown locale alias admin command '%{command}'!"), command: command)
+				when 'set'
+					help_msg_admin_locale_alias_set(client, message)
+					return
+				when 'remove'
+					help_msg_admin_locale_alias_remove(client, message)
+					return
+				else
+					message_user(client, message.actor, _("Unknown locale alias admin command '%{command}'!"), command: command)
 				end
 			end
 
@@ -2639,6 +2644,112 @@ class Bot
 		end
 	end
 
+	def cmd_locale client, message
+
+		text = convert_symbols_from_html( message.message )
+		command = text.split(' ')[ 1 ]
+
+		if command.nil?
+			message_user(client, message.actor, _('Expected a locale command!'))
+		else
+			case command.downcase
+			when 'set'
+				cmd_locale_set(client, message)
+			when 'list'
+				cmd_locale_list(client, message)
+			else
+				message_user(client, message.actor, _("Unknown locale command '%{command}'!"), command: command)
+			end
+		end
+
+	end
+
+	def help_msg_locale client, message
+
+		text = convert_symbols_from_html( message.message )
+		command = text.split(' ')[ 1 ]
+
+		unless command.nil?
+			case command.downcase
+			when 'set'
+				help_msg_locale_set(client, message)
+				return
+			when 'list'
+				help_msg_locale_list(client, message)
+				return
+			else
+				message_user(client, message.actor, _("Unknown locale command '%{command}'!"), command: command)
+			end
+		end
+
+		message_user(client, message.actor, _('The following commands are available:'))
+		message_user(client, message.actor, _('!locale set "locale" - Set your preferred locale.'))
+		message_user(client, message.actor, _('!locale list - Get a list of all available locales.'))
+
+	end
+
+	def cmd_locale_set client, message
+
+		text = convert_symbols_from_html( message.message )
+		locale = text.split(' ')[ 2 ]
+
+		if locale.nil?
+			message_user(client, message.actor, _('Missing the locale to set as preferred!'))
+		else
+			targetLocale = locale
+			unless FastGettext.available_locales.include?(targetLocale)
+				if @localeAliases.has_key?(targetLocale.downcase)
+					targetLocale = @localeAliases[targetLocale.downcase]
+				else
+					message_user(client, message.actor, _("Unknown locale '%{locale}'!"), locale: targetLocale)
+					targetLocale = nil
+				end
+			end
+
+			unless targetLocale.nil?
+				mumbleNick = client.find_user( message.actor ).name
+
+				if @players[ client ].has_key?( mumbleNick )
+					@players[ client ][ mumbleNick ].locale = targetLocale
+
+					ini = Kesh::IO::Storage::IniFile.loadFromFile('players.ini')
+					sec = ini.getSection('Locale')
+					if sec.hasValue?(CGI::escape(mumbleNick))
+						oldLocale = sec.getValue(CGI::escape(mumbleNick))
+						if oldLocale.eql?(targetLocale)
+							message_user(client, message.actor, _("Your preferred locale is already set to '%{locale}'."), locale: targetLocale)
+						else
+							sec.setValue(CGI::escape(mumbleNick), targetLocale)
+							message_user(client, message.actor, _("Updated your preferred locale to '%{newLocale}' from '%{oldLocale}'."), newLocale: targetLocale, oldLocale: oldLocale)
+						end
+					else
+						sec.setValue(CGI::escape(mumbleNick), targetLocale)
+						message_user(client, message.actor, _("Set your preferred locale to '%{locale}'."), locale: targetLocale)
+					end
+					ini.writeToFile('players.ini')
+
+				else
+					message_user(client, message.actor, _('You must be in one of the PuG channels to set your preferred locale!'))
+				end
+			end
+		end
+
+	end
+
+	def help_msg_locale_set client, message
+		message_user(client, message.actor, _('Syntax: !locale set "locale"'))
+		message_user(client, message.actor, _('Set your preferred locale to "locale".'))
+	end
+
+	def cmd_locale_list client, message
+		message_user(client, message.actor, _('The following locales are available: %{locales}'), locales: FastGettext.available_locales.join(', '))
+	end
+
+	def help_msg_locale_list client, message
+		message_user(client, message.actor, _('Syntax: !locale list'))
+		message_user(client, message.actor, _('List all of the available locales.'))
+	end
+
 	include FastGettext::Translation
 	# This is a stub which exists so we can create
 	# a list of localized strings automatically rather
@@ -2668,7 +2779,7 @@ class Bot
 
 			sec = ini.getSection('Alias')
 			sec.values.each do |val|
-				if FastGettext.default_available_locales.include?(val.value)
+				if FastGettext.available_locales.include?(val.value)
 					@localeAliases[val.name] = val.value
 				else
 					puts "ERROR: Unknown locale '#{val.value}'!"
