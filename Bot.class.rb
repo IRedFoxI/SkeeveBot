@@ -1050,6 +1050,8 @@ class Bot
 				cmd_admin_eval( client, message )
 			when 'debug'
 				cmd_admin_debug( client, message )
+			when 'locale'
+				cmd_admin_locale( client, message )
 			else
 				message_user(client, message.actor, _("Unknown admin command '%{command}'."), command: command)
 			end
@@ -2445,6 +2447,197 @@ class Bot
 
 	end
 
+	def cmd_admin_locale client, message
+		ensure_SuperUser(client, message) do
+
+			text = convert_symbols_from_html( message.message )
+			command = text.split(' ')[ 2 ]
+
+			if command.nil?
+				message_user(client, message.actor, _('Expected a locale admin command!'))
+			else
+				case command.downcase
+					when 'alias'
+						cmd_admin_locale_alias( client, message )
+					when 'reload'
+						cmd_admin_locale_reload( client, message )
+					else
+						message_user(client, message.actor, _("Unknown locale admin command '%{command}'!"), command: command)
+				end
+			end
+
+		end
+	end
+
+	def help_msg_admin_locale client, message
+		ensure_SuperUser(client, message) do
+
+			text = convert_symbols_from_html( message.message )
+			command = text.split(' ')[ 2 ]
+
+			unless command.nil?
+				case command.downcase
+					when 'alias'
+						help_msg_admin_locale_alias( client, message )
+						return
+					when 'reload'
+						help_msg_admin_locale_reload( client, message )
+						return
+					else
+						message_user(client, message.actor, _("Unknown locale admin command '%{command}'!"), command: command)
+				end
+			end
+
+			message_user(client, message.actor, _('The following locale admin commands are available:'))
+			message_user(client, message.actor, _('!admin locale alias - Commands for managing locale aliases.'))
+			message_user(client, message.actor, _('!admin locale reload - Reload all locales, ensuring the most up-to-date versions are used.'))
+
+		end
+	end
+
+	def cmd_admin_locale_reload client, message
+		ensure_SuperUser(client, message) do
+			reload_locales
+		end
+	end
+
+	def help_msg_admin_locale_reload client, message
+		ensure_SuperUser(client, message) do
+			message_user(client, message.actor, _('Syntax: !admin locale reload'))
+			message_user(client, message.actor, _('Reloads all locale info, ensuring the newest version is used.'))
+		end
+	end
+
+	def cmd_admin_locale_alias client, message
+		ensure_SuperUser(client, message) do
+
+			text = convert_symbols_from_html( message.message )
+			command = text.split(' ')[ 3 ]
+
+			if command.nil?
+				message_user(client, message.actor, _('Expected a locale alias admin command!'))
+			else
+				case command.downcase
+					when 'set'
+						cmd_admin_locale_alias_set(client, message)
+					when 'remove'
+						cmd_admin_locale_alias_remove(client, message)
+					else
+						message_user(client, message.actor, _("Unknown locale alias admin command '%{command}'!"), command: command)
+				end
+			end
+
+		end
+	end
+
+	def help_msg_admin_locale_alias client, message
+		ensure_SuperUser(client, message) do
+
+			text = convert_symbols_from_html( message.message )
+			command = text.split(' ')[ 3 ]
+
+			unless command.nil?
+				case command.downcase
+					when 'set'
+						help_msg_admin_locale_alias_set(client, message)
+						return
+					when 'remove'
+						help_msg_admin_locale_alias_remove(client, message)
+						return
+					else
+						message_user(client, message.actor, _("Unknown locale alias admin command '%{command}'!"), command: command)
+				end
+			end
+
+			message_user(client, message.actor, _('The following locale alias admin commands are available:'))
+			message_user(client, message.actor, _('!admin locale alias set "alias" "locale" - Sets an alias for the specified locale.'))
+			message_user(client, message.actor, _('!admin locale alias remove "alias" - Remove an alias for a locale.'))
+
+		end
+	end
+
+	def cmd_admin_locale_alias_set client, message
+		ensure_SuperUser(client, message) do
+
+			text = convert_symbols_from_html( message.message )
+			localeAlias = text.split(' ')[ 4 ]
+			localeName = text.split(' ')[ 5 ]
+
+			if localeAlias.nil?
+				message_user(client, message.actor, _('Missing the alias to set!'))
+			elsif localeName.nil?
+				message_user(client, message.actor, _('Missing the locale to set an alias of!'))
+			elsif !FastGettext.available_locales.include?(localeName)
+				message_user(client, message.actor, _("Unknown locale '%{locale}'!"), locale: localeName)
+				message_user(client, message.actor, _('See the output of the "!locale list" command for a list of the valid locales.'))
+			else
+				if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/locale.ini' ) )
+					ini = Kesh::IO::Storage::IniFile.loadFromFile('locale.ini')
+				else
+					ini = Kesh::IO::Storage::IniFile.new
+				end
+
+				sec = ini.getSection('Alias')
+				if sec.hasValue?(localeAlias.downcase)
+					oldValue = sec.getValue(localeAlias.downcase)
+					if localeName.eql?(oldValue)
+						message_user(client, message.actor, _("'%{alias}' is already an alias of '%{locale}'."), alias: localeAlias, locale: localeName)
+					else
+						sec.setValue(localeAlias.downcase, localeName)
+						ini.getSection('AliasDisplayName').setValue(localeAlias.downcase, localeAlias)
+						message_user(client, message.actor, _("Updated '%{alias}' to be an alias of '%{newLocale}' rather than '%{oldLocale}'."), alias: localeAlias, newLocale: localeName, oldLocale: oldValue)
+					end
+				else
+					sec.setValue(localeAlias.downcase, localeName)
+					message_user(client, message.actor, _("Set '%{alias}' as an alias of '%{locale}'"), alias: localeAlias, locale: localeName)
+				end
+
+				ini.writeToFile('locale.ini')
+			end
+
+		end
+	end
+
+	def help_msg_admin_locale_alias_set client, message
+		ensure_SuperUser(client, message) do
+			message_user(client, message.actor, _('Syntax: !admin locale alias set "alias" "locale"'))
+			message_user(client, message.actor, _('Set "alias" as an alias of "locale".'))
+		end
+	end
+
+	def cmd_admin_locale_alias_remove client, message
+		ensure_SuperUser(client, message) do
+
+			text = convert_symbols_from_html( message.message )
+			aliasName = text.split(' ')[ 4 ]
+
+			if aliasName.nil?
+				message_user(client, message.actor, _('Missing the name of the alias to remove!'))
+			elsif File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/locale.ini' ) )
+				ini = Kesh::IO::Storage::IniFile.loadFromFile('locale.ini')
+				sec = ini.getSection('Alias')
+
+				if sec.hasValue?(aliasName.downcase)
+					oldValue = sec.getValue(aliasName.downcase)
+					sec.removeValue(aliasName.downcase)
+					ini.getSection('AliasDisplayName').removeValue(aliasName.downcase)
+					message_user(client, message.actor, _("Removed '%{alias}' as an alias of '%{locale}'."), alias: aliasName, locale: oldValue)
+				else
+					message_user(client, message.actor, _("The value '%{alias}' is not an alias for any locale!"), alias: aliasName)
+				end
+			else
+				message_user(client, message.actor, _("The value '%{alias}' is not an alias for any locale!"), alias: aliasName)
+			end
+
+		end
+	end
+
+	def help_msg_admin_locale_alias_remove client, message
+		ensure_SuperUser(client, message) do
+			message_user(client, message.actor, _('Syntax: !admin locale alias remove "alias"'))
+			message_user(client, message.actor, _('Remove the locale alias "alias".'))
+		end
+	end
 
 	include FastGettext::Translation
 	# This is a stub which exists so we can create
@@ -2476,7 +2669,7 @@ class Bot
 			sec = ini.getSection('Alias')
 			sec.values.each do |val|
 				if FastGettext.default_available_locales.include?(val.value)
-					@localeAliases[val.name.downcase] = val.value
+					@localeAliases[val.name] = val.value
 				else
 					puts "ERROR: Unknown locale '#{val.value}'!"
 				end
@@ -2637,5 +2830,32 @@ class Bot
 		text.gsub!( /(?:\r\n|\r|\n)/, '<br/>' )
 		# text.gsub!( '-', '&shy;' )
 		return text
+	end
+
+
+
+
+	def ensure_SuperUser client, message
+
+		mumbleNick = client.find_user( message.actor ).name
+
+		if @players[ client ].has_key?( mumbleNick ) && @players[ client ][ mumbleNick ].admin.eql?( 'SuperUser' )
+			yield
+		else
+			message_user(client, message.actor, _('Insufficient privileges to perform this action.'))
+		end
+
+	end
+
+	def ensure_Admin client, message
+
+		mumbleNick = client.find_user( message.actor ).name
+
+		if @players[ client ].has_key?( mumbleNick ) && (@players[ client ][ mumbleNick ].admin.eql?( 'Admin' ) || @players[ client ][ mumbleNick ].admin.eql?( 'SuperUser' ))
+			yield
+		else
+			message_user(client, message.actor, _('Insufficient privileges to perform this action.'))
+		end
+
 	end
 end
