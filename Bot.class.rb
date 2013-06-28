@@ -1372,7 +1372,7 @@ class Bot
 
 	def help_msg_admin_delrole client, message
 		message_user(client, message.actor, _('Syntax: !admin delrole "role"'))
-		message_user(client, message.actor, _('Removes an existing role'))
+		message_user(client, message.actor, _('Removes an existing role.'))
 	end
 
 	def cmd_admin_come client, message
@@ -1392,7 +1392,7 @@ class Bot
 
 	def help_msg_admin_come client, message
 		message_user(client, message.actor, _('Syntax: !admin come'))
-		message_user(client, message.actor, _('Makes the bot join the channel you are in'))
+		message_user(client, message.actor, _('Makes the bot join the channel you are in.'))
 	end
 
 	def cmd_admin_playernum client, message 
@@ -1421,7 +1421,7 @@ class Bot
 
 	def help_msg_admin_playernum client, message
 		message_user(client, message.actor, _('Syntax: !admin playernum "number"'))
-		message_user(client, message.actor, _('Sets the required number of players per team'))
+		message_user(client, message.actor, _('Sets the required number of players per team.'))
 	end
 
 	def cmd_admin_alias client, message
