@@ -72,8 +72,8 @@ describe AdminLevel do
 	end
 
 	describe '::None' do
-		it 'should exist' do
-			AdminLevel::None.should
+		it 'should be defined' do
+			defined?(AdminLevel::None).should
 		end
 
 		it 'should be constant' do
@@ -118,8 +118,8 @@ describe AdminLevel do
 	end
 
 	describe '::Admin' do
-		it 'should exist' do
-			AdminLevel::Admin.should
+		it 'should be defined' do
+			defined?(AdminLevel::Admin).should
 		end
 
 		it 'should be constant' do
@@ -164,8 +164,8 @@ describe AdminLevel do
 	end
 
 	describe '::SuperUser' do
-		it 'should exist' do
-			AdminLevel::SuperUser.should
+		it 'should be defined' do
+			defined?(AdminLevel::SuperUser).should
 		end
 
 		it 'should be constant' do
