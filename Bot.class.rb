@@ -647,6 +647,13 @@ class Bot
 				@matches[ index ].date = Time.now
 				message_all( client, "The teams are picked, match (id: #{match.id}) started.", [ nil, @currentMatch[ client ] ], 2 )
 
+				# Record number of maps played by each player
+				match.players.each_key do |pN|
+					player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+					statsVals = get_player_stats( player.playerName, [ 'Matches_Completed' ] )
+					player.noMaps = statsVals.shift unless statVals.nil?
+				end
+
 				# Create new match
 				create_new_match( client )
 				match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
@@ -983,7 +990,7 @@ class Bot
 		client.send_user_message message.actor, 'Syntax !info "tribes_nick" "stat"'
 		client.send_user_message message.actor, "As above but also shows \"tribes_nick\"'s \"stat\""
 		client.send_user_message message.actor, '"stat" can be a space delimited list of these stats:'
-		stats = get_player_stats 'SomeFakePlayerName'
+		stats = get_player_stats( 'SomeFakePlayerName' )
 		stats.each do |stat|
 			client.send_user_message message.actor, stat unless stat.eql? 'ret_msg'
 		end
