@@ -1,15 +1,10 @@
 require 'rspec'
 require './Enum.class'
 
-AdminLevel = Enum.new(:None, :Admin, :SuperUser) do
+AdminLevel = ComparableEnum.new(:None, :Admin, :SuperUser) do
 
 	def self.hello
 		return 'hello'
-	end
-
-	include Comparable
-	def <=> other
-		return @innerValue <=> other.innerValue
 	end
 
 end
@@ -109,12 +104,12 @@ describe AdminLevel do
 			AdminLevel::None.should_not == AdminLevel::Admin
 		end
 
-		it 'should not be equal to ::SuperUser' do
-			AdminLevel::None.should_not == AdminLevel::SuperUser
-		end
-
 		it 'should be less than ::Admin' do
 			AdminLevel::None.should < AdminLevel::Admin
+		end
+
+		it 'should not be equal to ::SuperUser' do
+			AdminLevel::None.should_not == AdminLevel::SuperUser
 		end
 
 		it 'should be equal to "None"' do
@@ -123,6 +118,10 @@ describe AdminLevel do
 
 		it 'should not be equal to "Admin"' do
 			AdminLevel::None.should_not == 'Admin'
+		end
+
+		it 'should be less than "Admin"' do
+			AdminLevel::None.should < 'Admin'
 		end
 
 		it 'should not be equal to "SuperUser"' do
@@ -135,6 +134,10 @@ describe AdminLevel do
 
 		it 'should not be equal to 1' do
 			AdminLevel::None.should_not == 1
+		end
+
+		it 'should be less than 1' do
+			AdminLevel::None.should < 1
 		end
 
 		it 'should not be equal to 2' do

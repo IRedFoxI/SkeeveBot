@@ -1,6 +1,32 @@
 
-class Enum
+class ComparableEnum
+	# Declare a new comparable enum with the given values.
+	# @param enumValues [Array<(Symbol)>] The values of the enum.
+	def self.new *enumValues, &block
+		klass = Enum.new(*enumValues) do
+			include Comparable
+			def <=> other
+				if other.nil?
+					return false
+				else
+					if other.is_a? self.class
+						return @innerValue <=> other.innerValue
+					elsif other.is_a? String
+						return @innerValue <=> self.class.parse(other).innerValue
+					elsif other.is_a? Numeric
+						return @innerValue <=> other
+					else
+						fail 'Unknown type to compare to!'
+					end
+				end
+			end
+		end
+		klass.class_eval &block
+		return klass
+	end
+end
 
+class Enum
 	# Declare a new enum with the given values.
 	# @param enumValues [Array<(Symbol)>] The values of the enum.
 	def self.new *enumValues, &block
