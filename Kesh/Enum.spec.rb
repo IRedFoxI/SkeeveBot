@@ -1,9 +1,30 @@
 require 'rspec'
 require './Enum.class'
 
-AdminLevel = Enum.new(:None, :Admin, :SuperUser)
+AdminLevel = Enum.new(:None, :Admin, :SuperUser) do
+
+	def self.hello
+		return 'hello'
+	end
+
+	include Comparable
+	def <=> other
+		return @innerValue <=> other.innerValue
+	end
+
+end
 
 describe AdminLevel do
+
+	describe '::hello' do
+		it 'should be defined' do
+			AdminLevel.method(:hello).should
+		end
+
+		it 'should return "hello"' do
+			AdminLevel::hello.should == 'hello'
+		end
+	end
 
 	describe '::parse' do
 		it 'should return nil when passed nil' do
@@ -90,6 +111,10 @@ describe AdminLevel do
 
 		it 'should not be equal to ::SuperUser' do
 			AdminLevel::None.should_not == AdminLevel::SuperUser
+		end
+
+		it 'should be less than ::Admin' do
+			AdminLevel::None.should < AdminLevel::Admin
 		end
 
 		it 'should be equal to "None"' do

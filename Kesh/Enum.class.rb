@@ -3,21 +3,54 @@ class Enum
 
 	# Declare a new enum with the given values.
 	# @param enumValues [Array<(Symbol)>] The values of the enum.
-	def self.new *enumValues
+	def self.new *enumValues, &block
 		klass = Class.new
 
-		klass.class_eval <<-EOT.gsub(/^\s+\|/, ''), __FILE__, __LINE__ + 1
-		|	private
-		|		def initialize innerVal
-		|			@innerValue = innerVal
-		|		end
-		EOT
+		klass.class_eval do
+			attr :innerValue
 
-		klass.class_eval <<-EOT.gsub(/^\s+\|/, ''), __FILE__, __LINE__ + 1
-		|	def innerValue
-		|		return @innerValue
-		|	end
-		EOT
+		private
+			def initialize innerVal
+				@innerValue = innerVal
+			end
+
+		public
+			def inspect
+				return "#{self.to_s} (#{@innerValue})"
+			end
+
+			def != other
+				return !(self == other)
+			end
+
+			def == other
+				if other.nil?
+					return false
+				else
+					if other.is_a? self.class
+						return @innerValue == other.innerValue
+					elsif other.is_a? String
+						return @innerValue == self.class.parse(other).innerValue
+					elsif other.is_a? Numeric
+						return @innerValue == other
+					else
+						fail 'Unknown type to compare to!'
+					end
+				end
+			end
+
+			def eql? other
+				return self == other
+			end
+
+			def === other
+				return self == other
+			end
+
+			def hash
+				return @innerValue.hash
+			end
+		end
 
 		i = 0
 		enumValues.each do |val|
@@ -67,54 +100,7 @@ class Enum
 		|	end
 		EOT
 
-		klass.class_eval <<-EOT.gsub(/^\s+\|/, ''), __FILE__, __LINE__ + 1
-		|	def inspect
-		|		return "\#{self.to_s} (\#{@innerValue})"
-		|	end
-		EOT
-
-		klass.class_eval <<-EOT.gsub(/^\s+\|/, ''), __FILE__, __LINE__ + 1
-		|	def != other
-		|		return !(self == other)
-		|	end
-		EOT
-
-		klass.class_eval <<-EOT.gsub(/^\s+\|/, ''), __FILE__, __LINE__ + 1
-		|	def == other
-		|		if other.nil?
-		|			return false
-		|		else
-		|			if other.is_a? self.class
-		|				return @innerValue == other.innerValue
-		|			elsif other.is_a? String
-		|				return @innerValue == self.class.parse(other).innerValue
-		|			elsif other.is_a? Numeric
-		|				return @innerValue == other
-		|			else
-		|				fail 'Unknown type to compare to!'
-		|			end
-		|		end
-		|	end
-		EOT
-
-		klass.class_eval <<-EOT.gsub(/^\s+\|/, ''), __FILE__, __LINE__ + 1
-		|	def eql? other
-		|		return self == other
-		|	end
-		EOT
-
-
-		klass.class_eval <<-EOT.gsub(/^\s+\|/, ''), __FILE__, __LINE__ + 1
-		|	def === other
-		|		return self == other
-		|	end
-		EOT
-
-		klass.class_eval <<-EOT.gsub(/^\s+\|/, ''), __FILE__, __LINE__ + 1
-		|	def hash
-		|		return @innerValue.hash
-		|	end
-		EOT
+		klass.class_eval &block if block_given?
 
 		return klass
 	end
