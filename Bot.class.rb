@@ -255,8 +255,14 @@ class Bot
 					end
 				else
 					results = Array.new
-					recentMatch.results.each do |res|
-						results << "#{res.scores.join('-')}"
+					recentMatch.results.each_index do |i|
+						res = recentMatch.results[i]
+						id = recentMatch.idsAPI[i]
+						unless id.nil?
+							results << "<A HREF=\"https://account.hirezstudios.com/tribesascend/match-details.aspx?match=#{recentMatch.idsAPI[i]}\">#{res.scores.join('-')}</A>"
+						else
+							results << "#{res.scores.join('-')}"
+						end
 					end
 					comment << "<TD>#{results.join(' ')}</TD>"
 				end
