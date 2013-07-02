@@ -54,11 +54,6 @@ while exitflag
 		# TODO: Message all connected superusers when this occurs
 		puts( "The run_bot.rb script threw an exception '#{e}'!\nTRACE:\n#{e.backtrace.join('\n')}" )
  	end
-	
-	if exitflag
-		sleep 0.2
-		system( 'git pull' )
-	end
 
 	sleep 0.2
 
