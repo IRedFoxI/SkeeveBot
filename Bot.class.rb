@@ -188,14 +188,8 @@ class Bot
 		end
 
 		unless @players[ client ].nil? || @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }.empty?
-			comment << '<HR><TABLE BORDER="0"><TR><TD>Signups</TD>'
+			comment << '<HR><TABLE BORDER="0"><TR><TD>Signups</TD><TD>Team</TD></TR>'
 			signups = @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }
-			noCols = 1
-			match.teams.each do |t|
-				comment << "<TD>#{t}</TD>"
-				noCols += 1
-			end
-			comment << '</TR>'
 			signups.each_value do |pl|
 				comment << '<TR>'
 				name = String.new
@@ -203,16 +197,11 @@ class Bot
 				name << convert_symbols_to_html( pl.playerName )
 				roles = convert_symbols_to_html( pl.roles.join('/') )
 				comment << "<TD>#{name}(level: #{pl.level}): #{roles}</TD>"
-				i = 2
-				while i <= noCols
-					if pl.team.eql?( match.teams[ i - 2 ] )
-						comment << '<TD><CENTER>*</CENTER></TD>'
-					else
-						comment << '<TD></TD>'
-					end
-					i += 1
+				if pl.team.nil?
+					comment << '<TD>&nbsp;</TD></TR>'
+				else
+					comment << "<TD>#{pl.team}</TD></TR>"
 				end
-				comment << '</TR>'
 			end
 			comment << '</TABLE>'
 		end
