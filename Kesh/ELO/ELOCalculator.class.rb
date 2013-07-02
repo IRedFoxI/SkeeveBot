@@ -38,7 +38,10 @@ module Kesh
 					raise 'Player not initialized' unless @currentELOs.has_key?( pN )
 					@currentNoMatches[ pN ] += 1
 				end
-				calculate_ELOs( match )
+				
+				scores = calculate_ELOs( match )
+
+				return scores
 			end
 
 			private
@@ -56,6 +59,8 @@ module Kesh
 						@currentELOs[ pN ] = ( @currentELOs[ pN ] + k * ( actualScores[ team ] - estimatedScores[ team ] ) ).round
 					end
 				end
+
+				return [ estimatedScores, actualScores ]
 
 			end			
 

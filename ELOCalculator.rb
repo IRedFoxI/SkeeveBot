@@ -9,6 +9,7 @@ require 'cgi'
 require File.expand_path( File.dirname( __FILE__ ) + '/Loader.library.rb' )
 
 requireLibrary 'IO'
+requireLibrary 'ELO'
 
 Match = Struct.new( :id, :status, :date, :teams, :players, :comment, :results )
 Result = Struct.new( :map, :teams, :scores, :comment )
@@ -17,13 +18,12 @@ class ELOCalculator
 
 	def initialize multiplier
 		@matches = Array.new
-		@currentELOs = Hash.new
 		@players = Hash.new
 		@dates = Array.new
 		@estimated = Hash.new
 		@actual = Hash.new
 		@ratioNew = Hash.new
-		@multiplier = multiplier
+		@eloCalculator = Kesh::ELO::ELOCalculator.new
 	end
 
 	def load_matches
@@ -44,12 +44,6 @@ class ELOCalculator
 			monthOffset = params.shift
 		end
 
-		if !params.first.nil? && params.shift
-			weightedAverage = true
-		else
-			weightedAverage = false
-		end
-
 		@matches.each do |match|
 
 			date = match.date >> monthOffset
@@ -58,37 +52,27 @@ class ELOCalculator
 
 			newPlayers = 0.0
 			match.players.each_key do |pN|
-				unless @currentELOs.has_key?( pN )
+				unless @eloCalculator.has_player?( pN )
+					@eloCalculator.add_player( pN, 1000, 0 )
+					@players[ pN ] = Hash.new
 					newPlayers += 1.0
 				end
 			end
 
 			@ratioNew[ date ] = newPlayers / match.players.keys.length
 
-			teamELOs = calc_team_ELOs( match, weightedAverage )
+			scores = @eloCalculator.add_match( match )
 
-			estimatedScores = calc_estimated_scores( teamELOs )
+			estimatedScores = scores[0]
 			@estimated[ date ] = estimatedScores[ match.teams[0] ]
 
-			actualScores = calc_actual_scores( match.results )
+			actualScores = scores[1]
 			@actual[ date ] = actualScores[ match.teams[0] ]
 
-			match.teams.each do |team|
-
-				match.players.select{ |pN, t| t.eql?( team ) }.each_key do |pN|
-
-					k = calc_k_factor( pN )
-
-					@currentELOs[ pN ] = ( @currentELOs[ pN ] + k * ( actualScores[ team ] - estimatedScores[ team ] ) ).round
-
-					unless @players.has_key?( pN )
-						@players[ pN ] = Hash.new
-					end
-
-					@players[ pN ][ date ] = @currentELOs[ pN ]
-
+			match.players.each_key do |pN|
+				if @eloCalculator.has_player?( pN )
+					@players[ pN ][ date ] = @eloCalculator.get_elo( pN )
 				end
-
 			end
 
 		end
@@ -107,8 +91,8 @@ class ELOCalculator
 
 		@players.each_pair  do |pN, data|
 
-			elo = @currentELOs[ pN ]
-			noMatches = data.keys.length
+			elo = @eloCalculator.get_elo( pN )
+			noMatches = @eloCalculator.get_noMatches( pN )
 
 			unless ( elo.eql?( 1000 ) && noMatches.eql?( 0 ) )
 				ini.removeValue( sectionName, CGI::escape( pN ) )
@@ -123,65 +107,6 @@ class ELOCalculator
 	end
 
 	private
-
-	def calc_team_ELOs match, weightedAverage
-
-		teamELOs = Hash.new
-
-		match.teams.each do |team|
-
-			noPlayers = 0
-			totalWeight = 0
-
-			teamELOs[ team ] = 0
-
-			match.players.select{ |pN, t| t.eql?( team ) }.each_key do |pN|
-				playerELO = get_player_elo( pN )
-
-				k = calc_k_factor( pN )
-				totalWeight += 1.0 / k
-				noPlayers += 1
-
-				if weightedAverage
-					teamELOs[ team ] += playerELO / k
-				else
-					teamELOs[ team ] += get_player_elo( pN )
-				end
-
-			end
-
-			if weightedAverage
-				teamELOs[ team ] = teamELOs[ team ] / totalWeight
-			else
-				teamELOs[ team ] = teamELOs[ team ] / noPlayers
-			end
-
-		end
-
-		return teamELOs
-
-	end
-
-	def calc_k_factor playerName
-
-		if @currentELOs[ playerName ] < 2100
-			k = 32
-		elsif @currentELOs[ playerName ] > 2400
-			k = 16
-		else
-			k = 24
-		end
-
-		matchNumber = 1
-
-		if @players.has_key?( playerName )
-			matchNumber += @players[ playerName ].keys.length
-		end
-
-		k *= calc_init_factor( matchNumber )
-
-		return k
-	end
 
 	def plot_player_elo playerName, minMatches
 
@@ -222,20 +147,6 @@ class ELOCalculator
 
 		g.write( fileName )
 
-	end
-
-	def calc_init_factor matchNumber
-		factor = 1
-		# factor *= 1 + 1.1 ** ( -2 * matchNumber )
-		# factor *= 1 + 1.2 ** ( 10 - 2 * matchNumber )
-		# factor *= 1 + 1.2 ** ( 10 - matchNumber )
-		# factor *= 1 + 1.258925412 ** ( 3.080105496E-21 - matchNumber ) # 2 to 1.01 between 0 to 20
-		# factor *= 1 + 1.303321321 ** ( 2.616480413 - matchNumber ) # 3 to 1.01 between 0 to 20
-		factor *= 1 + 1.330013541 ** ( 3.852223655 - matchNumber ) # 4 to 1.01 between 0 to 20
-		# factor *= 1 + 1.349282848 ** ( 4.627564263 - matchNumber ) # 5 to 1.01 between 0 to 20
-		# factor *= 1 + 1.36442133 ** ( 5.179531475 - matchNumber ) # 6 to 1.01 between 0 to 20
-		factor *= @multiplier
-		return factor
 	end
 
 	def plot_number_of_matches minMatches
@@ -282,7 +193,7 @@ class ELOCalculator
 		end
 
 		g = Gruff::Line.new(1600)
-		g.title = "ELO Performance (#{@dates.length} matches, #{@currentELOs.keys.length} players)"
+		g.title = "ELO Performance (#{@dates.length} matches, #{@players.keys.length} players)"
 		g.dot_radius = 2
 		g.line_width = 1
 		g.title_font_size = 25
@@ -350,80 +261,6 @@ class ELOCalculator
 
 		g.write('Graphs/elo_history.png')
 
-	end
-
-	# @param results [Array<(Result)>]
-	def calc_actual_scores results
-
-		actualScores = Hash.new
-
-		mapWins = [ 0, 0 ]
-
-		teams = results[0].teams
-
-		results.each do |result|
-			if result.scores[0] > result.scores[1]
-				mapWins[0] += 1
-			elsif result.scores[0] < result.scores[1]
-				mapWins[1] += 1
-			else
-				# Not a valid outcome
-			end
-		end
-
-		
-
-		if mapWins[0] == mapWins[1]
-			score = 0.5
-		else
-			totalMaps = mapWins[0] + mapWins[1]
-			if totalMaps == 1
-				score = 1.0
-			elsif totalMaps == 2
-				score = 0.75
-			elsif totalMaps == 3
-				score = 0.6
-			else
-				score = 0.5
-			end
-		end
-
-		if mapWins[0] > mapWins[1]
-			actualScores[ teams[0] ] = score
-			actualScores[ teams[1] ] = 1 - score
-		elsif mapWins[0] < mapWins[1]
-			actualScores[ teams[0] ] = 1 - score
-			actualScores[ teams[1] ] = score
-		else
-			actualScores[ teams[0] ] = score
-			actualScores[ teams[1] ] = 1 - score
-		end
-
-		return actualScores
-
-	end
-
-	def calc_estimated_scores teamELOs
-
-		estimatedScores = Hash.new
-		teams = teamELOs.keys
-
-		rA = teamELOs[ teams[0] ]
-		rB = teamELOs[ teams[1] ]
-
-		estScrA = 1 / ( 1 + 10 **( (rB-rA)/400.0 ) )
-		estScrB = 1 / ( 1 + 10 **( (rA-rB)/400.0 ) )
-
-		estimatedScores[ teams[0] ] = estScrA
-		estimatedScores[ teams[1] ] = estScrB
-
-		return estimatedScores
-
-	end
-
-	def get_player_elo playerName
-		return @currentELOs[ playerName ] if @currentELOs.has_key?( playerName )
-		return (@currentELOs[ playerName ] = 1000)
 	end
 
 	def load_matches_ini
@@ -517,19 +354,15 @@ class ELOCalculator
 
 end
 
-multiplier = 7
-
 calc = ELOCalculator.new( multiplier )
 
 minMatches = 20
 
 calc.load_matches
 
-weightedAverage = false
-
 repeat = 0
 while repeat < 1
-	calc.calculate_elos( repeat, weightedAverage )
+	calc.calculate_elos( repeat )
 	repeat += 1
 end
 
