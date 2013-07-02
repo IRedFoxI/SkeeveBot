@@ -300,7 +300,7 @@ class Bot
 
 		changed = Array.new
 
-		@matches.each do|match|
+		@matches.each do |match|
 
 			next unless match.status.eql?( "Started" )
 
@@ -311,16 +311,6 @@ class Bot
 				players << @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
 			end
 
-			# noMaps = 0
-			# noPlayers = 0
-			# players.each do |player|
-			# 	statsVals = get_player_stats( player.playerName, [ 'Matches_Completed' ] )
-			# 	next if ( statsVals.nil? || player.noMaps.nil? )
-			# 	noMaps += statsVals.shift - player.noMaps
-			# 	noPlayers += 1
-			# end
-			# noMaps = noMaps / noPlayers unless noPlayers == 0
-
 			matchIdsMatrix = Array.new
 			players.each do |player|
 				ids = get_player_matches( player.playerName, match.date ).reverse
@@ -330,19 +320,20 @@ class Bot
 
 			return if matchIdsMatrix.empty?
 
-			idsAPI = Array.new
+			noPlayersAPI = matchIdsMatrix.length
+
+			combIdsAPI = Array.new
 			matchIdsMatrix.each do |ids|
-				idsAPI += ids
+				combIdsAPI += ids
 			end
 
-			idsAPI.uniq!
+			idsAPI = combIdsAPI.uniq
+
+			idsAPI.each do |id|
+				idsAPI.delete( id ) if ( combIdsAPI.count( id ) / noPlayersAPI ) < 0.5
+			end
+
 			idsAPI.sort!
-
-			puts idsAPI.inspect
-
-			# if ( noMaps != 0 && idsAPI.length > noMaps )
-			# 	idsAPI = idsAPI[ 0..noMaps-1 ]
-			# end
 
 			next if idsAPI.eql?( match.idsAPI )
 
