@@ -9,7 +9,7 @@ requireLibrary 'TribesAPI'
 
 
 Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :playerName, :level, :tag, :noCaps, :noMaps, :match, :roles, :team )
-Match = Struct.new( :id, :label, :status, :date, :teams, :players, :comment, :results )
+Match = Struct.new( :id, :label, :status, :date, :teams, :players, :comment, :results, :idsAPI )
 Result = Struct.new( :map, :teams, :scores, :comment )
 
 class Bot
@@ -36,6 +36,7 @@ class Bot
 		@moveQueue = Hash.new
 		@query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
 		@lastCleanUp = Time.now
+		@lastTrack = Time.now
 
 		load_matches_ini
 	end
@@ -152,6 +153,12 @@ class Bot
 				@lastCleanUp = Time.now
 			end
 
+
+			if ( Time.now - @lastTrack ) > 60
+				track_matches
+				@lastTrack = Time.now
+			end
+
 			return true unless all_connected? # TODO: This is a very ugly way to reset all connections
 
 			sleep 0.2
@@ -234,7 +241,19 @@ class Bot
 
 				
 				if recentMatch.results.empty?
-					comment << '<TD>pending</TD>'
+					if recentMatch.idsAPI.empty?
+						if recentMatch.status.eql?( 'Started')
+							comment << '<TD>started</TD>'
+						else
+							comment << '<TD>pending</TD>'
+						end
+					else
+						idStrs = Array.new
+						recentMatch.idsAPI.each_index do |i|
+							idStrs << "<A HREF=\"https://account.hirezstudios.com/tribesascend/match-details.aspx?match=#{recentMatch.idsAPI[i]}\">#{i+1}</A>"
+						end
+						comment << "<TD>map #{idStrs.join(',')}</TD>"
+					end
 				else
 					results = Array.new
 					recentMatch.results.each do |res|
@@ -276,6 +295,68 @@ class Bot
 			end
 		end
 	end
+
+	def track_matches
+
+		changed = Array.new
+
+		@matches.each do|match|
+
+			next unless match.status.eql?( "Started" )
+
+			client = @connections.select{ |cl, svr| match.label.eql?( svr[ :label] ) }.keys.first
+
+			players = Array.new
+			match.players.each_key do |pN|
+				players << @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+			end
+
+			# noMaps = 0
+			# noPlayers = 0
+			# players.each do |player|
+			# 	statsVals = get_player_stats( player.playerName, [ 'Matches_Completed' ] )
+			# 	next if ( statsVals.nil? || player.noMaps.nil? )
+			# 	noMaps += statsVals.shift - player.noMaps
+			# 	noPlayers += 1
+			# end
+			# noMaps = noMaps / noPlayers unless noPlayers == 0
+
+			matchIdsMatrix = Array.new
+			players.each do |player|
+				ids = get_player_matches( player.playerName, match.date ).reverse
+				next if ids.nil?
+				matchIdsMatrix << ids
+			end
+
+			return if matchIdsMatrix.empty?
+
+			idsAPI = Array.new
+			matchIdsMatrix.each do |ids|
+				idsAPI += ids
+			end
+
+			idsAPI.uniq!
+			idsAPI.sort!
+
+			puts idsAPI.inspect
+
+			# if ( noMaps != 0 && idsAPI.length > noMaps )
+			# 	idsAPI = idsAPI[ 0..noMaps-1 ]
+			# end
+
+			next if idsAPI.eql?( match.idsAPI )
+
+			match.idsAPI = idsAPI
+
+			changed << client unless changed.include?( client )
+
+		end
+
+		changed.each do |client|
+			create_comment( client )
+		end
+
+	end	
 
 	def change_user client, session, *chanPath
 
@@ -651,7 +732,7 @@ class Bot
 				match.players.each_key do |pN|
 					player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
 					statsVals = get_player_stats( player.playerName, [ 'Matches_Completed' ] )
-					player.noMaps = statsVals.shift unless statVals.nil?
+					player.noMaps = statsVals.shift unless statsVals.nil?
 				end
 
 				# Create new match
@@ -736,7 +817,8 @@ class Bot
 		players = Hash.new
 		comment= ''
 		result = Array.new
-		match = Match.new( id, label, status, date, teams, players, comment, result )
+		idsAPI = Array.new
+		match = Match.new( id, label, status, date, teams, players, comment, result, idsAPI )
 		@matches << match
 		@currentMatch[ client ] = id
 		@moveQueue[ client ] = false
@@ -2149,6 +2231,23 @@ class Bot
 
 	end
 
+	def get_player_matches nick, date
+
+		matchesData = @query.get_match_history( nick )
+		matchIds = Array.new
+		matchesData.each do |matchData|
+			matchDate = DateTime.strptime( matchData[ 'Entry_Datetime' ], '%m/%d/%Y %I:%M:%S %p' ).to_time.utc
+			break if matchDate < date
+			matchIds << matchData[ 'MatchId']
+		end
+
+		return matchIds
+
+	rescue => e
+		return nil
+
+	end
+
 	def write_roles_ini client
 
 		sectionNameBase = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
@@ -2274,6 +2373,8 @@ class Bot
 				ini.setValue( sectionName, "Result#{r.to_s}Comment", "#{result.comment}")
 			end
 
+			ini.setValue( sectionName, 'MatchIdsAPI', match.idsAPI.join(' ') ) unless match.idsAPI.empty?
+
 		end
 
 		ini.writeToFile( 'matches.ini' )
@@ -2348,7 +2449,7 @@ class Bot
 
 				while rIndex < rCount
 
-					rMap = section.getValue( "Result#{rIndex}Map")
+					rMap = section.getValue( "Result#{rIndex}Map" )
 					rTeams = teams
 					rScores = Array.new
 
@@ -2356,7 +2457,7 @@ class Bot
 						rScores << section.getValue( "Result#{rIndex}#{team}" ).to_i
 					end
 
-					rComment = section.getValue( "Result#{rIndex}Comment")
+					rComment = section.getValue( "Result#{rIndex}Comment" )
 
 					results << Result.new( rMap, rTeams, rScores, rComment )
 
@@ -2364,7 +2465,11 @@ class Bot
 
 				end
 
-				@matches << Match.new( idInt, label, status, date, teams, players, comment, results )
+				idsAPI = Array.new
+				idsAPIStr = section.getValue( 'MatchIdsAPI' )
+				idsAPI = idsAPIStr.split(' ') unless idsAPIStr.nil?
+
+				@matches << Match.new( idInt, label, status, date, teams, players, comment, results, idsAPI )
 
 			end
 
