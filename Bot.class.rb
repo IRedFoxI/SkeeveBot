@@ -142,7 +142,6 @@ class Bot
 
 			create_comment( client )
 
-
 		end
 
 		# Main loop
@@ -795,6 +794,8 @@ class Bot
 		message_all( client, "Your match (id: #{match.id}) seems to be over. Please report the result (check my comment for help).", [ matchId ], 2 )
 
 		write_matches_ini
+
+		create_comment( client )
 
 	end
 
