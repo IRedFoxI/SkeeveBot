@@ -10,7 +10,7 @@ requireLibrary 'ELO'
 
 
 Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :noMatches, :playerName, :level, :tag, :noCaps, :noMaps, :match, :roles, :team )
-Match = Struct.new( :id, :label, :status, :date, :teams, :players, :comment, :results )
+Match = Struct.new( :id, :label, :status, :date, :teams, :players, :comment, :results, :perfELO )
 Result = Struct.new( :map, :teams, :scores, :comment )
 
 class Bot
@@ -231,7 +231,13 @@ class Bot
 					recentMatch.results.each do |res|
 						results << "#{res.scores.join('-')}"
 					end
-					comment << "<TD>#{results.join(' ')}</TD>"
+					comment << '<TD>'
+					comment << "#{results.join(' ')}"
+					unless recentMatch.perfELO.nil?
+						percent = ( recentMatch.perfELO * 100 ).round
+						comment << " (#{percent}%)"
+					end
+					comment << '</TD>'
 				end
 				comment << '</TR>'
 			end
@@ -721,7 +727,8 @@ class Bot
 		players = Hash.new
 		comment= ''
 		result = Array.new
-		match = Match.new( id, label, status, date, teams, players, comment, result )
+		perfELO = nil
+		match = Match.new( id, label, status, date, teams, players, comment, result, perfELO )
 		@matches << match
 		@currentMatch[ client ] = id
 		@moveQueue[ client ] = false
@@ -1914,7 +1921,10 @@ class Bot
 			end
 		end
 
-		@eloCalculator.add_match( match )
+		scores = @eloCalculator.add_match( match )
+		estimated = scores[0][ match.teams[0] ]
+		actual = scores[1][ match.teams[0] ]
+		match.perfELO = ( estimated - actual ).abs
 
 		if File.exists?( 'players.ini' )
 			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
@@ -2264,6 +2274,8 @@ class Bot
 				ini.setValue( sectionName, "Result#{r.to_s}Comment", "#{result.comment}")
 			end
 
+			ini.setValue( sectionName, 'PerformanceELO', match.perfELO.to_s )
+
 		end
 
 		ini.writeToFile( 'matches.ini' )
@@ -2354,7 +2366,9 @@ class Bot
 
 				end
 
-				@matches << Match.new( idInt, label, status, date, teams, players, comment, results )
+				perfELO = Float( section.getValue( 'PerformanceELO' ) )
+
+				@matches << Match.new( idInt, label, status, date, teams, players, comment, results, perfELO )
 
 			end
 
