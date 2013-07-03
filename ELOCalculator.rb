@@ -16,7 +16,7 @@ Result = Struct.new( :map, :teams, :scores, :comment )
 
 class ELOCalculator
 
-	def initialize multiplier
+	def initialize
 		@matches = Array.new
 		@players = Hash.new
 		@dates = Array.new
@@ -89,13 +89,13 @@ class ELOCalculator
 
 		sectionName = 'ELO'
 
-		@players.each_pair  do |pN, data|
+		@players.each_key do |pN|
 
 			elo = @eloCalculator.get_elo( pN )
 			noMatches = @eloCalculator.get_noMatches( pN )
 
+			ini.removeValue( sectionName, CGI::escape( pN ) )
 			unless ( elo.eql?( 1000 ) && noMatches.eql?( 0 ) )
-				ini.removeValue( sectionName, CGI::escape( pN ) )
 				eloStr = "#{elo} #{noMatches}"
 				ini.setValue( sectionName, CGI::escape( pN ), eloStr )
 			end
@@ -103,6 +103,30 @@ class ELOCalculator
 		end
 
 		ini.writeToFile( 'players.ini' )
+
+	end
+
+	def write_elo_history
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/elo_history.ini' ) )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'elo_history.ini' )
+			FileUtils.cp( 'elo_history.ini', 'elo_history.bak' )
+		else
+			ini = Kesh::IO::Storage::IniFile.new
+		end
+
+		@players.each_pair do |pN, data|
+			sectionName = "#{pN}"
+			ini.removeSection( sectionName ) if ini.hasSection?( sectionName )
+			ini.setValue( sectionName, 'Count', data.length.to_s )
+			i = 0
+			data.each_pair do |date, elo|
+				ini.setValue( sectionName, "Date#{i}", date.to_time.utc.to_s )
+				ini.setValue( sectionName, "ELO#{i}", elo.to_s )
+				i += 1
+			end
+		end
+
+		ini.writeToFile( 'elo_history.ini' )
 
 	end
 
@@ -354,7 +378,7 @@ class ELOCalculator
 
 end
 
-calc = ELOCalculator.new( multiplier )
+calc = ELOCalculator.new
 
 minMatches = 20
 
@@ -370,3 +394,4 @@ calc.make_plots repeat * minMatches
 
 calc.write_elo
 
+calc.write_elo_history
