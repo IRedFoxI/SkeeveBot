@@ -2586,22 +2586,26 @@ class Bot
 					ini = Kesh::IO::Storage::IniFile.new
 				end
 
-				sec = ini.getSection('Alias')
-				if sec.hasValue?(localeAlias.downcase)
-					oldValue = sec.getValue(localeAlias.downcase)
-					if localeName.eql?(oldValue)
-						message_user(client, message.actor, _("'%{alias}' is already an alias of '%{locale}'."), alias: localeAlias, locale: localeName)
+				unless ini.hasSection?( 'Alias' )
+					ini.addSection( 'Alias' )
+				end
+				sec = ini.getSection( 'Alias' )
+
+				if sec.hasValue?( localeAlias.downcase )
+					oldValue = sec.getValue( localeAlias.downcase )
+					if localeName.eql?( oldValue )
+						message_user( client, message.actor, _( "'%{alias}' is already an alias of '%{locale}'." ), alias: localeAlias, locale: localeName )
 					else
-						sec.setValue(localeAlias.downcase, localeName)
-						ini.getSection('AliasDisplayName').setValue(localeAlias.downcase, localeAlias)
-						message_user(client, message.actor, _("Updated '%{alias}' to be an alias of '%{newLocale}' rather than '%{oldLocale}'."), alias: localeAlias, newLocale: localeName, oldLocale: oldValue)
+						sec.setValue( localeAlias.downcase, localeName )
+						ini.getSection( 'AliasDisplayName' ).setValue( localeAlias.downcase, localeAlias )
+						message_user( client, message.actor, _( "Updated '%{alias}' to be an alias of '%{newLocale}' rather than '%{oldLocale}'." ), alias: localeAlias, newLocale: localeName, oldLocale: oldValue )
 					end
 				else
-					sec.setValue(localeAlias.downcase, localeName)
-					message_user(client, message.actor, _("Set '%{alias}' as an alias of '%{locale}'"), alias: localeAlias, locale: localeName)
+					sec.setValue( localeAlias.downcase, localeName )
+					message_user( client, message.actor, _( "Set '%{alias}' as an alias of '%{locale}'" ), alias: localeAlias, locale: localeName )
 				end
 
-				ini.writeToFile('locale.ini')
+				ini.writeToFile( 'locale.ini' )
 			end
 
 		end
