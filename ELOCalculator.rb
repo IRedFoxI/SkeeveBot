@@ -114,6 +114,23 @@ class ELOCalculator
 			ini = Kesh::IO::Storage::IniFile.new
 		end
 
+		sectionName = "ELOPerformance"
+		ini.removeSection( sectionName ) if ini.hasSection?( sectionName )
+		ini.setValue( sectionName, 'Count', @dates.length.to_s )
+		i = 0
+		@dates.each do |date|
+			estimated = @estimated[ date ]
+			actual = @actual[ date ]
+			difference = ( @estimated[ date ] - @actual[ date ] ).abs
+			ratioNew = @ratioNew[ date ]
+			ini.setValue( sectionName, "Date#{i}", date.to_time.utc.to_s )
+			ini.setValue( sectionName, "Estimated#{i}", estimated.to_s )
+			ini.setValue( sectionName, "Actual#{i}", actual.to_s )
+			ini.setValue( sectionName, "Difference#{i}", difference.to_s )
+			ini.setValue( sectionName, "RatioNew#{i}", ratioNew.to_s )
+			i += 1
+		end
+
 		@players.each_pair do |pN, data|
 			sectionName = "#{pN}"
 			ini.removeSection( sectionName ) if ini.hasSection?( sectionName )
