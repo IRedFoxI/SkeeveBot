@@ -1997,9 +1997,6 @@ class Bot
 		index = @matches.index{ |m| m.id.eql?( match.id ) }
 		@matches[ index ] = match
 
-		write_matches_ini
-		create_comment( client )
-
 		match.players.each_key do |pN|
 			unless @eloCalculator.has_player?( pN )
 				player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
@@ -2038,6 +2035,9 @@ class Bot
 		end
 
 		ini.writeToFile( 'players.ini' )
+
+		write_matches_ini
+		create_comment( client )
 
 		resultStr = ''
 		if match.results.length > 0
@@ -2471,7 +2471,8 @@ class Bot
 
 				end
 
-				perfELO = Float( section.getValue( 'PerformanceELO' ) )
+				perfELO = section.getValue( 'PerformanceELO' )
+				perfELO = Float( perfELO ) unless perfELO.nil?
 
 				idsAPI = Array.new
 				idsAPIStr = section.getValue( 'MatchIdsAPI' )
