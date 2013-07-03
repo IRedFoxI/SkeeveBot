@@ -319,7 +319,7 @@ class Bot
 				matchIdsMatrix << ids
 			end
 
-			return if matchIdsMatrix.empty?
+			next if matchIdsMatrix.empty?
 
 			noPlayersAPI = matchIdsMatrix.length
 
@@ -348,7 +348,10 @@ class Bot
 			create_comment( client )
 		end
 
-	end	
+	end
+
+	def track_match match
+	end
 
 	def change_user client, session, *chanPath
 
