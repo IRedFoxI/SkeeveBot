@@ -6,7 +6,7 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO';
 
 
 CREATE TABLE IF NOT EXISTS `Map` (
-	`ID` INT(10) unsigned NOT NULL,
+	`ID` INT(10) UNSIGNED NOT NULL,
 	`Name` VARCHAR(128) COLLATE utf8_bin NOT NULL,
 	`Comment` TEXT COLLATE utf8_bin NOT NULL DEFAULT '',
 	PRIMARY KEY (`ID`),
@@ -35,7 +35,7 @@ ALTER TABLE `Map` ENABLE KEYS;
 
 
 CREATE TABLE IF NOT EXISTS `Region` (
-	`ID` INT(10) unsigned NOT NULL AUTO_INCREMENT,
+	`ID` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
 	`Name` VARCHAR(64) NOT NULL,
 	PRIMARY KEY (`ID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
@@ -49,8 +49,8 @@ ALTER TABLE `Region` ENABLE KEYS;
 
 
 CREATE TABLE IF NOT EXISTS `Match` (
-	`ID` INT(10) unsigned NOT NULL AUTO_INCREMENT,
-	`RegionID` INT(10) unsigned NOT NULL,
+	`ID` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+	`RegionID` INT(10) UNSIGNED NOT NULL,
 	`State` ENUM('Signup','Picking','Started','Finished','Deleted') COLLATE utf8_bin NOT NULL DEFAULT 'Signup',
 	`Time` DATETIME NOT NULL,
 	`Comment` TEXT COLLATE utf8_bin NOT NULL DEFAULT '',
@@ -63,27 +63,37 @@ CREATE TABLE IF NOT EXISTS `Match` (
 
 
 CREATE TABLE IF NOT EXISTS `MatchResult` (
-	`ResultID` INT(10) unsigned NOT NULL AUTO_INCREMENT,
-	`RegionID` INT(10) unsigned NOT NULL,
-	`MatchID` INT(10) unsigned NOT NULL,
-	`MapID` INT(10) unsigned NOT NULL,
-	`BECaps` TINYINT unsigned NOT NULL,
-	`DSCaps` TINYINT unsigned NOT NULL,
+	`ID` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+	`RegionID` INT(10) UNSIGNED NOT NULL,
+	`MatchID` INT(10) UNSIGNED NOT NULL,
+	`MapID` INT(10) UNSIGNED NOT NULL,
 	`Comment` TEXT COLLATE utf8_bin NOT NULL DEFAULT '',
-	PRIMARY KEY (`ResultID`),
+	PRIMARY KEY (`ID`),
 	KEY `K_RegionID_MapID` (`RegionID`, `MapID`),
 	KEY `K_RegionID` (`RegionID`),
 	KEY `K_MatchID` (`MatchID`),
 	KEY `K_MapID` (`MapID`),
-	CONSTRAINT `FK_MatchResults_MapID` FOREIGN KEY (`MapID`) REFERENCES `Map` (`ID`),
-	CONSTRAINT `FK_MatchResults_MatchID` FOREIGN KEY (`MatchID`) REFERENCES `Match` (`ID`),
-	CONSTRAINT `FK_MatchResults_RegionID` FOREIGN KEY (`RegionID`) REFERENCES `Region` (`ID`)
+	CONSTRAINT `FK_MatchResult_MapID` FOREIGN KEY (`MapID`) REFERENCES `Map` (`ID`),
+	CONSTRAINT `FK_MatchResult_MatchID` FOREIGN KEY (`MatchID`) REFERENCES `Match` (`ID`),
+	CONSTRAINT `FK_MatchResult_RegionID` FOREIGN KEY (`RegionID`) REFERENCES `Region` (`ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+
+CREATE TABLE IF NOT EXISTS `MatchResultScore` (
+	`ResultID` INT(10) UNSIGNED NOT NULL,
+	`TeamID` INT(10) UNSIGNED NOT NULL,
+	`Score` INT(10) UNSIGNED NOT NULL,
+	PRIMARY KEY (`ResultID`, `TeamID`),
+	KEY `ResultID` (`ResultID`),
+	KEY `TeamID` (`TeamID`),
+	CONSTRAINT `FK_MatchResultScore_ResultID` FOREIGN KEY (`ResultID`) REFERENCES `MatchResult` (`ID`),
+	CONSTRAINT `FK_MatchResultScore_TeamID` FOREIGN KEY (`TeamID`) REFERENCES `Team` (`ID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 
 CREATE TABLE IF NOT EXISTS `MatchTeam` (
-	`MatchID` INT(10) unsigned NOT NULL,
-	`TeamID` INT(10) unsigned NOT NULL,
+	`MatchID` INT(10) UNSIGNED NOT NULL,
+	`TeamID` INT(10) UNSIGNED NOT NULL,
 	PRIMARY KEY (`MatchID`,`TeamID`),
 	KEY `K_MatchTeam_TeamID` (`TeamID`),
 	CONSTRAINT `FK_MatchTeam_MatchID` FOREIGN KEY (`MatchID`) REFERENCES `Match` (`ID`),
@@ -92,16 +102,17 @@ CREATE TABLE IF NOT EXISTS `MatchTeam` (
 
 
 CREATE TABLE IF NOT EXISTS `Player` (
-	`ID` INT(10) unsigned NOT NULL AUTO_INCREMENT,
+	`ID` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
 	`Created` DATETIME NOT NULL,
 	`LastUpdated` DATETIME NOT NULL,
-	`RegionID` INT(10) unsigned NOT NULL,
+	`RegionID` INT(10) UNSIGNED NOT NULL,
 	`Playername` VARCHAR(64) COLLATE utf8_bin NOT NULL,
 	`Admin` ENUM('None', 'Admin', 'SuperUser') COLLATE utf8_bin NOT NULL DEFAULT 'None',
-	`MuteLevel` INT(10) unsigned NOT NULL DEFAULT 0,
-	`ELO` INT(10) unsigned NOT NULL,
-	`Level` TINYINT unsigned NOT NULL,
+	`MuteLevel` INT(10) UNSIGNED NOT NULL DEFAULT 0,
+	`ELO` INT(10) UNSIGNED NOT NULL,
+	`Level` TINYINT UNSIGNED NOT NULL,
 	`Tag` VARCHAR(4) COLLATE utf8_bin NOT NULL DEFAULT '',
+	`Locale` CHAR(8) COLLATE ascii_bin DEFAULT NULL,
 	PRIMARY KEY (`ID`),
 	UNIQUE KEY `UK_RegionID_Playername` (`RegionID`, `Playername`),
 	KEY `K_RegionID` (`RegionID`),
@@ -150,7 +161,7 @@ ALTER TABLE `Player` ENABLE KEYS;
 
 CREATE TABLE IF NOT EXISTS `PlayerAlias` (
 	`PlayerID` INT(10) UNSIGNED NOT NULL,
-	`Type` ENUM('Mumble', 'IRC') NOT NULL,
+	`Type` ENUM('Mumble', 'IRC', 'Smurf') NOT NULL,
 	`Name` VARCHAR(64) NOT NULL,
 	PRIMARY KEY (`Type`, `Name`),
 	KEY `K_PlayerID_Type` (`PlayerID`, `Type`),
@@ -161,15 +172,15 @@ CREATE TABLE IF NOT EXISTS `PlayerAlias` (
 
 
 CREATE TABLE IF NOT EXISTS `Team` (
-	`ID` INT(10) unsigned NOT NULL AUTO_INCREMENT,
+	`ID` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
 	`Comment` TEXT COLLATE utf8_bin NOT NULL DEFAULT '',
 	PRIMARY KEY (`ID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 
 CREATE TABLE IF NOT EXISTS `TeamPlayer` (
-	`TeamID` INT(10) unsigned NOT NULL,
-	`PlayerID` INT(10) unsigned NOT NULL,
+	`TeamID` INT(10) UNSIGNED NOT NULL,
+	`PlayerID` INT(10) UNSIGNED NOT NULL,
 	PRIMARY KEY (`TeamID`,`PlayerID`),
 	KEY `K_TeamPlayer_PlayerID` (`PlayerID`),
 	CONSTRAINT `FK_TeamPlayer_TeamID` FOREIGN KEY (`TeamID`) REFERENCES `Team` (`ID`),

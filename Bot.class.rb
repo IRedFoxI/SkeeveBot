@@ -1,5 +1,6 @@
 require 'time'
 require 'cgi'
+require 'fast_gettext'
 # require 'speech'
 # require 'celt-ruby'
 
@@ -8,7 +9,7 @@ requireLibrary 'Mumble'
 requireLibrary 'TribesAPI'
 
 
-Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :playerName, :level, :tag, :noCaps, :noMaps, :match, :roles, :team )
+Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :playerName, :level, :tag, :noCaps, :noMaps, :match, :roles, :team, :locale )
 Match = Struct.new( :id, :label, :status, :date, :teams, :players, :comment, :results )
 Result = Struct.new( :map, :teams, :scores, :comment )
 
@@ -34,10 +35,14 @@ class Bot
 		@matches = Array.new
 		@defaultMute = 1
 		@moveQueue = Hash.new
-		@query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
+		unless @options[ :is_debug_bot ]
+			@query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
+		end
 		@lastCleanUp = Time.now
+		@localeAliases = Hash.new
 
 		load_matches_ini
+		load_locales
 	end
 
 	def exit_by_user
@@ -130,6 +135,7 @@ class Bot
 			client.register_text_handler '!mute', method( :cmd_mute )
 			client.register_text_handler '!result', method( :cmd_result )
 			client.register_text_handler '!list', method( :cmd_list )
+			client.register_text_handler '!locale', method( :cmd_locale )
 
 			client.register_exception_handler method( :on_exception )
 
@@ -474,7 +480,8 @@ class Bot
 				playerName = playerData[ :playerName ]
 				level = playerData[ :level ]
 				tag = playerData[ :tag ]
-				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, roles, nil )
+				locale = playerData[ :locale ]
+				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, roles, nil, locale )
 
 				firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
@@ -800,21 +807,25 @@ class Bot
 			when 'admin'
 				help_msg_admin( client, message )
 				return
+			when 'locale'
+				help_msg_locale( client, message )
+				return
 			else
-				client.send_user_message message.actor, "Unknown command '#{command}'"
+				message_user(client, message.actor, _("Unknown command '%{command}'!"), command: command)
 			end
 
 		end
 
-		client.send_user_message message.actor, 'The following commands are available:'
-		client.send_user_message message.actor, '!help "command" - detailed help on the command'
-		client.send_user_message message.actor, '!find "mumble_nick" - find which channel someone is in'
-		client.send_user_message message.actor, "!goto \"mumble_nick\" - move yourself to someone's channel"
-		client.send_user_message message.actor, '!info "tribes_nick" "stat" - detailed stats on player'
-		client.send_user_message message.actor, '!mute - 0/1/2/3 - mute the bots spam messages from 0 (no mute) to 3 (all muted)'
-		client.send_user_message message.actor, '!result "map1" "map2" "map3"- sets the result of your last match'
-		client.send_user_message message.actor, '!list - shows the latest matches'
-		client.send_user_message message.actor, '!admin "command" - admin commands'
+		message_user(client, message.actor, _('The following commands are available:'))
+		message_user(client, message.actor, _('!help "command" - detailed help on the command'))
+		message_user(client, message.actor, _('!find "mumble_nick" - find which channel someone is in'))
+		message_user(client, message.actor, _("!goto \"mumble_nick\" - move yourself to someone's channel"))
+		message_user(client, message.actor, _('!info "tribes_nick" "stat" - detailed stats on player'))
+		message_user(client, message.actor, _('!mute - 0/1/2/3 - mute the bots spam messages from 0 (no mute) to 3 (all muted)'))
+		message_user(client, message.actor, _('!result "map1" "map2" "map3"- sets the result of your last match'))
+		message_user(client, message.actor, _('!list - shows the latest matches'))
+		message_user(client, message.actor, _('!admin "command" - admin commands'))
+		message_user(client, message.actor, _('!locale "command" - locale comamnds'))
 	end
 
 	def cmd_find client, message
@@ -865,18 +876,18 @@ class Bot
 		
 		if user
 			if playerName.nil?
-				client.send_user_message message.actor, "Player '#{user.name}' is in channel '#{user.channel.path}'"
+				message_user(client, message.actor, _("Player '%{userName}' is in channel '%{userChannel}'"), userName: user.name, userChannel: user.channel.path)
 			else
-				client.send_user_message message.actor, "Player '#{playerName}' found using name '#{user.name}' in channel '#{user.channel.path}'"
+				message_user(client, message.actor, _("Player '%{playerName}' found using name '%{userName}' in channel '%{userChannel}'"), playerName: playerName, userName: user.name, userChannel: user.channel.path)
 			end
 		else
-			client.send_user_message message.actor, "There is no user '#{nick}' on the Server"
+			message_user(client, message.actor, _("There is no user '%{nick}' on the Server"), nick: nick)
 		end
 	end
 
 	def help_msg_find client, message
-		client.send_user_message message.actor, 'Syntax: !find "nick"'
-		client.send_user_message message.actor, "Returns \"nick\"'s channel. \"nick\" can be a mumble nick or a player name."
+		message_user(client, message.actor, _('Syntax: !find "nick"'))
+		message_user(client, message.actor, _("Returns \"nick\"'s channel. \"nick\" can be a mumble nick or a player name."))
 	end
 
 	def cmd_goto client, message
@@ -888,8 +899,8 @@ class Bot
 	end
 
 	def help_msg_goto client, message
-		client.send_user_message message.actor, 'Syntax: !goto "mumble_nick"'
-		client.send_user_message message.actor, "The bot tries to move you to \"mumble_nick\"'s. Fails if the bot doesn't have sufficient rights"
+		message_user(client, message.actor, _('Syntax: !goto "mumble_nick"'))
+		message_user(client, message.actor, _("The bot tries to move you to \"mumble_nick\"'s. Fails if the bot doesn't have sufficient rights"))
 	end
 
 	def cmd_test client, message
@@ -938,21 +949,21 @@ class Bot
 			statsVals = get_player_stats( ownNick, stats )
 
 			if statsVals.nil?
-				client.send_user_message message.actor, "Player #{nick} not found. Also didn't find #{ownNick}."
+				message_user(client, message.actor, _("Player '%{nick}' not found. Also didn't find '%{ownNick}'."), nick: nick, ownNick: ownNick)
 				return
 			else
-				client.send_user_message message.actor, "Player #{nick} not found. Trying #{ownNick} and looking for stat #{nick}."
+				message_user(client, message.actor, _("Player '%{nick}' not found. Trying '%{ownNick}' and looking for stat '%{nick}'."), nick: nick, ownNick: ownNick)
 			end
 
 		end
 
 		if statsVals.nil?
-			client.send_user_message message.actor, "Player #{nick} not found."
+			message_user(client, message.actor, _("Player '%{nick}' not found."), nick: nick)
 			return
 		end
 
 		if stats[ noDefaultStats ] == nick && statsVals[ noDefaultStats ].nil?
-			client.send_user_message message.actor, "Player #{nick} not found."
+			message_user(client, message.actor, _("Player '%{nick}' not found."), nick: nick)
 		else
 			name = statsVals.shift
 			level = statsVals.shift
@@ -960,14 +971,14 @@ class Bot
 			stats.shift( noDefaultStats )
 
 			name = "[#{tag}]#{name}" unless tag.empty?
-			client.send_user_message message.actor, "Player #{name} has level #{level}."
+			message_user(client, message.actor, _("Player '%{name}' has level '%{level}'."), name: name, level: level)
 			
 			while (stat = stats.shift)
 				statVal = statsVals.shift
 				if statVal
-					client.send_user_message message.actor, "#{stat}: #{statVal}."
+					message_user(client, message.actor, "#{stat}: #{statVal}.")
 				else
-					client.send_user_message message.actor, "Unknown stat #{stat}."
+					message_user(client, message.actor, _("Unknown stat '%{stat}'."), stat: stat)
 				end
 			end			
 		end
@@ -975,15 +986,15 @@ class Bot
 	end
 
 	def help_msg_info client, message
-		client.send_user_message message.actor, 'Syntax !info'
-		client.send_user_message message.actor, 'Returns your tag, playername and level based on your mumble nick'
-		client.send_user_message message.actor, 'Syntax !info "stat"'
-		client.send_user_message message.actor, 'As above, but also shows your additional statistic "stat"'
-		client.send_user_message message.actor, 'Syntax !info "tribes_nick"'
-		client.send_user_message message.actor, "Returns \"nick\"'s tag, playername and level, searching for his alias if set"
-		client.send_user_message message.actor, 'Syntax !info "tribes_nick" "stat"'
-		client.send_user_message message.actor, "As above but also shows \"tribes_nick\"'s \"stat\""
-		client.send_user_message message.actor, '"stat" can be a space delimited list of these stats:'
+		message_user(client, message.actor, _('Syntax !info'))
+		message_user(client, message.actor, _('Returns your tag, playername and level based on your mumble nick'))
+		message_user(client, message.actor, _('Syntax !info "stat"'))
+		message_user(client, message.actor, _('As above, but also shows your additional statistic "stat"'))
+		message_user(client, message.actor, _('Syntax !info "tribes_nick"'))
+		message_user(client, message.actor, _("Returns \"nick\"'s tag, playername and level, searching for his alias if set"))
+		message_user(client, message.actor, _('Syntax !info "tribes_nick" "stat"'))
+		message_user(client, message.actor, _("As above but also shows \"tribes_nick\"'s \"stat\""))
+		message_user(client, message.actor, _('"stat" can be a space delimited list of these stats:'))
 		stats = get_player_stats 'SomeFakePlayerName'
 		stats.each do |stat|
 			client.send_user_message message.actor, stat unless stat.eql? 'ret_msg'
@@ -1010,13 +1021,14 @@ class Bot
 			playerName = playerData[ :playerName ]
 			level = playerData[ :level ]
 			tag = playerData[ :tag ]
-			player = Player.new( message.actor, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, nil, nil )
+			locale = playerData[ :locale ]
+			player = Player.new( message.actor, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, nil, nil, locale )
 			@players[ client ][ mumbleNick ] = player
 		end
 
 		if command.nil?
 
-			client.send_user_message message.actor, 'Please specify an admin command.'
+			message_user(client, message.actor, _('Please specify an admin command.'))
 
 		else
 
@@ -1049,8 +1061,10 @@ class Bot
 				cmd_admin_eval( client, message )
 			when 'debug'
 				cmd_admin_debug( client, message )
+			when 'locale'
+				cmd_admin_locale( client, message )
 			else
-				client.send_user_message message.actor, "Unknown admin command '#{command}'."
+				message_user(client, message.actor, _("Unknown admin command '%{command}'."), command: command)
 			end
 
 		end
@@ -1095,23 +1109,23 @@ class Bot
 				help_msg_admin_delete( client, message )
 				return
 			else
-				client.send_user_message message.actor, "Unknown admin command '#{command}':"
+				message_user(client, message.actor, _("Unknown admin command '%{command}'."), command: command)
 			end
 
 		end
 
-		client.send_user_message message.actor, 'The following admin commands are available:'
-		client.send_user_message message.actor, '!help admin "command" - detailed help on the admin command'
-		client.send_user_message message.actor, '!admin login "password" - login as SuperUser'
-		client.send_user_message message.actor, "!admin setchan \"role\" - set a channel's role"
-		client.send_user_message message.actor, '!admin setrole "role" "parameter" - set a role'
-		client.send_user_message message.actor, '!admin delrole "role" - delete a role'
-		client.send_user_message message.actor, '!admin playernum "number" - set the required number of players per team'
-		client.send_user_message message.actor, "!admin alias \"player\" \"alias\" - set a player's alias"
-		client.send_user_message message.actor, '!admin come - make the bot move to your channel'
-		client.send_user_message message.actor, '!admin op "player" - make "player" an admin'
-		client.send_user_message message.actor, '!admin result "match_id" "scores"- set the result of a match'
-		client.send_user_message message.actor, '!admin delete "match_id" - delete a match'
+		message_user(client, message.actor, _('The following admin commands are available:'))
+		message_user(client, message.actor, _('!help admin "command" - detailed help on the admin command'))
+		message_user(client, message.actor, _('!admin login "password" - login as SuperUser'))
+		message_user(client, message.actor, _("!admin setchan \"role\" - set a channel's role"))
+		message_user(client, message.actor, _('!admin setrole "role" "parameter" - set a role'))
+		message_user(client, message.actor, _('!admin delrole "role" - delete a role'))
+		message_user(client, message.actor, _('!admin playernum "number" - set the required number of players per team'))
+		message_user(client, message.actor, _("!admin alias \"player\" \"alias\" - set a player's alias"))
+		message_user(client, message.actor, _('!admin come - make the bot move to your channel'))
+		message_user(client, message.actor, _('!admin op "player" - make "player" an admin'))
+		message_user(client, message.actor, _('!admin result "match_id" "scores"- set the result of a match'))
+		message_user(client, message.actor, _('!admin delete "match_id" - delete a match'))
 
 	end
 
@@ -1119,10 +1133,10 @@ class Bot
 		mumbleNick = client.find_user( message.actor ).name 
 
 		if @players[ client ][ mumbleNick ].admin.eql?('SuperUser')
-			client.send_user_message message.actor, 'Shutting down...'
+			message_user(client, message.actor, _('Shutting down...'))
 			@shutdown = true
 		else
-			client.send_user_message message.actor, 'Not enough admin privileges.'
+			message_user(client, message.actor, _('Not enough admin privileges.'))
 		end
 	end
 
@@ -1130,11 +1144,11 @@ class Bot
 		mumbleNick = client.find_user( message.actor ).name 
 
 		if @players[ client ][ mumbleNick ].admin.eql?('SuperUser')
-			client.send_user_message message.actor, 'Restarting...'
+			message_user(client, message.actor, _('Restarting...'))
 			@restart = true
 			@shutdown = true
 		else
-			client.send_user_message message.actor, 'Not enough admin privileges.'
+			message_user(client, message.actor, _('Not enough admin privileges.'))
 		end
 	end
 
@@ -1145,7 +1159,7 @@ class Bot
 		mumbleNick = client.find_user( message.actor ).name
 
 		if @players[ client ][ mumbleNick ].admin.eql?('SuperUser')
-			client.send_user_message message.actor, "Raising an exception: #{exception}"
+			message_user(client, message.actor, _('Raising an exception: %{exception}'), exception: exception)
 			raise exception
 		end
 	end
@@ -1160,11 +1174,11 @@ class Bot
 
 		if password.eql? @connections[ client ][ :pass ]
 
-			client.send_user_message message.actor, 'Login accepted.'
+			message_user(client, message.actor, _('Login accepted.'))
 
 			if player.admin.eql? 'SuperUser'
 
-				client.send_user_message message.actor, 'Already a SuperUser.'
+				message_user(client, message.actor, _('Already a SuperUser.'))
 				return
 
 			else
@@ -1188,15 +1202,15 @@ class Bot
 
 		else
 
-			client.send_user_message message.actor, 'Wrong password.'
+			message_user(client, message.actor, _('Wrong password.'))
 
 		end
 
 	end
 
 	def help_msg_admin_login client, message
-		client.send_user_message message.actor, 'Syntax: !admin login "password"'
-		client.send_user_message message.actor, 'Logs you in to the bot as a SuperUser'
+		message_user(client, message.actor, _('Syntax: !admin login "password"'))
+		message_user(client, message.actor, _('Logs you in to the bot as a SuperUser'))
 	end
 
 	def cmd_admin_setchan client, message 
@@ -1210,14 +1224,14 @@ class Bot
 			roles = text.split(' ')[ 2..-1 ]
 
 			unless @rolesRequired[ client ]
-				client.send_user_message message.actor, 'No roles defined.'
+				message_user(client, message.actor, _('No roles defined.'))
 				return
 			end
 
 			unless roles.empty?
 				roles.each do |role|
 					unless @rolesRequired[ client ].has_key? role
-						client.send_user_message message.actor, "Unknown role: '#{role}'."
+						message_user(client, message.actor, _("Unknown role: '%{role}'."), role: role)
 						return
 					end
 				end
@@ -1246,24 +1260,24 @@ class Bot
 
 			if prevValue
 				if roles.empty?
-					client.send_user_message message.actor, "Channel #{chanPath} removed (was '#{prevValue.join(' ')}')."
+					message_user(client, message.actor, _("Channel '%{channel}' removed (was '%{previousValue}')."), channel: chanPath, previousValue: prevValue.join(' '))
 				else
-					client.send_user_message message.actor, "Channel #{chanPath} changed from '#{prevValue.join(' ')}' to '#{roles.join(' ')}'."
+					message_user(client, message.actor, _("Channel '%{channel}' changed from '%{previousValue}' to '%{newValue}'."), channel: chanPath, previousValue: prevValue.join(' '), newValue: roles.join(' '))
 				end
 			else
-				client.send_user_message message.actor, "Channel #{chanPath} set to '#{roles.join(' ')}'."
+				message_user(client, message.actor, _("Channel '%{channel}' set to '%{newRoles}'."), channel: chanPath, newRoles: roles.join(' '))
 			end
 
 		else
-			client.send_user_message message.actor, 'No admin privileges.'
+			message_user(client, message.actor, _('No admin privileges.'))
 		end
 
 	end
 
 	def help_msg_admin_setchan client, message
-		client.send_user_message message.actor, 'Syntax: !admin setchan "role"'
-		client.send_user_message message.actor, 'Sets the channel you are in to "role"'
-		client.send_user_message message.actor, 'You can set multiple roles by separating them with a space'
+		message_user(client, message.actor, _('Syntax: !admin setchan "role"'))
+		message_user(client, message.actor, _('Sets the channel you are in to "role"'))
+		message_user(client, message.actor, _('You can set multiple roles by separating them with a space'))
 	end
 
 	def cmd_admin_setrole client, message
@@ -1283,14 +1297,14 @@ class Bot
 			end
 
 			if required.nil?
-				client.send_user_message message.actor, 'Missing argument.'
+				message_user(client, message.actor, _('Missing argument.'))
 				return
 			end
 
 			required.upcase!
 
 			if required.to_i.to_s != required && required != 'T' && required != 'Q'
-				client.send_user_message message.actor, "Argument must be numeric, 'T' or 'Q'."
+				message_user(client, message.actor, _("Argument must be numeric, 'T' or 'Q'."))
 				return
 			end
 
@@ -1312,25 +1326,25 @@ class Bot
 			write_roles_ini client
 
 			if prevValue
-				client.send_user_message message.actor, "Role #{role} changed from '#{prevValue}' to '#{required}'."
+				message_user(client, message.actor, _("Role %{role} changed from '%{prevValue}' to '%{required}'."), role: role, prevValue: prevValue, required: required)
 			else
-				client.send_user_message message.actor, "Role #{role} set to '#{required}'."
+				message_user(client, message.actor, _("Role %{role} set to '%{required}'."), role: role, required: required)
 			end
 
 		else
-			client.send_user_message message.actor, 'No admin privileges.'
+			message_user(client, message.actor, _('No admin privileges.'))
 		end
 
 	end
 
 	def help_msg_admin_setrole client, message
-		client.send_user_message message.actor, 'Syntax: !admin setrole "role" "requirement"'
-		client.send_user_message message.actor, 'Create a new role with or sets an existing role to "requirement"'
-		client.send_user_message message.actor, 'Where "requirement" is one of:'
-		client.send_user_message message.actor, '- the number of players with that role required per team'
-		client.send_user_message message.actor, "- '-1' if the channel holds spectators"
-		client.send_user_message message.actor, "- 'T' if the channel is a team channel"
-		client.send_user_message message.actor, "- 'Q' if the channel is a queuing channel"
+		message_user(client, message.actor, _('Syntax: !admin setrole "role" "requirement"'))
+		message_user(client, message.actor, _('Create a new role with or sets an existing role to "requirement"'))
+		message_user(client, message.actor, _('Where "requirement" is one of:'))
+		message_user(client, message.actor, _('- the number of players with that role required per team'))
+		message_user(client, message.actor, _("- '-1' if the channel holds spectators"))
+		message_user(client, message.actor, _("- 'T' if the channel is a team channel"))
+		message_user(client, message.actor, _("- 'Q' if the channel is a queuing channel"))
 	end
 
 	def cmd_admin_delrole client, message
@@ -1348,12 +1362,12 @@ class Bot
 			end
 
 			if role.nil?
-				client.send_user_message message.actor, 'Missing argument.'
+				message_user(client, message.actor, _('Missing argument.'))
 				return
 			end
 
 			unless @rolesRequired[ client ].has_key? role
-					client.send_user_message message.actor, "Unknown role: '#{role}'."
+				message_user(client, message.actor, _("Unknown role: '%{role}'."), role: role)
 				return
 			end
 
@@ -1361,15 +1375,15 @@ class Bot
 
 			write_roles_ini client
 
-			client.send_user_message message.actor, "Role deleted ('#{role}')."
+			message_user(client, message.actor, _("Role deleted ('%{role}')."), role: role)
 
 		end
 
 	end
 
 	def help_msg_admin_delrole client, message
-		client.send_user_message message.actor, 'Syntax: !admin delrole "role"'
-		client.send_user_message message.actor, 'Removes an existing role'
+		message_user(client, message.actor, _('Syntax: !admin delrole "role"'))
+		message_user(client, message.actor, _('Removes an existing role.'))
 	end
 
 	def cmd_admin_come client, message
@@ -1380,14 +1394,14 @@ class Bot
 			@connections[ client ][ :channel ] = client.find_user( message.actor ).channel.path
 			client.switch_channel @connections[ client ][ :channel ]
 		else
-			client.send_user_message message.actor, 'No admin privileges.'
+			message_user(client, message.actor, _('No admin privileges.'))
 		end
 
 	end
 
 	def help_msg_admin_come client, message
-		client.send_user_message message.actor, 'Syntax: !admin come'
-		client.send_user_message message.actor, 'Makes the bot join the channel you are in'
+		message_user(client, message.actor, _('Syntax: !admin come'))
+		message_user(client, message.actor, _('Makes the bot join the channel you are in.'))
 	end
 
 	def cmd_admin_playernum client, message 
@@ -1401,22 +1415,22 @@ class Bot
 			if newPlayerNum.nil? || newPlayerNum == @defaultPlayerNum
 				@playerNum.delete( client )
 				write_roles_ini client
-				client.send_user_message message.actor, "Required number of players set to default value ('#{@defaultPlayerNum}')."
+				message_user(client, message.actor, _("Required number of players set to default value ('%{defaultPlayerNumber}')."), defaultPlayerNumber: @defaultPlayerNum)
 			else
 				@playerNum[ client ] = newPlayerNum
 				write_roles_ini client
-				client.send_user_message message.actor, "Required number of players set to '#{newPlayerNum}'."
+				message_user(client, message.actor, _("Required number of players set to '%{newPlayerNumber}'."), newPlayerNumber: newPlayerNum)
 			end
 
 		else
-			client.send_user_message message.actor, 'No admin privileges.'
+			message_user(client, message.actor, _('No admin privileges.'))
 		end
 
 	end
 
 	def help_msg_admin_playernum client, message
-		client.send_user_message message.actor, 'Syntax: !admin playernum "number"'
-		client.send_user_message message.actor, 'Sets the required number of players per team'
+		message_user(client, message.actor, _('Syntax: !admin playernum "number"'))
+		message_user(client, message.actor, _('Sets the required number of players per team.'))
 	end
 
 	def cmd_admin_alias client, message
@@ -1431,7 +1445,7 @@ class Bot
 			parameters = parameterStr.scan(/(?:"(?:\\.|[^"])*"|[^" ])+/)
 
 			unless parameters.length.eql?( 2 )
-				client.send_user_message message.actor, 'This command needs two parameters: the mumble nick and the alias you want to set.'
+				message_user(client, message.actor, _('This command needs two parameters: the mumble nick and the alias you want to set.'))
 				return
 			end
 
@@ -1440,7 +1454,7 @@ class Bot
 			player = @players[ client ].values.select{ |v| v.mumbleNick.downcase.eql?( target.downcase ) }.first
 
 			if player.nil?
-				client.send_user_message message.actor, "Player #{target} has to be in one of the PUG channels."
+				message_user(client, message.actor, _("Player '%{target}' has to be in one of the PUG channels."), target: target)
 				return
 			end
 
@@ -1450,7 +1464,7 @@ class Bot
 			statsVals = get_player_stats( aliasValue, [ 'Name', 'Level', 'Tag' ] )
 
 			if statsVals.nil?
-				client.send_user_message message.actor, "Player #{aliasValue} not found or unable to connect to TribesAPI, alias not set."
+				message_user(client, message.actor, _("Player '%{alias}' not found or unable to connect to TribesAPI, alias not set."), alias: aliasValue)
 				return
 			end
 
@@ -1464,23 +1478,23 @@ class Bot
 
 				if aliasValue.downcase.eql? player.mumbleNick.downcase
 					player.aliasNick = nil
-					client.send_user_message message.actor, "Alias of #{player.mumbleNick} removed."
-					client.send_user_message player.session, "Your alias has been reset to #{player.mumbleNick} by #{mumbleNick}."
+					message_user(client, message.actor, _("Alias of '%{playerMumbleNick}' removed."), playerMumbleNick: player.mumbleNick)
+					message_user(client, player.session, _("Your alias has been reset to '%{playerMumbleNick}' by '%{mumbleNick}'."), playerMumbleNick: player.mumbleNick, mumbleNick: mumbleNick)
 				else
 					player.aliasNick = aliasValue
-					client.send_user_message message.actor, "Alias of #{player.mumbleNick} set to #{aliasValue}."
-					client.send_user_message player.session, "Your alias has been set to #{aliasValue} by #{mumbleNick}."
+					message_user(client, message.actor, _("Alias of '%{playerMumbleNick}' set to '%{aliasValue}'."), playerMumbleNick: player.mumbleNick, aliasValue: aliasValue)
+					message_user(client, player.session, _("Your alias has been set to '%{aliasValue}' by '%{mumbleNick}'."), aliasValue: aliasValue, mumbleNick: mumbleNick)
 				end
 
 			else
 
 				if aliasValue.downcase.eql? player.mumbleNick.downcase
-					client.send_user_message message.actor, 'Alias not set: equal to mumble username.'
+					message_user(client, message.actor, _('Alias not set: equal to mumble username.'))
 					return
 				else
 					player.aliasNick = aliasValue
-					client.send_user_message message.actor, "Alias of #{player.mumbleNick} set to #{aliasValue}."
-					client.send_user_message player.session, "Your alias has been set to #{aliasValue} by #{mumbleNick}."
+					message_user(client, message.actor, _("Alias of '%{playerMumbleNick}' set to '%{aliasValue}'."), playerMumbleNick: player.mumbleNick, aliasValue: aliasValue)
+					message_user(client, player.session, _("Your alias has been set to '%{aliasValue}' by '%{mumbleNick}'."), aliasValue: aliasValue, mumbleNick: mumbleNick)
 				end
 
 			end
@@ -1574,14 +1588,14 @@ class Bot
 			create_comment( client )
 
 		else
-			client.send_user_message message.actor, 'No admin privileges.'
+			message_user(client, message.actor, _('No admin privileges.'))
 		end
 
 	end
 
 	def help_msg_admin_alias client, message
-		client.send_user_message message.actor, 'Syntax: !admin alias "mumble_nick" "alias"'
-		client.send_user_message message.actor, "Sets \"mumble_nick\"'s alias to \"alias\""
+		message_user(client, message.actor, _('Syntax: !admin alias "mumble_nick" "alias"'))
+		message_user(client, message.actor, _("Sets \"mumble_nick\"'s alias to \"alias\""))
 	end
 
 	def cmd_admin_op client, message
@@ -1593,7 +1607,7 @@ class Bot
 			text = convert_symbols_from_html( message.message )
 			param = text.split(' ')[ 2..-1 ]
 			unless param.length.eql?( 1 )
-				client.send_user_message message.actor, 'Please specify exactly one mumble nick to make admin.'
+				message_user(client, message.actor, _('Please specify exactly one mumble nick to make admin.'))
 				return
 			end
 			param = param.first
@@ -1607,7 +1621,7 @@ class Bot
 
 			if player.admin.eql?( 'SuperUser' ) || player.admin.eql?( 'Admin' )
 
-				client.send_user_message message.actor, "Already a #{player.admin}."
+				message_user(client, message.actor, _('Already a %{admin}.'), admin: player.admin)
 				return
 
 			else
@@ -1627,21 +1641,21 @@ class Bot
 
 				ini.writeToFile( 'players.ini' )
 
-				client.send_user_message message.actor, "Player #{player.mumbleNick} made an admin."
-				client.send_user_message player.session, "You have been made an admin by #{mumbleNick}."
+				message_user(client, message.actor, _("Player '%{playerMumbleNick}' made an admin."), playerMumbleNick: player.mumbleNick)
+				message_user(client, player.session, _('You have been made an admin by %{adminName}.'), adminName: mumbleNick)
 
 			end
 
 
 		else
-			client.send_user_message message.actor, 'No admin privileges.'
+			message_user(client, message.actor, _('No admin privileges.'))
 		end
 
 	end
 
 	def help_msg_admin_op client, message
-		client.send_user_message message.actor, 'Syntax: !admin op "mumble_nick"'
-		client.send_user_message message.actor, 'Makes "mumble_nick" an admin if you are a SuperUser'
+		message_user(client, message.actor, _('Syntax: !admin op "mumble_nick"'))
+		message_user(client, message.actor, _('Makes "mumble_nick" an admin if you are a SuperUser'))
 	end
 
 	def cmd_admin_debug client, message
@@ -1670,7 +1684,7 @@ class Bot
 				when 'matches'
 					displayMatches = true
 				else
-					client.send_user_message message.actor, "Unknown argument '#{command}'!"
+					message_user(client, message.actor, _("Unknown command '%{command}'!"), command: command)
 				end
 			end
 
@@ -1693,7 +1707,7 @@ class Bot
 						client.send_user_message message.actor, "Player: #{convert_symbols_to_html( player.playerName )}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 					end
 				else
-					client.send_user_message message.actor, 'No players registered'
+					message_user(client, message.actor, _('No players registered'))
 				end
 			end
 
@@ -1726,13 +1740,13 @@ class Bot
 
 				else
 
-					client.send_user_message message.actor, 'No matches registered - this is not good!'
+					message_user(client, message.actor, _('No matches registered - this is not good!'))
 
 				end
 			end
 
 		else
-			client.send_user_message message.actor, 'No admin privileges.'
+			message_user(client, message.actor, _('No admin privileges.'))
 		end
 
 	end
@@ -1743,7 +1757,7 @@ class Bot
 		mumbleNick = client.find_user( message.actor ).name
 
 		if !@players[ client ] || !@players[ client ].has_key?( mumbleNick )
-			client.send_user_message message.actor, 'You need to join one of the PUG channels set the mute level.'
+			message_user(client, message.actor, _('You need to join one of the PUG channels set the mute level.'))
 			return
 		end
 
@@ -1755,7 +1769,7 @@ class Bot
 
 		if muteValue 
 			if muteValue.to_i.to_s != muteValue
-				client.send_user_message message.actor, 'The mute level has to be numeric: 0(off), 1(default) or 2(all muted).'
+				message_user(client, message.actor, _('The mute level has to be numeric: 0(off), 1(default) or 2(all muted).'))
 				return
 			else
 				muteValue = muteValue.to_i
@@ -1768,7 +1782,7 @@ class Bot
 		end
 
 		if muteValue.eql?( player.muted )
-			client.send_user_message message.actor, 'No change in mute level.'
+			message_user(client, message.actor, _('No change in mute level.'))
 			return
 		end
 
@@ -1792,13 +1806,13 @@ class Bot
 
 		ini.writeToFile( 'players.ini' )
 
-		client.send_user_message message.actor, "Mute level set to #{player.muted.to_s}."
+		message_user(client, message.actor, _('Mute level set to %{muteLevel}.'), muteLevel: player.muted.to_s)
 
 	end
 
 	def help_msg_mute client, message
-		client.send_user_message message.actor, 'Syntax: !mute 0/1/2/3'
-		client.send_user_message message.actor, "Mute the bot's spam messages from 0 (no mute) to 3 (all muted)"
+		message_user(client, message.actor, _('Syntax: !mute 0/1/2/3'))
+		message_user(client, message.actor, _("Mute the bot's spam messages from 0 (no mute) to 3 (all muted)"))
 	end
 
 	def cmd_result client, message
@@ -1806,14 +1820,14 @@ class Bot
 		scores = text.split(' ')[ 1..-1 ]
 
 		if scores.empty?
-			client.send_user_message message.actor, 'You need to enter at least one score.'
+			message_user(client, message.actor, _('You need to enter at least one score.'))
 			return
 		end
 
 		mumbleNick = client.find_user( message.actor ).name
 
 		if !@players[ client ] || !@players[ client ].has_key?( mumbleNick )
-			client.send_user_message message.actor, 'You need to join one of the PUG channels to set a result.'
+			message_user(client, message.actor, _('You need to join one of the PUG channels to set a result.'))
 			return
 		end
 
@@ -1832,7 +1846,7 @@ class Bot
 			scores.each do |score|
 
 				if score.split('-').length != match.teams.length
-					client.send_user_message message.actor, 'Malformed result: please use "BE"-"DS" for each map.'
+					message_user(client, message.actor, _('Malformed result: please use "BE"-"DS" for each map.'))
 					return
 				end
 
@@ -1864,15 +1878,15 @@ class Bot
 
 		else
 
-			client.send_user_message message.actor, 'No match found with results pending. Maybe the match has already been reported.'
+			message_user(client, message.actor, _('No match found with results pending. Maybe the match has already been reported.'))
 
 		end
 
 	end
 
 	def help_msg_result client, message
-		client.send_user_message message.actor, 'Syntax: !result "map1" "map2" "map3"'
-		client.send_user_message message.actor, 'Report the results of a match with the scores for each maps in the form "BE"-"DS".'
+		message_user(client, message.actor, _('Syntax: !result "map1" "map2" "map3"'))
+		message_user(client, message.actor, _('Report the results of a match with the scores for each maps in the form "BE"-"DS".'))
 	end
 
 	def cmd_admin_result client, message
@@ -1881,18 +1895,18 @@ class Bot
 		scores = text.split(' ')[ 3..-1 ]
 
 		if matchId.nil?
-			client.send_user_message message.actor, 'You need to enter a match id and at least one score.'
+			message_user(client, message.actor, _('You need to enter a match id and at least one score.'))
 			return
 		end
 
 		if matchId.to_i.to_s != matchId
-			client.send_user_message message.actor, 'The match id has to be numerical.'
+			message_user(client, message.actor, _('The match id has to be numerical.'))
 			return
 		end
 		matchId = matchId.to_i
 
 		if scores.empty?
-			client.send_user_message message.actor, 'You need to enter at least one score.'
+			message_user(client, message.actor, _('You need to enter at least one score.'))
 			return
 		end
 
@@ -1909,7 +1923,7 @@ class Bot
 				scores.each do |score|
 
 					if score.split('-').length != match.teams.length
-						client.send_user_message message.actor, 'Malformed result: please use "BE"-"DS" for each map.'
+						message_user(client, message.actor, _('Malformed result: please use "BE"-"DS" for each map.'))
 						return
 					end
 
@@ -1947,14 +1961,14 @@ class Bot
 			end
 
 		else
-			client.send_user_message message.actor, 'No admin privileges.'
+			message_user(client, message.actor, _('No admin privileges.'))
 		end
 
 	end
 
 	def help_msg_admin_result client, message
-		client.send_user_message message.actor, 'Syntax: !admin result "match_id" "scores"'
-		client.send_user_message message.actor, 'Sets the "scores" of "match_id" for all maps in form "ourcaps"-"theircaps" separated by a space.'
+		message_user(client, message.actor, _('Syntax: !admin result "match_id" "scores"'))
+		message_user(client, message.actor, _('Sets the "scores" of "match_id" for all maps in form "ourcaps"-"theircaps" separated by a space.'))
 	end
 
 	def cmd_admin_delete client, message
@@ -1962,12 +1976,12 @@ class Bot
 		matchId = text.split(' ')[ 2 ]
 
 		if matchId.nil?
-			client.send_user_message message.actor, 'You need to enter a match id.'
+			message_user(client, message.actor, _('You need to enter a match id.'))
 			return
 		end
 
 		if matchId.to_i.to_s != matchId
-			client.send_user_message message.actor, 'The match id has to be numerical.'
+			message_user(client, message.actor, _('The match id has to be numerical.'))
 			return
 		end
 		matchId = matchId.to_i
@@ -1982,7 +1996,7 @@ class Bot
 			if match
 
 				if match.status.eql?( 'Signup' )
-					client.send_user_message message.actor, "Can't delete the current signup match."
+					message_user(client, message.actor, _("Can't delete the current signup match."))
 					return
 				end
 
@@ -2018,14 +2032,14 @@ class Bot
 			end
 
 		else
-			client.send_user_message message.actor, 'No admin privileges.'
+			message_user(client, message.actor, _('No admin privileges.'))
 		end
 
 	end
 
 	def help_msg_admin_delete client, message
-		client.send_user_message message.actor, 'Syntax: !admin delete "match_id"'
-		client.send_user_message message.actor, 'Delete match with id "match_id".'
+		message_user(client, message.actor, _('Syntax: !admin delete "match_id"'))
+		message_user(client, message.actor, _('Delete match with id "match_id".'))
 	end
 
 	def cmd_list client, message
@@ -2047,7 +2061,7 @@ class Bot
 		end
 
 		if selection.empty?
-			client.send_user_message message.actor, 'No matches found.'
+			message_user(client, message.actor, _('No matches found.'))
 		else
 			selection.each do |match|
 
@@ -2082,8 +2096,8 @@ class Bot
 	end
 
 	def help_msg_list client, message
-		client.send_user_message message.actor, 'Syntax: !list'
-		client.send_user_message message.actor, 'Shows the latest matches that have been registered on the bot.'
+		message_user(client, message.actor, _('Syntax: !list'))
+		message_user(client, message.actor, _('Shows the latest matches that have been registered on the bot.'))
 	end
 
 	# @param message [TextMessage]
@@ -2095,14 +2109,14 @@ class Bot
 			cmd = convert_symbols_from_html(message.message).split[ 2..-1 ].join(' ')
 			unless cmd.empty?
 				if cmd[ 'system' ] || cmd[ '`' ] || cmd[ '%x' ]
-					client.send_user_message message.actor, 'System calls not allowed.'
+					message_user(client, message.actor, _('System calls not allowed.'))
 					return
 				else
 					Thread.new { eval_cmd( client, message.actor, cmd ) }
 				end
 			end
 		else
-			client.send_user_message message.actor, 'No SuperUser privileges.'
+			message_user(client, message.actor, _('No SuperUser privileges.'))
 		end
 
 	end
@@ -2375,6 +2389,7 @@ class Bot
 		aliasNick = nil
 		muted = nil
 		elo = nil
+		locale = nil
 
 		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
 
@@ -2401,6 +2416,9 @@ class Bot
 			sectionName = 'ELO'
 			elo = ini.getValue( sectionName, CGI::escape(nick) )
 
+			sectionName = 'Locale'
+			locale = ini.getValue( sectionName, CGI::escape(nick) )
+
 		end
 
 		stats = Array.new
@@ -2408,7 +2426,10 @@ class Bot
 		stats << 'Level'
 		stats << 'Tag'
 
-		statsVals = get_player_stats( nick, stats )
+		statsVals = nil
+		unless @options[ :is_debug_bot ]
+			statsVals = get_player_stats( nick, stats )
+		end
 
 		if statsVals.nil?
 			playerName = nick
@@ -2429,12 +2450,370 @@ class Bot
 			elo: elo,
 			playerName: playerName,
 			level: level,
-			tag: tag
+			tag: tag,
+			locale: locale,
 		}
 
 	end
 
+	def cmd_admin_locale client, message
+		ensure_SuperUser(client, message) do
+
+			text = convert_symbols_from_html( message.message )
+			command = text.split(' ')[ 2 ]
+
+			if command.nil?
+				message_user(client, message.actor, _('Expected a locale admin command!'))
+			else
+				case command.downcase
+				when 'alias'
+					cmd_admin_locale_alias( client, message )
+				when 'reload'
+					cmd_admin_locale_reload( client, message )
+				else
+					message_user(client, message.actor, _("Unknown locale admin command '%{command}'!"), command: command)
+				end
+			end
+
+		end
+	end
+
+	def help_msg_admin_locale client, message
+		ensure_SuperUser(client, message) do
+
+			text = convert_symbols_from_html( message.message )
+			command = text.split(' ')[ 2 ]
+
+			unless command.nil?
+				case command.downcase
+				when 'alias'
+					help_msg_admin_locale_alias( client, message )
+					return
+				when 'reload'
+					help_msg_admin_locale_reload( client, message )
+					return
+				else
+					message_user(client, message.actor, _("Unknown locale admin command '%{command}'!"), command: command)
+				end
+			end
+
+			message_user(client, message.actor, _('The following locale admin commands are available:'))
+			message_user(client, message.actor, _('!admin locale alias - Commands for managing locale aliases.'))
+			message_user(client, message.actor, _('!admin locale reload - Reload all locales, ensuring the most up-to-date versions are used.'))
+
+		end
+	end
+
+	def cmd_admin_locale_reload client, message
+		ensure_SuperUser(client, message) do
+			reload_locales
+			message_user(client, message.actor, _('Locales reloaded successfully.'))
+		end
+	end
+
+	def help_msg_admin_locale_reload client, message
+		ensure_SuperUser(client, message) do
+			message_user(client, message.actor, _('Syntax: !admin locale reload'))
+			message_user(client, message.actor, _('Reloads all locale info, ensuring the newest version is used.'))
+		end
+	end
+
+	def cmd_admin_locale_alias client, message
+		ensure_SuperUser(client, message) do
+
+			text = convert_symbols_from_html( message.message )
+			command = text.split(' ')[ 3 ]
+
+			if command.nil?
+				message_user(client, message.actor, _('Expected a locale alias admin command!'))
+			else
+				case command.downcase
+				when 'set'
+					cmd_admin_locale_alias_set(client, message)
+				when 'remove'
+					cmd_admin_locale_alias_remove(client, message)
+				else
+					message_user(client, message.actor, _("Unknown locale alias admin command '%{command}'!"), command: command)
+				end
+			end
+
+		end
+	end
+
+	def help_msg_admin_locale_alias client, message
+		ensure_SuperUser(client, message) do
+
+			text = convert_symbols_from_html( message.message )
+			command = text.split(' ')[ 3 ]
+
+			unless command.nil?
+				case command.downcase
+				when 'set'
+					help_msg_admin_locale_alias_set(client, message)
+					return
+				when 'remove'
+					help_msg_admin_locale_alias_remove(client, message)
+					return
+				else
+					message_user(client, message.actor, _("Unknown locale alias admin command '%{command}'!"), command: command)
+				end
+			end
+
+			message_user(client, message.actor, _('The following locale alias admin commands are available:'))
+			message_user(client, message.actor, _('!admin locale alias set "alias" "locale" - Sets an alias for the specified locale.'))
+			message_user(client, message.actor, _('!admin locale alias remove "alias" - Remove an alias for a locale.'))
+
+		end
+	end
+
+	def cmd_admin_locale_alias_set client, message
+		ensure_SuperUser(client, message) do
+
+			text = convert_symbols_from_html( message.message )
+			localeAlias = text.split(' ')[ 4 ]
+			localeName = text.split(' ')[ 5 ]
+
+			if localeAlias.nil?
+				message_user(client, message.actor, _('Missing the alias to set!'))
+			elsif localeName.nil?
+				message_user(client, message.actor, _('Missing the locale to set an alias of!'))
+			elsif !FastGettext.available_locales.include?(localeName)
+				message_user(client, message.actor, _("Unknown locale '%{locale}'!"), locale: localeName)
+				message_user(client, message.actor, _('See the output of the "!locale list" command for a list of the valid locales.'))
+			else
+				if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/locale.ini' ) )
+					ini = Kesh::IO::Storage::IniFile.loadFromFile('locale.ini')
+				else
+					ini = Kesh::IO::Storage::IniFile.new
+				end
+
+				sec = ini.getSection('Alias')
+				if sec.hasValue?(localeAlias.downcase)
+					oldValue = sec.getValue(localeAlias.downcase)
+					if localeName.eql?(oldValue)
+						message_user(client, message.actor, _("'%{alias}' is already an alias of '%{locale}'."), alias: localeAlias, locale: localeName)
+					else
+						sec.setValue(localeAlias.downcase, localeName)
+						ini.getSection('AliasDisplayName').setValue(localeAlias.downcase, localeAlias)
+						message_user(client, message.actor, _("Updated '%{alias}' to be an alias of '%{newLocale}' rather than '%{oldLocale}'."), alias: localeAlias, newLocale: localeName, oldLocale: oldValue)
+					end
+				else
+					sec.setValue(localeAlias.downcase, localeName)
+					message_user(client, message.actor, _("Set '%{alias}' as an alias of '%{locale}'"), alias: localeAlias, locale: localeName)
+				end
+
+				ini.writeToFile('locale.ini')
+			end
+
+		end
+	end
+
+	def help_msg_admin_locale_alias_set client, message
+		ensure_SuperUser(client, message) do
+			message_user(client, message.actor, _('Syntax: !admin locale alias set "alias" "locale"'))
+			message_user(client, message.actor, _('Set "alias" as an alias of "locale".'))
+		end
+	end
+
+	def cmd_admin_locale_alias_remove client, message
+		ensure_SuperUser(client, message) do
+
+			text = convert_symbols_from_html( message.message )
+			aliasName = text.split(' ')[ 4 ]
+
+			if aliasName.nil?
+				message_user(client, message.actor, _('Missing the name of the alias to remove!'))
+			elsif File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/locale.ini' ) )
+				ini = Kesh::IO::Storage::IniFile.loadFromFile('locale.ini')
+				sec = ini.getSection('Alias')
+
+				if sec.hasValue?(aliasName.downcase)
+					oldValue = sec.getValue(aliasName.downcase)
+					sec.removeValue(aliasName.downcase)
+					ini.getSection('AliasDisplayName').removeValue(aliasName.downcase)
+					message_user(client, message.actor, _("Removed '%{alias}' as an alias of '%{locale}'."), alias: aliasName, locale: oldValue)
+				else
+					message_user(client, message.actor, _("The value '%{alias}' is not an alias for any locale!"), alias: aliasName)
+				end
+			else
+				message_user(client, message.actor, _("The value '%{alias}' is not an alias for any locale!"), alias: aliasName)
+			end
+
+		end
+	end
+
+	def help_msg_admin_locale_alias_remove client, message
+		ensure_SuperUser(client, message) do
+			message_user(client, message.actor, _('Syntax: !admin locale alias remove "alias"'))
+			message_user(client, message.actor, _('Remove the locale alias "alias".'))
+		end
+	end
+
+	def cmd_locale client, message
+
+		text = convert_symbols_from_html( message.message )
+		command = text.split(' ')[ 1 ]
+
+		if command.nil?
+			message_user(client, message.actor, _('Expected a locale command!'))
+		else
+			case command.downcase
+			when 'set'
+				cmd_locale_set(client, message)
+			when 'list'
+				cmd_locale_list(client, message)
+			else
+				message_user(client, message.actor, _("Unknown locale command '%{command}'!"), command: command)
+			end
+		end
+
+	end
+
+	def help_msg_locale client, message
+
+		text = convert_symbols_from_html( message.message )
+		command = text.split(' ')[ 1 ]
+
+		unless command.nil?
+			case command.downcase
+			when 'set'
+				help_msg_locale_set(client, message)
+				return
+			when 'list'
+				help_msg_locale_list(client, message)
+				return
+			else
+				message_user(client, message.actor, _("Unknown locale command '%{command}'!"), command: command)
+			end
+		end
+
+		message_user(client, message.actor, _('The following commands are available:'))
+		message_user(client, message.actor, _('!locale set "locale" - Set your preferred locale.'))
+		message_user(client, message.actor, _('!locale list - Get a list of all available locales.'))
+
+	end
+
+	def cmd_locale_set client, message
+
+		text = convert_symbols_from_html( message.message )
+		locale = text.split(' ')[ 2 ]
+
+		if locale.nil?
+			message_user(client, message.actor, _('Missing the locale to set as preferred!'))
+		else
+			targetLocale = locale
+			unless FastGettext.available_locales.include?(targetLocale)
+				if @localeAliases.has_key?(targetLocale.downcase)
+					targetLocale = @localeAliases[targetLocale.downcase]
+				else
+					message_user(client, message.actor, _("Unknown locale '%{locale}'!"), locale: targetLocale)
+					targetLocale = nil
+				end
+			end
+
+			unless targetLocale.nil?
+				mumbleNick = client.find_user( message.actor ).name
+
+				if @players[ client ].has_key?( mumbleNick )
+					@players[ client ][ mumbleNick ].locale = targetLocale
+
+					ini = Kesh::IO::Storage::IniFile.loadFromFile('players.ini')
+					sectionName = 'Locale'
+					if ini.hasValue?(sectionName, CGI::escape(mumbleNick))
+						oldLocale = ini.getValue(sectionName, CGI::escape(mumbleNick))
+						if oldLocale.eql?(targetLocale)
+							message_user(client, message.actor, _("Your preferred locale is already set to '%{locale}'."), locale: targetLocale)
+						else
+							ini.setValue(sectionName, CGI::escape(mumbleNick), targetLocale)
+							message_user(client, message.actor, _("Updated your preferred locale from '%{oldLocale}' to '%{newLocale}'."), oldLocale: oldLocale, newLocale: targetLocale)
+						end
+					else
+						ini.setValue(sectionName, CGI::escape(mumbleNick), targetLocale)
+						message_user(client, message.actor, _("Set your preferred locale to '%{locale}'."), locale: targetLocale)
+					end
+					ini.writeToFile('players.ini')
+
+				else
+					message_user(client, message.actor, _('You must be in one of the PuG channels to set your preferred locale!'))
+				end
+			end
+		end
+
+	end
+
+	def help_msg_locale_set client, message
+		message_user(client, message.actor, _('Syntax: !locale set "locale"'))
+		message_user(client, message.actor, _('Set your preferred locale to "locale".'))
+	end
+
+	def cmd_locale_list client, message
+		message_user(client, message.actor, _('The following locales are available: %{locales}'), locales: FastGettext.available_locales.sort{ |a, b| a <=> b }.join(', '))
+	end
+
+	def help_msg_locale_list client, message
+		message_user(client, message.actor, _('Syntax: !locale list'))
+		message_user(client, message.actor, _('List all of the available locales.'))
+	end
+
+	include FastGettext::Translation
+	# This is a stub which exists so we can create
+	# a list of localized strings automatically rather
+	# than having to maintain one manually.
+	def _ message
+		return message
+	end
+
+	def load_locales
+		FastGettext.add_text_domain('SkeeveBot', :path => 'locale', :type => :po)
+		FastGettext.default_text_domain = 'SkeeveBot'
+		FastGettext.default_locale = @options[ :default_locale ]
+
+		reload_locales
+	end
+
+	def reload_locales
+
+		localeDirectory = File.dirname( __FILE__ ) + '/locale/'
+		FastGettext.default_available_locales = Dir.entries(localeDirectory).select { |entry| File.directory?(File.join(localeDirectory, entry)) && entry != '.' && entry != '..' }
+		FastGettext.default_available_locales << 'en' # Add the language the source code is in.
+
+		@localeAliases.clear
+
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/locale.ini' ) )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'locale.ini' )
+
+			sec = ini.getSection('Alias')
+			sec.values.each do |val|
+				if FastGettext.available_locales.include?(val.value)
+					@localeAliases[val.name] = val.value
+				else
+					puts "ERROR: Unknown locale '#{val.value}'!"
+				end
+			end
+		end
+
+		FastGettext.reload!
+
+	end
+
+	def message_user client, actor, message, *formatArgs
+		mumbleNick = client.find_user( actor ).name
+
+		if @players[ client ].has_key?( mumbleNick )
+			unless @players[ client ][ mumbleNick ].locale.nil?
+				FastGettext.locale = @players[ client ][ mumbleNick ].locale
+			end
+		end
+
+		client.send_user_message actor, ((FastGettext.cached_find(message) or message) % formatArgs)
+		FastGettext.locale = nil
+	end
+
 	def message_all client, message, matchIds, importance, *exclude
+
+		if @options[ :is_debug_bot ] # This is DebugBot, and we don't need to be spamming people.
+			return
+		end
 
 		return unless @players[ client ]
 
@@ -2567,5 +2946,32 @@ class Bot
 		text.gsub!( /(?:\r\n|\r|\n)/, '<br/>' )
 		# text.gsub!( '-', '&shy;' )
 		return text
+	end
+
+
+
+
+	def ensure_SuperUser client, message
+
+		mumbleNick = client.find_user( message.actor ).name
+
+		if @players[ client ].has_key?( mumbleNick ) && @players[ client ][ mumbleNick ].admin.eql?( 'SuperUser' )
+			yield
+		else
+			message_user(client, message.actor, _('Insufficient privileges to perform this action.'))
+		end
+
+	end
+
+	def ensure_Admin client, message
+
+		mumbleNick = client.find_user( message.actor ).name
+
+		if @players[ client ].has_key?( mumbleNick ) && (@players[ client ][ mumbleNick ].admin.eql?( 'Admin' ) || @players[ client ][ mumbleNick ].admin.eql?( 'SuperUser' ))
+			yield
+		else
+			message_user(client, message.actor, _('Insufficient privileges to perform this action.'))
+		end
+
 	end
 end

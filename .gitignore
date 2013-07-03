@@ -15,6 +15,7 @@ tmp
 .tags*
 *.ini
 *.bak
+Identities
 
 # YARD artifacts
 .yardoc

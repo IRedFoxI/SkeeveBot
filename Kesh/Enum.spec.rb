@@ -1,9 +1,25 @@
 require 'rspec'
 require './Enum.class'
 
-AdminLevel = Enum.new(:None, :Admin, :SuperUser)
+AdminLevel = ComparableEnum.new(:None, :Admin, :SuperUser) do
+
+	def self.hello
+		return 'hello'
+	end
+
+end
 
 describe AdminLevel do
+
+	describe '::hello' do
+		it 'should be defined' do
+			AdminLevel.method(:hello).should
+		end
+
+		it 'should return "hello"' do
+			AdminLevel::hello.should == 'hello'
+		end
+	end
 
 	describe '::parse' do
 		it 'should return nil when passed nil' do
@@ -72,8 +88,8 @@ describe AdminLevel do
 	end
 
 	describe '::None' do
-		it 'should exist' do
-			AdminLevel::None.should
+		it 'should be defined' do
+			defined?(AdminLevel::None).should
 		end
 
 		it 'should be constant' do
@@ -88,6 +104,10 @@ describe AdminLevel do
 			AdminLevel::None.should_not == AdminLevel::Admin
 		end
 
+		it 'should be less than ::Admin' do
+			AdminLevel::None.should < AdminLevel::Admin
+		end
+
 		it 'should not be equal to ::SuperUser' do
 			AdminLevel::None.should_not == AdminLevel::SuperUser
 		end
@@ -98,6 +118,10 @@ describe AdminLevel do
 
 		it 'should not be equal to "Admin"' do
 			AdminLevel::None.should_not == 'Admin'
+		end
+
+		it 'should be less than "Admin"' do
+			AdminLevel::None.should < 'Admin'
 		end
 
 		it 'should not be equal to "SuperUser"' do
@@ -112,14 +136,18 @@ describe AdminLevel do
 			AdminLevel::None.should_not == 1
 		end
 
+		it 'should be less than 1' do
+			AdminLevel::None.should < 1
+		end
+
 		it 'should not be equal to 2' do
 			AdminLevel::None.should_not == 2
 		end
 	end
 
 	describe '::Admin' do
-		it 'should exist' do
-			AdminLevel::Admin.should
+		it 'should be defined' do
+			defined?(AdminLevel::Admin).should
 		end
 
 		it 'should be constant' do
@@ -164,8 +192,8 @@ describe AdminLevel do
 	end
 
 	describe '::SuperUser' do
-		it 'should exist' do
-			AdminLevel::SuperUser.should
+		it 'should be defined' do
+			defined?(AdminLevel::SuperUser).should
 		end
 
 		it 'should be constant' do
