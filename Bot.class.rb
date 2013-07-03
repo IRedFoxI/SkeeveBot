@@ -10,7 +10,7 @@ requireLibrary 'ELO'
 
 
 Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :noMatches, :playerName, :level, :tag, :noCaps, :noMaps, :match, :roles, :team )
-Match = Struct.new( :id, :label, :status, :date, :teams, :players, :comment, :results, :perfELO )
+Match = Struct.new( :id, :label, :status, :date, :teams, :players, :comment, :results, :perfELO, :idsAPI )
 Result = Struct.new( :map, :teams, :scores, :comment )
 
 class Bot
@@ -38,6 +38,7 @@ class Bot
 		@query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
 		@eloCalculator = Kesh::ELO::ELOCalculator.new
 		@lastCleanUp = Time.now
+		@lastTrack = Time.now
 
 		load_matches_ini
 	end
@@ -153,6 +154,12 @@ class Bot
 				@lastCleanUp = Time.now
 			end
 
+
+			if ( Time.now - @lastTrack ) > 60
+				track_matches
+				@lastTrack = Time.now
+			end
+
 			return true unless all_connected? # TODO: This is a very ugly way to reset all connections
 
 			sleep 0.2
@@ -209,7 +216,7 @@ class Bot
 		selection = selection | @matches.select{ |m| m.label.eql?( @connections[ client ][ :label ] ) && !m.status.eql?( 'Deleted' ) && !m.id.eql?( @currentMatch[ client ] ) }
 		unless selection.empty?
 			
-			comment << '<HR>Recent matches:<TABLE BORDER="0"><TR><TD>Id</TD><TD>Date</TD><TD>Time</TD><TD>Status</TD>'
+			comment << '<HR>Recent matches (percentage is prediction accuracy):<TABLE BORDER="0"><TR><TD>Id</TD><TD>Date</TD><TD>Time</TD><TD>Status</TD>'
 			comment << "<TD>#{selection.first.teams.join('</TD><TD>')}</TD><TD>Result</TD></TR>"
 
 			selection.each do |recentMatch|
@@ -224,14 +231,31 @@ class Bot
 
 				
 				if recentMatch.results.empty?
-					comment << '<TD>pending</TD>'
+					if recentMatch.idsAPI.empty?
+						if recentMatch.status.eql?( 'Started')
+							comment << '<TD>started</TD>'
+						else
+							comment << '<TD>pending</TD>'
+						end
+					else
+						idStrs = Array.new
+						recentMatch.idsAPI.each_index do |i|
+							idStrs << "<A HREF=\"https://account.hirezstudios.com/tribesascend/match-details.aspx?match=#{recentMatch.idsAPI[i]}\">#{i+1}</A>"
+						end
+						comment << "<TD>map #{idStrs.join(',')}</TD>"
+					end
 				else
 					results = Array.new
-					recentMatch.results.each do |res|
-						results << "#{res.scores.join('-')}"
+					recentMatch.results.each_index do |i|
+						res = recentMatch.results[i]
+						id = recentMatch.idsAPI[i]
+						unless id.nil?
+							results << "<A HREF=\"https://account.hirezstudios.com/tribesascend/match-details.aspx?match=#{recentMatch.idsAPI[i]}\">#{res.scores.join('-')}</A>"
+						else
+							results << "#{res.scores.join('-')}"
+						end
 					end
-					comment << '<TD>'
-					comment << "#{results.join(' ')}"
+					comment << "<TD>#{results.join(' ')}"
 					unless recentMatch.perfELO.nil?
 						percent = ( recentMatch.perfELO * 100 ).round
 						comment << " (#{percent}%)"
@@ -272,6 +296,59 @@ class Bot
 			end
 		end
 	end
+
+	def track_matches
+
+		changed = Array.new
+
+		@matches.each do |match|
+
+			next unless match.status.eql?( "Started" )
+
+			client = @connections.select{ |cl, svr| match.label.eql?( svr[ :label] ) }.keys.first
+
+			players = Array.new
+			match.players.each_key do |pN|
+				players << @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+			end
+
+			matchIdsMatrix = Array.new
+			players.each do |player|
+				ids = get_player_matches( player.playerName, match.date ).reverse
+				next if ids.nil?
+				matchIdsMatrix << ids
+			end
+
+			return if matchIdsMatrix.empty?
+
+			noPlayersAPI = matchIdsMatrix.length
+
+			combIdsAPI = Array.new
+			matchIdsMatrix.each do |ids|
+				combIdsAPI += ids
+			end
+
+			idsAPI = combIdsAPI.uniq
+
+			idsAPI.each do |id|
+				idsAPI.delete( id ) if ( combIdsAPI.count( id ) / noPlayersAPI ) < 0.5
+			end
+
+			idsAPI.sort!
+
+			next if idsAPI.eql?( match.idsAPI )
+
+			match.idsAPI = idsAPI
+
+			changed << client unless changed.include?( client )
+
+		end
+
+		changed.each do |client|
+			create_comment( client )
+		end
+
+	end	
 
 	def change_user client, session, *chanPath
 
@@ -644,6 +721,13 @@ class Bot
 				@matches[ index ].date = Time.now
 				message_all( client, "The teams are picked, match (id: #{match.id}) started.", [ nil, @currentMatch[ client ] ], 2 )
 
+				# Record number of maps played by each player
+				match.players.each_key do |pN|
+					player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+					statsVals = get_player_stats( player.playerName, [ 'Matches_Completed' ] )
+					player.noMaps = statsVals.shift unless statsVals.nil?
+				end
+
 				# Create new match
 				create_new_match( client )
 				match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
@@ -729,7 +813,8 @@ class Bot
 		comment= ''
 		result = Array.new
 		perfELO = nil
-		match = Match.new( id, label, status, date, teams, players, comment, result, perfELO )
+		idsAPI = Array.new
+		match = Match.new( id, label, status, date, teams, players, comment, result, perfELO, idsAPI )
 		@matches << match
 		@currentMatch[ client ] = id
 		@moveQueue[ client ] = false
@@ -983,7 +1068,7 @@ class Bot
 		client.send_user_message message.actor, 'Syntax !info "tribes_nick" "stat"'
 		client.send_user_message message.actor, "As above but also shows \"tribes_nick\"'s \"stat\""
 		client.send_user_message message.actor, '"stat" can be a space delimited list of these stats:'
-		stats = get_player_stats 'SomeFakePlayerName'
+		stats = get_player_stats( 'SomeFakePlayerName' )
 		stats.each do |stat|
 			client.send_user_message message.actor, stat unless stat.eql? 'ret_msg'
 		end
@@ -2150,6 +2235,23 @@ class Bot
 
 	end
 
+	def get_player_matches nick, date
+
+		matchesData = @query.get_match_history( nick )
+		matchIds = Array.new
+		matchesData.each do |matchData|
+			matchDate = DateTime.strptime( matchData[ 'Entry_Datetime' ], '%m/%d/%Y %I:%M:%S %p' ).to_time.utc
+			break if matchDate < date
+			matchIds << matchData[ 'MatchId']
+		end
+
+		return matchIds
+
+	rescue => e
+		return nil
+
+	end
+
 	def write_roles_ini client
 
 		sectionNameBase = "#{@connections[ client ][ :host ]}:#{@connections[ client ][ :port ]}"
@@ -2277,6 +2379,8 @@ class Bot
 
 			ini.setValue( sectionName, 'PerformanceELO', match.perfELO.to_s )
 
+			ini.setValue( sectionName, 'MatchIdsAPI', match.idsAPI.join(' ') ) unless match.idsAPI.empty?
+
 		end
 
 		ini.writeToFile( 'matches.ini' )
@@ -2351,7 +2455,7 @@ class Bot
 
 				while rIndex < rCount
 
-					rMap = section.getValue( "Result#{rIndex}Map")
+					rMap = section.getValue( "Result#{rIndex}Map" )
 					rTeams = teams
 					rScores = Array.new
 
@@ -2359,7 +2463,7 @@ class Bot
 						rScores << section.getValue( "Result#{rIndex}#{team}" ).to_i
 					end
 
-					rComment = section.getValue( "Result#{rIndex}Comment")
+					rComment = section.getValue( "Result#{rIndex}Comment" )
 
 					results << Result.new( rMap, rTeams, rScores, rComment )
 
@@ -2369,7 +2473,11 @@ class Bot
 
 				perfELO = Float( section.getValue( 'PerformanceELO' ) )
 
-				@matches << Match.new( idInt, label, status, date, teams, players, comment, results, perfELO )
+				idsAPI = Array.new
+				idsAPIStr = section.getValue( 'MatchIdsAPI' )
+				idsAPI = idsAPIStr.split(' ') unless idsAPIStr.nil?
+
+				@matches << Match.new( idInt, label, status, date, teams, players, comment, results, perfELO, idsAPI )
 
 			end
 
