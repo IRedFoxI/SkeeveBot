@@ -367,6 +367,8 @@ class Bot
 
 						# Sub entering running game
 						channel = client.find_channel( chanPath )
+						playerNum = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
+						return unless channel.localusers.length < playerNum
 						channel.localusers.each do |user|
 							if @players[ client ] && @players[ client ].has_key?( user.name )
 								next if user.name.eql?( mumbleNick )
@@ -503,6 +505,8 @@ class Bot
 
 					# Sub entering running game
 					channel = client.find_channel( chanPath )
+					playerNum = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
+					return unless channel.localusers.length < playerNum
 					channel.localusers.each do |user|
 						if @players[ client ] && @players[ client ].has_key?( user.name )
 							next if user.name.eql?( mumbleNick )
