@@ -2007,12 +2007,15 @@ class Bot
 		index = @matches.index{ |m| m.id.eql?( match.id ) }
 		@matches[ index ] = match
 
+		ratioNew = 0.0
 		match.players.each_key do |pN|
 			unless @eloCalculator.has_player?( pN )
 				player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
 				@eloCalculator.add_player( pN, player.elo, player.noMatches )
+				ratioNew += 1.0 if player.noMatches.eql?( 0 )
 			end
 		end
+		ratioNew = ratioNew / match.players.length
 
 		scores = @eloCalculator.add_match( match )
 		estimated = scores[0][ match.teams[0] ]
@@ -2045,6 +2048,56 @@ class Bot
 		end
 
 		ini.writeToFile( 'players.ini' )
+
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/elo_history.ini' ) )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'elo_history.ini' )
+			FileUtils.cp( 'elo_history.ini', 'elo_history.bak' )
+		else
+			ini = Kesh::IO::Storage::IniFile.new
+		end		
+
+		sectionName = 'ELOPerformance'
+		i = 0
+		count = 1
+		if ini.hasSection?( sectionName )
+			i = ini.getValue( sectionName, 'Count' ).to_i
+			count += i
+			ini.removeValue( sectionName, 'Count' )
+		else
+			ini.addSection( sectionName )
+		end
+		ini.setValue( sectionName, 'Count', count.to_s )
+		ini.setValue( sectionName, "Date#{i}", match.date.to_time.utc.to_s )
+		ini.setValue( sectionName, "Estimated#{i}", estimated.to_s )
+		ini.setValue( sectionName, "Actual#{i}", actual.to_s )
+		ini.setValue( sectionName, "Performance#{i}", match.perfELO.to_s )
+		ini.setValue( sectionName, "RatioNew#{i}", ratioNew.to_s )
+
+		match.players.each_key do |pN|
+			if @eloCalculator.has_player?( pN )
+
+				player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+
+				sectionName = CGI::escape( pN )
+
+				i = 0
+				count = 1
+				if ini.hasSection?( sectionName )
+					i = ini.getValue( sectionName, 'Count' ).to_i
+					count += i
+					ini.removeValue( sectionName, 'Count' )
+				else
+					ini.addSection( sectionName )
+				end
+
+				ini.setValue( sectionName, 'Count', count.to_s )
+				ini.setValue( sectionName, "Date#{i}", match.date.to_time.utc.to_s )
+				ini.setValue( sectionName, "ELO#{i}", player.elo )
+
+			end
+		end
+
+		ini.writeToFile( 'elo_history.ini' )
 
 		write_matches_ini
 		create_comment( client )
