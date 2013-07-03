@@ -307,38 +307,7 @@ class Bot
 
 			client = @connections.select{ |cl, svr| match.label.eql?( svr[ :label] ) }.keys.first
 
-			players = Array.new
-			match.players.each_key do |pN|
-				players << @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
-			end
-
-			matchIdsMatrix = Array.new
-			players.each do |player|
-				ids = get_player_matches( player.playerName, match.date ).reverse
-				next if ids.nil?
-				matchIdsMatrix << ids
-			end
-
-			next if matchIdsMatrix.empty?
-
-			noPlayersAPI = matchIdsMatrix.length
-
-			combIdsAPI = Array.new
-			matchIdsMatrix.each do |ids|
-				combIdsAPI += ids
-			end
-
-			idsAPI = combIdsAPI.uniq
-
-			idsAPI.each do |id|
-				idsAPI.delete( id ) if ( combIdsAPI.count( id ) / noPlayersAPI ) < 0.5
-			end
-
-			idsAPI.sort!
-
-			next if idsAPI.eql?( match.idsAPI )
-
-			match.idsAPI = idsAPI
+			next unless track_match( client, match )
 
 			changed << client unless changed.include?( client )
 
@@ -350,7 +319,43 @@ class Bot
 
 	end
 
-	def track_match match
+	def track_match client, match
+
+		players = Array.new
+		match.players.each_key do |pN|
+			players << @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+		end
+
+		matchIdsMatrix = Array.new
+		players.each do |player|
+			ids = get_player_matches( player.playerName, match.date )
+			next if ids.nil?
+			matchIdsMatrix << ids
+		end
+
+		return false if matchIdsMatrix.empty?
+
+		noPlayersAPI = matchIdsMatrix.length
+
+		combIdsAPI = Array.new
+		matchIdsMatrix.each do |ids|
+			combIdsAPI += ids
+		end
+
+		idsAPI = combIdsAPI.uniq
+
+		idsAPI.each do |id|
+			idsAPI.delete( id ) if ( combIdsAPI.count( id ) / noPlayersAPI ) < 0.5
+		end
+
+		idsAPI.sort!
+
+		return false if idsAPI.eql?( match.idsAPI )
+
+		match.idsAPI = idsAPI
+
+		return true
+
 	end
 
 	def change_user client, session, *chanPath
@@ -724,12 +729,12 @@ class Bot
 				@matches[ index ].date = Time.now
 				message_all( client, "The teams are picked, match (id: #{match.id}) started.", [ nil, @currentMatch[ client ] ], 2 )
 
-				# Record number of maps played by each player
-				match.players.each_key do |pN|
-					player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
-					statsVals = get_player_stats( player.playerName, [ 'Matches_Completed' ] )
-					player.noMaps = statsVals.shift unless statsVals.nil?
-				end
+				# # Record number of maps played by each player
+				# match.players.each_key do |pN|
+				# 	player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+				# 	statsVals = get_player_stats( player.playerName, [ 'Matches_Completed' ] )
+				# 	player.noMaps = statsVals.shift unless statsVals.nil?
+				# end
 
 				# Create new match
 				create_new_match( client )
@@ -798,6 +803,8 @@ class Bot
 		@matches[ index ].status = 'Pending'
 
 		message_all( client, "Your match (id: #{match.id}) seems to be over. Please report the result (check my comment for help).", [ matchId ], 2 )
+
+		track_match( client, match )
 
 		write_matches_ini
 
@@ -2010,7 +2017,7 @@ class Bot
 		scores = @eloCalculator.add_match( match )
 		estimated = scores[0][ match.teams[0] ]
 		actual = scores[1][ match.teams[0] ]
-		match.perfELO = ( estimated - actual ).abs
+		match.perfELO = 1 - ( estimated - actual ).abs
 
 		if File.exists?( 'players.ini' )
 			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
