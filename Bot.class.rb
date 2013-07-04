@@ -328,6 +328,7 @@ class Bot
 
 		matchIdsMatrix = Array.new
 		players.each do |player|
+			next if player.nil?
 			ids = get_player_matches( player.playerName, match.date )
 			next if ids.nil?
 			matchIdsMatrix << ids
@@ -2011,6 +2012,11 @@ class Bot
 		match.players.each_key do |pN|
 			unless @eloCalculator.has_player?( pN )
 				player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+				next if player.nil?
+				if player.elo.nil?
+					player.elo = 1000
+					player.noMatches = 0
+				end
 				@eloCalculator.add_player( pN, player.elo, player.noMatches )
 				ratioNew += 1.0 if player.noMatches.eql?( 0 )
 			end
