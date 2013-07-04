@@ -803,9 +803,19 @@ class Bot
 
 		@matches[ index ].status = 'Pending'
 
-		message_all( client, "Your match (id: #{match.id}) seems to be over. Please report the result (check my comment for help).", [ matchId ], 2 )
-
 		track_match( client, match )
+
+		mapStr = String.new
+		unless match.idsAPI.empty?
+			mapLinks = Array.new
+			match.idsAPI.each do |id|
+				name = get_map_name( id ).split(' ')[2..-1].join(' ')
+				mapLinks << "<A HREF=\"https://account.hirezstudios.com/tribesascend/match-details.aspx?match=#{id}\">#{name}</A>"
+			end
+			mapStr = "You seem to have played #{mapLinks.join(', ')}. "
+		end
+
+		message_all( client, "Your match (id: #{match.id}) seems to be over.#{mapStr} Please report the result (check my comment for help).", [ matchId ], 2 )
 
 		write_matches_ini
 
@@ -2340,6 +2350,16 @@ class Bot
 		end
 
 		return matchIds
+
+	rescue => e
+		return nil
+
+	end
+
+	def get_map_name matchId
+
+		matchData = @query.get_match_stats( matchId )
+		return matchData.first[ "Map_Name" ]
 
 	rescue => e
 		return nil
