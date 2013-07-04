@@ -323,12 +323,12 @@ class Bot
 
 		players = Array.new
 		match.players.each_key do |pN|
-			players << @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+			player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+			players << player unless player.nil?
 		end
 
 		matchIdsMatrix = Array.new
 		players.each do |player|
-			next if player.nil?
 			ids = get_player_matches( player.playerName, match.date )
 			next if ids.nil?
 			matchIdsMatrix << ids
@@ -2010,16 +2010,37 @@ class Bot
 
 		ratioNew = 0.0
 		match.players.each_key do |pN|
+
 			unless @eloCalculator.has_player?( pN )
+
+				elo = nil
+				noMatches = nil
+
 				player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
-				next if player.nil?
-				if player.elo.nil?
-					player.elo = 1000
-					player.noMatches = 0
+
+				if player.nil?
+					if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
+						ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
+						sectionName = 'ELO'
+						eloStr = ini.getValue( sectionName, CGI::escape( pN ) )
+						unless eloStr.nil?
+							elo = eloStr.split(' ')[0].to_i
+							noMatches = eloStr.split(' ')[1].to_i
+						end
+					end
+				else
+					elo = player.elo
+					noMatches = player.noMatches
 				end
-				@eloCalculator.add_player( pN, player.elo, player.noMatches )
-				ratioNew += 1.0 if player.noMatches.eql?( 0 )
+				elo = 1000 if elo.nil?
+				noMatches = 0 if noMatches.nil?
+
+				@eloCalculator.add_player( pN, elo, noMatches )
+
+				ratioNew += 1.0 if noMatches.eql?( 0 )
+
 			end
+
 		end
 		ratioNew = ratioNew / match.players.length
 
@@ -2040,13 +2061,18 @@ class Bot
 		match.players.each_key do |pN|
 			if @eloCalculator.has_player?( pN )
 
+				elo = @eloCalculator.get_elo( pN )
+				noMatches = @eloCalculator.get_noMatches( pN )
+
 				player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
-				player.elo = @eloCalculator.get_elo( pN )
-				player.noMatches = @eloCalculator.get_noMatches( pN )
+				unless player.nil?
+					player.elo = elo
+					player.noMatches = noMatches
+				end
 
 				ini.removeValue( sectionName, CGI::escape( pN ) )
-				unless ( player.elo.eql?( 1000 ) && player.noMatches.eql?( 0 ) )
-					eloStr = "#{player.elo} #{player.noMatches}"
+				unless ( elo.eql?( 1000 ) && noMatches.eql?( 0 ) )
+					eloStr = "#{elo} #{noMatches}"
 					ini.setValue( sectionName, CGI::escape( pN ), eloStr )
 				end
 
@@ -2082,8 +2108,7 @@ class Bot
 		match.players.each_key do |pN|
 			if @eloCalculator.has_player?( pN )
 
-				player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
-
+				elo = @eloCalculator.get_elo( pN )
 				sectionName = CGI::escape( pN )
 
 				i = 0
@@ -2098,7 +2123,7 @@ class Bot
 
 				ini.setValue( sectionName, 'Count', count.to_s )
 				ini.setValue( sectionName, "Date#{i}", match.date.to_time.utc.to_s )
-				ini.setValue( sectionName, "ELO#{i}", player.elo )
+				ini.setValue( sectionName, "ELO#{i}", elo )
 
 			end
 		end
