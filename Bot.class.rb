@@ -399,6 +399,15 @@ class Bot
 			if @players[ client ] && @players[ client ].has_key?( mumbleNick )
 				# Already signed up
 
+				# DEBUG
+				if !player.aliasNick.nil? && !player.aliasNick.eql?( player.playerName )
+					message = "DEBUG: aliasNick *not* equal to playerName for mumble nick: #{player.mumbleNick}"
+					puts message
+					puts player.inspect
+					on_exception( client, message )
+				end
+
+
 				player = @players[ client ][ mumbleNick ]
 				oldMatchId = player.match
 
@@ -450,6 +459,8 @@ class Bot
 
 						# Sub entering running game
 						channel = client.find_channel( chanPath )
+						playerNum = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
+						return unless channel.localusers.length < playerNum
 						channel.localusers.each do |user|
 							if @players[ client ] && @players[ client ].has_key?( user.name )
 								next if user.name.eql?( mumbleNick )
@@ -587,6 +598,8 @@ class Bot
 
 					# Sub entering running game
 					channel = client.find_channel( chanPath )
+					playerNum = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
+					return unless channel.localusers.length < playerNum
 					channel.localusers.each do |user|
 						if @players[ client ] && @players[ client ].has_key?( user.name )
 							next if user.name.eql?( mumbleNick )
