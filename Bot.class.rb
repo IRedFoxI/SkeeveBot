@@ -155,7 +155,7 @@ class Bot
 			end
 
 
-			if ( Time.now - @lastTrack ) > 60
+			if ( Time.now - @lastTrack ) > 60 * 5
 				track_matches
 				@lastTrack = Time.now
 			end
