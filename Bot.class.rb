@@ -399,6 +399,9 @@ class Bot
 			if @players[ client ] && @players[ client ].has_key?( mumbleNick )
 				# Already signed up
 
+				player = @players[ client ][ mumbleNick ]
+				oldMatchId = player.match
+
 				# DEBUG
 				if !player.aliasNick.nil? && !player.aliasNick.eql?( player.playerName )
 					message = "DEBUG: aliasNick *not* equal to playerName for mumble nick: #{player.mumbleNick}"
@@ -406,10 +409,6 @@ class Bot
 					puts player.inspect
 					on_exception( client, message )
 				end
-
-
-				player = @players[ client ][ mumbleNick ]
-				oldMatchId = player.match
 
 				if player.roles.eql?( roles ) && player.team.nil?
 					# No change in role
