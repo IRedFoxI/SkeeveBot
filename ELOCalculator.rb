@@ -159,7 +159,7 @@ class ELOCalculator
 		end
 
 		g = Gruff::Line.new(1600)
-		g.title = "ELO History #{playerName}"
+		g.title = "ELO History #{playerName} (#{@players[ playerName ].length})"
 		g.dot_radius = 2
 		g.line_width = 1
 		g.title_font_size = 25

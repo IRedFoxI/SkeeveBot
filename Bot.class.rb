@@ -9,7 +9,7 @@ requireLibrary 'TribesAPI'
 requireLibrary 'ELO'
 
 
-Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :noMatches, :playerName, :level, :tag, :noCaps, :noMaps, :match, :roles, :team )
+Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :noMatches, :playerName, :level, :tag, :noCaps, :noMaps, :match, :roles, :team, :autoTeam )
 Match = Struct.new( :id, :label, :status, :date, :teams, :players, :comment, :results, :perfELO, :idsAPI )
 Result = Struct.new( :map, :teams, :scores, :comment )
 
@@ -181,6 +181,20 @@ class Bot
 
 		match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
 		comment << "<HR>Current status: #{match.status}<BR>"
+		unless @players[ client ].nil?
+			match.teams.each do |team|
+				avgElo = 0
+				noPlayers = 0
+				@players[ client ].values.select {|pl| pl.match.eql?( @currentMatch[ client ] ) && pl.autoTeam.eql?( team ) }.each do |pl|
+					avgElo += pl.elo
+					noPlayers += 1
+				end
+				if noPlayers > 0
+					avgElo = avgElo / noPlayers
+					comment << "Average ELO #{team}: #{avgElo}<BR>"
+				end
+			end
+		end
 
 		rolesNeeded = check_requirements( client )
 		playersNeeded = rolesNeeded.shift
@@ -204,7 +218,11 @@ class Bot
 				roles = convert_symbols_to_html( pl.roles.join('/') )
 				comment << "<TD>#{name}(level: #{pl.level}): #{roles}</TD>"
 				if pl.team.nil?
-					comment << '<TD>&nbsp;</TD></TR>'
+					if pl.autoTeam.nil?
+						comment << '<TD>&nbsp;</TD></TR>'
+					else
+						comment << "<TD>[#{pl.autoTeam}]</TD></TR>"
+					end
 				else
 					comment << "<TD>#{pl.team}</TD></TR>"
 				end
@@ -359,6 +377,166 @@ class Bot
 
 	end
 
+	def suggest_teams client
+
+		signups = @players[ client ].values.select{ |pl| pl.match.eql?( @currentMatch[ client ] ) }
+		puts "signups: #{signups}"
+
+		teamNames = @rolesRequired[ client ].select{ |k,v| v.eql?('T') }.keys
+		actualTeams = Hash.new
+		noPlayers = Hash.new
+		eloTeams = Hash.new
+		autoTeams = Hash.new
+		teamNames.each do |team|
+			actualTeams[ team ] = signups.select{ |pl| pl.team.eql?( team ) }
+			signups.delete_if{ |pl| pl.team.eql?( team ) }
+			noPlayers[ team ] = actualTeams[ team ].length
+			if noPlayers[ team ] > 0
+				eloTeams[ team ] = 0
+				actualTeams[ team ].each do |pl|
+					eloTeams[ team ] += pl.elo
+				end
+				eloTeams[ team ] = eloTeams[ team ] / noPlayers[ team ]
+			else
+				eloTeams[ team ] = nil
+			end
+			autoTeams[ team ] = Array.new
+		end
+
+		puts "actualTeams: #{actualTeams}"
+		puts "eloTeams: #{eloTeams}"
+		puts "noPlayers: #{noPlayers}"
+
+		queue = signups.select{ |pl| @rolesRequired[ client ][ pl.roles.first ].eql?('Q') }
+		signups.delete_if{ |pl| @rolesRequired[ client ][ pl.roles.first ].eql?('Q') }
+
+		puts "queue: #{queue}"
+		puts "signups: #{signups}"
+
+		rolesNeeded = Hash.new
+		teamNames.each do |team|
+			rolesNeeded[ team ] = Array.new
+			@rolesRequired[ client ].each_pair do |role, req|
+				next unless req.eql?( req.to_i.to_s )
+				req = req.to_i
+				i = 0
+				while i < req
+					rolesNeeded[ team ] << role
+					i += 1
+				end
+			end
+		end
+
+		playerNum = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
+
+		pickingRound = 0
+		while pickingRound < playerNum
+
+			teamNames.each do |team|
+
+				pool = Array.new
+
+				if actualTeams[ team ].length > playerNum - pickingRound
+					raise 'Auto picking teams: not enough picking rounds left to pick all players already on the team.'
+				end
+
+				if actualTeams[ team ].length.eql?( playerNum - pickingRound )
+					pool = actualTeams[ team ]
+				else
+					pool = signups | actualTeams[ team ]
+				end
+
+				role = rolesNeeded[ team ].shift
+				unless role.nil?
+					pool.select! { |pl| pl.roles.include?( role ) }
+					return false if pool.empty?
+				end
+
+				pool = queue.clone if pool.empty?
+
+				if eloTeams.values.include?( nil )
+
+					eloPick = 0
+					pick = nil
+
+					pool.each do |pl|
+						if pl.elo > eloPick
+							eloPick = pl.elo
+							pick = pl
+						end
+					end
+
+				else
+
+					noOpponents = 0
+					eloOpponents = 0
+					teamNames.each do |t|
+						unless t.eql?( team )
+							noOpponents += 1
+							eloOpponents += eloTeams[ t ]
+						end
+					end
+
+					raise 'Auto picking teams: no opponents?' if noOpponents.eql?( 0 )
+
+					eloOpponents = eloOpponents / noOpponents
+					currEloDiff = ( eloTeams[ team ] - eloOpponents ).abs
+					currSumElo = eloTeams[ team ] * noPlayers[ team ]
+					nextEloDiff = nil
+
+					pick = nil
+
+					pool.each do |pl|
+						thisEloDiff = ( ( currSumElo + pl.elo ) / ( noPlayers[ team ] + 1 ) - eloOpponents ).abs
+						if nextEloDiff.nil? || thisEloDiff < nextEloDiff
+							nextEloDiff = thisEloDiff  
+							pick = pl
+						end
+					end
+
+				end
+
+				autoTeams[ team ] << pick
+
+				signups.delete( pick )
+				actualTeams[ team ].delete( pick )
+				queue.delete( pick )
+
+				players = autoTeams[ team ] | actualTeams[ team ]
+				noPlayers[ team ] = players.length
+				eloTeams[ team ] = 0
+				players.each do |pl|
+					eloTeams[ team ] += pl.elo
+				end
+				eloTeams[ team ] = eloTeams[ team ] / noPlayers[ team ]
+
+			end
+
+			pickingRound += 1
+
+		end
+
+		puts "autoTeams: #{autoTeams}"
+		puts "eloTeams: #{eloTeams}"
+		puts "noPlayers: #{noPlayers}"
+
+		teamNames.each do |team|
+			raise "Auto picking teams: team #{team} doesn't have the required number of players." unless autoTeams[ team ].length.eql?( playerNum )
+			raise "Auto picking teams: team #{team} has players already on the team that are not picked." if actualTeams[ team ].length > 0
+			autoTeams[ team ].each do |pl|
+				pl.autoTeam = team
+			end
+		end
+
+		players = signups | queue
+		players.each do |pl|
+			pl.autoTeam = nil
+		end
+
+		return true
+
+	end
+
 	def change_user client, session, *chanPath
 
 		return unless @chanRoles[ client ]
@@ -459,12 +637,12 @@ class Bot
 						# Sub entering running game
 						channel = client.find_channel( chanPath )
 						playerNum = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
-						return unless channel.localusers.length < playerNum
 						channel.localusers.each do |user|
 							if @players[ client ] && @players[ client ].has_key?( user.name )
 								next if user.name.eql?( mumbleNick )
 								id = @players[ client ][ user.name ].match
 								if !id.nil? && id != @currentMatch[ client ]
+									return unless ( channel.localusers.length - 1 ) < playerNum # FIXME: include players in subdirectories
 									@players[ client ][ mumbleNick ].team = roles.first
 									@players[ client ][ mumbleNick ].match = id
 									index = @matches.index{ |m| m.id.eql?( id ) }
@@ -568,7 +746,7 @@ class Bot
 				playerName = playerData[ :playerName ]
 				level = playerData[ :level ]
 				tag = playerData[ :tag ]
-				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, noMatches, playerName, level, tag, nil, nil, nil, roles, nil )
+				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, noMatches, playerName, level, tag, nil, nil, nil, roles, nil, nil )
 
 				firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
@@ -598,12 +776,12 @@ class Bot
 					# Sub entering running game
 					channel = client.find_channel( chanPath )
 					playerNum = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
-					return unless channel.localusers.length < playerNum
 					channel.localusers.each do |user|
 						if @players[ client ] && @players[ client ].has_key?( user.name )
 							next if user.name.eql?( mumbleNick )
 							id = @players[ client ][ user.name ].match
 							if !id.nil? && id != @currentMatch[ client ]
+								return unless ( channel.localusers.length - 1 ) < playerNum # FIXME: include players in subdirectories
 								player.team = roles.first
 								player.match = id
 								@players[ client ][ mumbleNick ] = player
@@ -724,6 +902,9 @@ class Bot
 
 			if match.players.length < noTeams
 				@matches.select{ |m| m.id.eql?( match.id ) }.first.status = 'Signup'
+				@players[ client ].values.each do |pl|
+					pl.autoTeam = nil
+				end
 			end
 
 			teamsPicked = 0
@@ -742,13 +923,6 @@ class Bot
 				@matches[ index ].date = Time.now
 				message_all( client, "The teams are picked, match (id: #{match.id}) started.", [ nil, @currentMatch[ client ] ], 2 )
 
-				# # Record number of maps played by each player
-				# match.players.each_key do |pN|
-				# 	player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
-				# 	statsVals = get_player_stats( player.playerName, [ 'Matches_Completed' ] )
-				# 	player.noMaps = statsVals.shift unless statsVals.nil?
-				# end
-
 				# Create new match
 				create_new_match( client )
 				match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
@@ -761,6 +935,10 @@ class Bot
 				end
 
 				write_matches_ini
+
+			else
+
+				suggest_teams( client ) unless match.status.eql?( 'Signup' )
 
 			end
 
@@ -776,13 +954,20 @@ class Bot
 
 			elsif prevPlayersNeeded <= 0 && playersNeeded > 0
 				message_all( client, 'No longer enough players to start a match.', [ nil, @currentMatch[ client ] ], 2 )
+				@players[ client ].values.each do |pl|
+					pl.autoTeam = nil
+				end
 
 			elsif ( prevPlayersNeeded > 0 && playersNeeded <= 0 ) || !rolesNeeded.eql?( prevRolesNeeded ) 
 
 				if rolesNeeded.empty?
 					message_all( client, 'Enough players and all required roles are most likely covered. Start picking!', [ nil, @currentMatch[ client ] ], 2 )
+					suggest_teams( client )
 				else
 					message_all( client, "Enough players but missing #{rolesNeeded.join(' and ')}", [ nil, @currentMatch[ client ] ], 2 )
+					@players[ client ].values.each do |pl|
+						pl.autoTeam = nil
+					end
 				end
 				
 			end
@@ -1128,7 +1313,7 @@ class Bot
 			playerName = playerData[ :playerName ]
 			level = playerData[ :level ]
 			tag = playerData[ :tag ]
-			player = Player.new( message.actor, mumbleNick, admin, aliasNick, muted, elo, noMatches, playerName, level, tag, nil, nil, nil, nil, nil )
+			player = Player.new( message.actor, mumbleNick, admin, aliasNick, muted, elo, noMatches, playerName, level, tag, nil, nil, nil, nil, nil, nil )
 			@players[ client ][ mumbleNick ] = player
 		end
 
