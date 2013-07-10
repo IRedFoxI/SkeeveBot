@@ -28,3 +28,7 @@ SkeeveBot.ipr
 SkeeveBot.iws
 
 *.sublime-*
+
+Graphs/*
+Identities/*
+
