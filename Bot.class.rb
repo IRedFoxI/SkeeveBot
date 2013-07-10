@@ -962,7 +962,6 @@ class Bot
 
 				if rolesNeeded.empty?
 					message_all( client, 'Enough players and all required roles are most likely covered. Start picking!', [ nil, @currentMatch[ client ] ], 2 )
-					suggest_teams( client )
 				else
 					message_all( client, "Enough players but missing #{rolesNeeded.join(' and ')}", [ nil, @currentMatch[ client ] ], 2 )
 					@players[ client ].values.each do |pl|
@@ -971,6 +970,8 @@ class Bot
 				end
 				
 			end
+
+			suggest_teams( client ) if playersNeeded <= 0
 
 		end
 
