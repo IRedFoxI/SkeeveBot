@@ -459,12 +459,12 @@ class Bot
 						# Sub entering running game
 						channel = client.find_channel( chanPath )
 						playerNum = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
-						return unless channel.localusers.length < playerNum
 						channel.localusers.each do |user|
 							if @players[ client ] && @players[ client ].has_key?( user.name )
 								next if user.name.eql?( mumbleNick )
 								id = @players[ client ][ user.name ].match
 								if !id.nil? && id != @currentMatch[ client ]
+									return unless ( channel.localusers.length - 1 ) < playerNum # FIXME: include players in subdirectories
 									@players[ client ][ mumbleNick ].team = roles.first
 									@players[ client ][ mumbleNick ].match = id
 									index = @matches.index{ |m| m.id.eql?( id ) }
@@ -598,12 +598,12 @@ class Bot
 					# Sub entering running game
 					channel = client.find_channel( chanPath )
 					playerNum = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
-					return unless channel.localusers.length < playerNum
 					channel.localusers.each do |user|
 						if @players[ client ] && @players[ client ].has_key?( user.name )
 							next if user.name.eql?( mumbleNick )
 							id = @players[ client ][ user.name ].match
 							if !id.nil? && id != @currentMatch[ client ]
+								return unless ( channel.localusers.length - 1 ) < playerNum # FIXME: include players in subdirectories
 								player.team = roles.first
 								player.match = id
 								@players[ client ][ mumbleNick ] = player
