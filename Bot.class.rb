@@ -740,14 +740,22 @@ class Bot
 				index = @matches.index{ |m| m.id.eql?( @currentMatch[ client ] ) }
 				@matches[ index ].status = 'Started'
 				@matches[ index ].date = Time.now
-				message_all( client, "The teams are picked, match (id: #{match.id}) started.", [ nil, @currentMatch[ client ] ], 2 )
 
-				# # Record number of maps played by each player
-				# match.players.each_key do |pN|
-				# 	player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
-				# 	statsVals = get_player_stats( player.playerName, [ 'Matches_Completed' ] )
-				# 	player.noMaps = statsVals.shift unless statsVals.nil?
-				# end
+				teamEloStr = Array.new
+
+				match.teams.each do |team|
+					avgElo = 0
+					noPlayers = 0
+					@players[ client ].values.select {|pl| pl.match.eql?( @currentMatch[ client ] ) && pl.team.eql?( team ) }.each do |pl|
+						avgElo += pl.elo
+						noPlayers += 1
+					end
+					avgElo = avgElo / noPlayers
+					teamEloStr << "#{avgElo} (#{team})"
+				end
+				eloStr = "ELOs: #{teamEloStr.join(', ')}"
+
+				message_all( client, "The teams are picked, match (id: #{match.id}) started. #{eloStr}.", [ nil, @currentMatch[ client ] ], 2 )
 
 				# Create new match
 				create_new_match( client )
