@@ -182,7 +182,7 @@ class Bot
 		match = @matches.select{ |m| m.id.eql?( @currentMatch[ client ] ) }.first
 		comment << "<HR>Current status: #{match.status}<BR>"
 		unless @players[ client ].nil?
-			match.teams.each do |team|
+			@rolesRequired[ client ].select{ |k,v| v.eql?('T') }.keys.each do |team|
 				avgElo = 0
 				noPlayers = 0
 				@players[ client ].values.select {|pl| pl.match.eql?( @currentMatch[ client ] ) && pl.autoTeam.eql?( team ) }.each do |pl|
@@ -191,7 +191,7 @@ class Bot
 				end
 				if noPlayers > 0
 					avgElo = avgElo / noPlayers
-					comment << "Average ELO #{team}: #{avgElo}<BR>"
+					comment << "Average ELO suggested team #{team}: #{avgElo}<BR>"
 				end
 			end
 		end
@@ -380,7 +380,6 @@ class Bot
 	def suggest_teams client
 
 		signups = @players[ client ].values.select{ |pl| pl.match.eql?( @currentMatch[ client ] ) }
-		puts "signups: #{signups}"
 
 		teamNames = @rolesRequired[ client ].select{ |k,v| v.eql?('T') }.keys
 		actualTeams = Hash.new
@@ -403,15 +402,8 @@ class Bot
 			autoTeams[ team ] = Array.new
 		end
 
-		puts "actualTeams: #{actualTeams}"
-		puts "eloTeams: #{eloTeams}"
-		puts "noPlayers: #{noPlayers}"
-
 		queue = signups.select{ |pl| @rolesRequired[ client ][ pl.roles.first ].eql?('Q') }
 		signups.delete_if{ |pl| @rolesRequired[ client ][ pl.roles.first ].eql?('Q') }
-
-		puts "queue: #{queue}"
-		puts "signups: #{signups}"
 
 		rolesNeeded = Hash.new
 		teamNames.each do |team|
@@ -441,7 +433,7 @@ class Bot
 				end
 
 				if actualTeams[ team ].length.eql?( playerNum - pickingRound )
-					pool = actualTeams[ team ]
+					pool = actualTeams[ team ].clone
 				else
 					pool = signups | actualTeams[ team ]
 				end
@@ -515,10 +507,6 @@ class Bot
 			pickingRound += 1
 
 		end
-
-		puts "autoTeams: #{autoTeams}"
-		puts "eloTeams: #{eloTeams}"
-		puts "noPlayers: #{noPlayers}"
 
 		teamNames.each do |team|
 			raise "Auto picking teams: team #{team} doesn't have the required number of players." unless autoTeams[ team ].length.eql?( playerNum )
@@ -921,7 +909,22 @@ class Bot
 				index = @matches.index{ |m| m.id.eql?( @currentMatch[ client ] ) }
 				@matches[ index ].status = 'Started'
 				@matches[ index ].date = Time.now
-				message_all( client, "The teams are picked, match (id: #{match.id}) started.", [ nil, @currentMatch[ client ] ], 2 )
+
+				teamEloStr = Array.new
+
+				match.teams.each do |team|
+					avgElo = 0
+					noPlayers = 0
+					@players[ client ].values.select {|pl| pl.match.eql?( @currentMatch[ client ] ) && pl.team.eql?( team ) }.each do |pl|
+						avgElo += pl.elo
+						noPlayers += 1
+					end
+					avgElo = avgElo / noPlayers
+					teamEloStr << "#{avgElo} (#{team})"
+				end
+				eloStr = "ELOs: #{teamEloStr.join(', ')}"
+
+				message_all( client, "The teams are picked, match (id: #{match.id}) started. #{eloStr}.", [ nil, @currentMatch[ client ] ], 2 )
 
 				# Create new match
 				create_new_match( client )
