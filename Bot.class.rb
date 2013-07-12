@@ -640,6 +640,13 @@ class Bot
 							end
 						end
 
+						# Remove the player from his current team and 
+						# Remove the team from the match if no longer any players on it
+						match.players.delete( player.playerName )
+						if match.players.select { |pN, team| team.eql?( player.team ) }.length.eql?( 0 )
+							match.teams.delete( player.team )
+						end
+
 						player.team = roles.first
 						player.match = @currentMatch[ client ]
 
@@ -778,6 +785,13 @@ class Bot
 								return
 							end
 						end
+					end
+
+					# Remove the player from his current team and 
+					# Remove the team from the match if no longer any players on it
+					match.players.delete( player.playerName )
+					if match.players.select { |pN, team| team.eql?( player.team ) }.length.eql?( 0 )
+						match.teams.delete( player.team )
 					end
 
 					player.team = roles.first
