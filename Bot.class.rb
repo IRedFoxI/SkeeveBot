@@ -2523,7 +2523,7 @@ class Bot
 		output = eval(command)
 		puts "Eval call returned: #{output}"
 		client.send_user_message session, "Output: #{output}"
-	rescue => e
+	rescue Exception => e
 		client.send_user_message session, "The eval threw an exception '#{e}'\nTRACE:\n#{e.backtrace.join('\n')}"
 	end
 
