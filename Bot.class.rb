@@ -1967,9 +1967,11 @@ class Bot
 		end
 
 		if match
-			resultStr = set_result( client, match, scores )
-			client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
-			message_all( client, "#{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", [ match.id ], 2, message.actor )
+			resultStr = set_result( client, match, scores, message.actor )
+			unless resultStr.nil?
+				client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
+				message_all( client, "#{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", [ match.id ], 2, message.actor )
+			end
 		else
 			client.send_user_message message.actor, 'No match found with results pending. Maybe the match has already been reported.'
 		end
@@ -2009,9 +2011,11 @@ class Bot
 			match = @matches.select{ |m| m.id.eql?( matchId ) }.first
 
 			if match
-				resultStr = set_result( client, match, scores )
-				client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
-				message_all( client, "Admin #{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", [ match.id ], 2, message.actor )
+				resultStr = set_result( client, match, scores, message.actor )
+				unless resultStr.nil?
+					client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
+					message_all( client, "Admin #{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", [ match.id ], 2, message.actor )
+				end
 			else
 				client.send_user_message message.actor, "No match with id \"#{matchId}\" found."
 			end
@@ -2027,15 +2031,15 @@ class Bot
 		client.send_user_message message.actor, 'Sets the "scores" of "match_id" for all maps in form "ourcaps"-"theircaps" separated by a space.'
 	end
 
-	def set_result client, match, scores
+	def set_result client, match, scores, reporter
 
 		results = Array.new
 
 		scores.each do |score|
 
 			if score.split('-').length != match.teams.length
-				client.send_user_message message.actor, 'Malformed result: please use "BE"-"DS" for each map.'
-				return
+				client.send_user_message reporter, 'Malformed result: please use "BE"-"DS" for each map.'
+				return nil
 			end
 
 			result = Result.new
