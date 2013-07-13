@@ -429,7 +429,11 @@ class Bot
 				pool = Array.new
 
 				if actualTeams[ team ].length > playerNum - pickingRound
-					raise 'Auto picking teams: not enough picking rounds left to pick all players already on the team.'
+					puts 'Auto picking teams: not enough picking rounds left to pick all players already on the team.'
+					@players[ client ].values.select{ |pl| pl.match.eql?( @currentMatch[ client ] ) }.each do |pl|
+						pl.autoTeam = nil
+					end
+					return false
 				end
 
 				if actualTeams[ team ].length.eql?( playerNum - pickingRound )
@@ -441,7 +445,12 @@ class Bot
 				role = rolesNeeded[ team ].shift
 				unless role.nil?
 					pool.select! { |pl| pl.roles.include?( role ) }
-					return false if pool.empty?
+					if pool.empty?
+						@players[ client ].values.select{ |pl| pl.match.eql?( @currentMatch[ client ] ) }.each do |pl|
+							pl.autoTeam = nil
+						end
+						return false
+					end
 				end
 
 				pool = queue.clone if pool.empty?
@@ -486,6 +495,19 @@ class Bot
 						end
 					end
 
+				end
+
+				if pick.nil?
+					puts 'Auto picking teams: no pick, something went wrong'
+					puts "pool: #{pool}"
+					puts "actualTeams: #{actualTeams}"
+					puts "autoTeams: #{autoTeams}"
+					puts "signups: #{signups}"
+					puts "queue: #{queue}"
+					@players[ client ].values.select{ |pl| pl.match.eql?( @currentMatch[ client ] ) }.each do |pl|
+						pl.autoTeam = nil
+					end
+					return false
 				end
 
 				autoTeams[ team ] << pick
