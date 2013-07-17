@@ -1000,7 +1000,27 @@ class Bot
 			elsif ( prevPlayersNeeded > 0 && playersNeeded <= 0 ) || !rolesNeeded.eql?( prevRolesNeeded ) 
 
 				if rolesNeeded.empty?
+
 					message_all( client, 'Enough players and all required roles are most likely covered. Start picking!', [ nil, @currentMatch[ client ] ], 2 )
+
+					suggest_teams( client )
+					already_suggested = true
+
+					suggestedPlayers = @players[ client ].values.select{ |pl| pl.match.eql?( @currentMatch[ client ] ) && !pl.autoTeam.nil? }
+
+					teams = Hash.new
+					suggestedPlayers.each do |pl|
+						teams[ pl.autoTeam ] = Array.new unless teams.has_key?( pl.autoTeam )
+						teams[ pl.autoTeam ] << pl.playerName
+					end
+
+					teamStrs = Array.new
+					teams.each_key do |team|
+						teamStrs << "#{teams[ team ].join(' ')} (#{team})"
+					end
+
+					message_all( client, "Suggested teams: #{teamStrs.join(', ')}", [ nil, @currentMatch[ client ] ], 2 )
+
 				else
 					message_all( client, "Enough players but missing #{rolesNeeded.join(' and ')}", [ nil, @currentMatch[ client ] ], 2 )
 					@players[ client ].values.each do |pl|
@@ -1010,7 +1030,7 @@ class Bot
 				
 			end
 
-			suggest_teams( client ) if playersNeeded <= 0
+			suggest_teams( client ) if playersNeeded <= 0 && !already_suggested
 
 		end
 
