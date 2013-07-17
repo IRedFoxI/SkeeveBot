@@ -7,10 +7,11 @@ require 'fast_gettext'
 requireLibrary 'IO'
 requireLibrary 'Mumble'
 requireLibrary 'TribesAPI'
+requireLibrary 'ELO'
 
 
-Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :playerName, :level, :tag, :noCaps, :noMaps, :match, :roles, :team, :locale )
-Match = Struct.new( :id, :label, :status, :date, :teams, :players, :comment, :results )
+Player = Struct.new( :session, :mumbleNick, :admin, :aliasNick, :muted, :elo, :noMatches, :playerName, :level, :tag, :noCaps, :noMaps, :match, :roles, :team, :locale )
+Match = Struct.new( :id, :label, :status, :date, :teams, :players, :comment, :results, :perfELO, :idsAPI )
 Result = Struct.new( :map, :teams, :scores, :comment )
 
 class Bot
@@ -39,6 +40,7 @@ class Bot
 			@query = Kesh::TribesAPI::TribesAPI.new( @options[ :base_url ], @options[ :devId ], @options[ :authKey ] )
 		end
 		@lastCleanUp = Time.now
+		@lastTrack = Time.now
 		@localeAliases = Hash.new
 
 		load_matches_ini
@@ -147,7 +149,6 @@ class Bot
 
 			create_comment( client )
 
-
 		end
 
 		# Main loop
@@ -156,6 +157,12 @@ class Bot
 			if ( Time.now - @lastCleanUp ) > 60 * 60
 				remove_old_matches
 				@lastCleanUp = Time.now
+			end
+
+
+			if ( Time.now - @lastTrack ) > 60 * 5
+				track_matches
+				@lastTrack = Time.now
 			end
 
 			return true unless all_connected? # TODO: This is a very ugly way to reset all connections
@@ -192,14 +199,8 @@ class Bot
 		end
 
 		unless @players[ client ].nil? || @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }.empty?
-			comment << '<HR><TABLE BORDER="0"><TR><TD>Signups</TD>'
+			comment << '<HR><TABLE BORDER="0"><TR><TD>Signups</TD><TD>Team</TD></TR>'
 			signups = @players[ client ].select{ |mN, pl| pl.match.eql?( @currentMatch[ client ] ) }
-			noCols = 1
-			match.teams.each do |t|
-				comment << "<TD>#{t}</TD>"
-				noCols += 1
-			end
-			comment << '</TR>'
 			signups.each_value do |pl|
 				comment << '<TR>'
 				name = String.new
@@ -207,16 +208,11 @@ class Bot
 				name << convert_symbols_to_html( pl.playerName )
 				roles = convert_symbols_to_html( pl.roles.join('/') )
 				comment << "<TD>#{name}(level: #{pl.level}): #{roles}</TD>"
-				i = 2
-				while i <= noCols
-					if pl.team.eql?( match.teams[ i - 2 ] )
-						comment << '<TD><CENTER>*</CENTER></TD>'
-					else
-						comment << '<TD></TD>'
-					end
-					i += 1
+				if pl.team.nil?
+					comment << '<TD>&nbsp;</TD></TR>'
+				else
+					comment << "<TD>#{pl.team}</TD></TR>"
 				end
-				comment << '</TR>'
 			end
 			comment << '</TABLE>'
 		end
@@ -225,7 +221,7 @@ class Bot
 		selection = selection | @matches.select{ |m| m.label.eql?( @connections[ client ][ :label ] ) && !m.status.eql?( 'Deleted' ) && !m.id.eql?( @currentMatch[ client ] ) }
 		unless selection.empty?
 			
-			comment << '<HR>Recent matches:<TABLE BORDER="0"><TR><TD>Id</TD><TD>Date</TD><TD>Time</TD><TD>Status</TD>'
+			comment << '<HR>Recent matches (percentage is prediction accuracy):<TABLE BORDER="0"><TR><TD>Id</TD><TD>Date</TD><TD>Time</TD><TD>Status</TD>'
 			comment << "<TD>#{selection.first.teams.join('</TD><TD>')}</TD><TD>Result</TD></TR>"
 
 			selection.each do |recentMatch|
@@ -240,13 +236,36 @@ class Bot
 
 				
 				if recentMatch.results.empty?
-					comment << '<TD>pending</TD>'
+					if recentMatch.idsAPI.empty?
+						if recentMatch.status.eql?( 'Started')
+							comment << '<TD>started</TD>'
+						else
+							comment << '<TD>pending</TD>'
+						end
+					else
+						idStrs = Array.new
+						recentMatch.idsAPI.each_index do |i|
+							idStrs << "<A HREF=\"https://account.hirezstudios.com/tribesascend/match-details.aspx?match=#{recentMatch.idsAPI[i]}\">#{i+1}</A>"
+						end
+						comment << "<TD>map #{idStrs.join(',')}</TD>"
+					end
 				else
 					results = Array.new
-					recentMatch.results.each do |res|
-						results << "#{res.scores.join('-')}"
+					recentMatch.results.each_index do |i|
+						res = recentMatch.results[i]
+						id = recentMatch.idsAPI[i]
+						unless id.nil?
+							results << "<A HREF=\"https://account.hirezstudios.com/tribesascend/match-details.aspx?match=#{recentMatch.idsAPI[i]}\">#{res.scores.join('-')}</A>"
+						else
+							results << "#{res.scores.join('-')}"
+						end
 					end
-					comment << "<TD>#{results.join(' ')}</TD>"
+					comment << "<TD>#{results.join(' ')}"
+					unless recentMatch.perfELO.nil?
+						percent = ( recentMatch.perfELO * 100 ).round
+						comment << " (#{percent}%)"
+					end
+					comment << '</TD>'
 				end
 				comment << '</TR>'
 			end
@@ -281,6 +300,68 @@ class Bot
 				@matches.delete( match )
 			end
 		end
+	end
+
+	def track_matches
+
+		changed = Array.new
+
+		@matches.each do |match|
+
+			next unless match.status.eql?( "Started" )
+
+			client = @connections.select{ |cl, svr| match.label.eql?( svr[ :label] ) }.keys.first
+
+			next unless track_match( client, match )
+
+			changed << client unless changed.include?( client )
+
+		end
+
+		changed.each do |client|
+			create_comment( client )
+		end
+
+	end
+
+	def track_match client, match
+
+		players = Array.new
+		match.players.each_key do |pN|
+			player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+			players << player unless player.nil?
+		end
+
+		matchIdsMatrix = Array.new
+		players.each do |player|
+			ids = get_player_matches( player.playerName, match.date )
+			next if ids.nil?
+			matchIdsMatrix << ids
+		end
+
+		return false if matchIdsMatrix.empty?
+
+		noPlayersAPI = matchIdsMatrix.length
+
+		combIdsAPI = Array.new
+		matchIdsMatrix.each do |ids|
+			combIdsAPI += ids
+		end
+
+		idsAPI = combIdsAPI.uniq
+
+		idsAPI.each do |id|
+			idsAPI.delete( id ) if ( combIdsAPI.count( id ) / noPlayersAPI ) < 0.5
+		end
+
+		idsAPI.sort!
+
+		return false if idsAPI.eql?( match.idsAPI )
+
+		match.idsAPI = idsAPI
+
+		return true
+
 	end
 
 	def change_user client, session, *chanPath
@@ -325,6 +406,14 @@ class Bot
 
 				player = @players[ client ][ mumbleNick ]
 				oldMatchId = player.match
+
+				# DEBUG
+				if !player.aliasNick.nil? && !player.aliasNick.eql?( player.playerName )
+					message = "DEBUG: aliasNick *not* equal to playerName for mumble nick: #{player.mumbleNick}"
+					puts message
+					puts player.inspect
+					on_exception( client, message )
+				end
 
 				if player.roles.eql?( roles ) && player.team.nil?
 					# No change in role
@@ -374,11 +463,13 @@ class Bot
 
 						# Sub entering running game
 						channel = client.find_channel( chanPath )
+						playerNum = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
 						channel.localusers.each do |user|
 							if @players[ client ] && @players[ client ].has_key?( user.name )
 								next if user.name.eql?( mumbleNick )
 								id = @players[ client ][ user.name ].match
 								if !id.nil? && id != @currentMatch[ client ]
+									return unless ( channel.localusers.length - 1 ) < playerNum # FIXME: include players in subdirectories
 									@players[ client ][ mumbleNick ].team = roles.first
 									@players[ client ][ mumbleNick ].match = id
 									index = @matches.index{ |m| m.id.eql?( id ) }
@@ -386,6 +477,13 @@ class Bot
 									return
 								end
 							end
+						end
+
+						# Remove the player from his current team and 
+						# Remove the team from the match if no longer any players on it
+						match.players.delete( player.playerName )
+						if match.players.select { |pN, team| team.eql?( player.team ) }.length.eql?( 0 )
+							match.teams.delete( player.team )
 						end
 
 						player.team = roles.first
@@ -478,11 +576,12 @@ class Bot
 				aliasNick = playerData[ :aliasNick ]
 				muted = playerData[ :muted ]
 				elo = playerData[ :elo ]
+				noMatches = playerData[ :noMatches ]
 				playerName = playerData[ :playerName ]
 				level = playerData[ :level ]
 				tag = playerData[ :tag ]
 				locale = playerData[ :locale ]
-				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, roles, nil, locale )
+				player = Player.new( session, mumbleNick, admin, aliasNick, muted, elo, noMatches, playerName, level, tag, nil, nil, nil, roles, nil, locale )
 
 				firstRoleReq = @rolesRequired[ client ][ roles.first ]
 
@@ -511,11 +610,13 @@ class Bot
 
 					# Sub entering running game
 					channel = client.find_channel( chanPath )
+					playerNum = @playerNum[ client ] ? @playerNum[ client ] : @defaultPlayerNum
 					channel.localusers.each do |user|
 						if @players[ client ] && @players[ client ].has_key?( user.name )
 							next if user.name.eql?( mumbleNick )
 							id = @players[ client ][ user.name ].match
 							if !id.nil? && id != @currentMatch[ client ]
+								return unless ( channel.localusers.length - 1 ) < playerNum # FIXME: include players in subdirectories
 								player.team = roles.first
 								player.match = id
 								@players[ client ][ mumbleNick ] = player
@@ -524,6 +625,13 @@ class Bot
 								return
 							end
 						end
+					end
+
+					# Remove the player from his current team and 
+					# Remove the team from the match if no longer any players on it
+					match.players.delete( player.playerName )
+					if match.players.select { |pN, team| team.eql?( player.team ) }.length.eql?( 0 )
+						match.teams.delete( player.team )
 					end
 
 					player.team = roles.first
@@ -652,7 +760,22 @@ class Bot
 				index = @matches.index{ |m| m.id.eql?( @currentMatch[ client ] ) }
 				@matches[ index ].status = 'Started'
 				@matches[ index ].date = Time.now
-				message_all( client, "The teams are picked, match (id: #{match.id}) started.", [ nil, @currentMatch[ client ] ], 2 )
+
+				teamEloStr = Array.new
+
+				match.teams.each do |team|
+					avgElo = 0
+					noPlayers = 0
+					@players[ client ].values.select {|pl| pl.match.eql?( @currentMatch[ client ] ) && pl.team.eql?( team ) }.each do |pl|
+						avgElo += pl.elo
+						noPlayers += 1
+					end
+					avgElo = avgElo / noPlayers
+					teamEloStr << "#{avgElo} (#{team})"
+				end
+				eloStr = "ELOs: #{teamEloStr.join(', ')}"
+
+				message_all( client, "The teams are picked, match (id: #{match.id}) started. #{eloStr}.", [ nil, @currentMatch[ client ] ], 2 )
 
 				# Create new match
 				create_new_match( client )
@@ -720,9 +843,23 @@ class Bot
 
 		@matches[ index ].status = 'Pending'
 
-		message_all( client, "Your match (id: #{match.id}) seems to be over. Please report the result (check my comment for help).", [ matchId ], 2 )
+		track_match( client, match )
+
+		mapStr = String.new
+		unless match.idsAPI.empty?
+			mapLinks = Array.new
+			match.idsAPI.each do |id|
+				name = get_map_name( id ).split(' ')[2..-1].join(' ')
+				mapLinks << "<A HREF=\"https://account.hirezstudios.com/tribesascend/match-details.aspx?match=#{id}\">#{name}</A>"
+			end
+			mapStr = "You seem to have played #{mapLinks.join(', ')}. "
+		end
+
+		message_all( client, "Your match (id: #{match.id}) seems to be over.#{mapStr} Please report the result (check my comment for help).", [ matchId ], 2 )
 
 		write_matches_ini
+
+		create_comment( client )
 
 	end
 
@@ -736,7 +873,9 @@ class Bot
 		players = Hash.new
 		comment= ''
 		result = Array.new
-		match = Match.new( id, label, status, date, teams, players, comment, result )
+		perfELO = nil
+		idsAPI = Array.new
+		match = Match.new( id, label, status, date, teams, players, comment, result, perfELO, idsAPI )
 		@matches << match
 		@currentMatch[ client ] = id
 		@moveQueue[ client ] = false
@@ -1017,11 +1156,12 @@ class Bot
 			aliasNick = playerData[ :aliasNick ]
 			muted = playerData[ :muted ]
 			elo = playerData[ :elo ]
+			noMatches = playerData[ :noMatches ]
 			playerName = playerData[ :playerName ]
 			level = playerData[ :level ]
 			tag = playerData[ :tag ]
 			locale = playerData[ :locale ]
-			player = Player.new( message.actor, mumbleNick, admin, aliasNick, muted, elo, playerName, level, tag, nil, nil, nil, nil, nil, locale )
+			player = Player.new( message.actor, mumbleNick, admin, aliasNick, muted, elo, noMatches, playerName, level, tag, nil, nil, nil, nil, nil, locale )
 			@players[ client ][ mumbleNick ] = player
 		end
 
@@ -1577,9 +1717,10 @@ class Bot
 
 			sectionName = 'ELO'
 
-			if !player.elo.nil? && !player.elo.eql?( 1000 )
-				ini.removeValue( sectionName, CGI::escape(oldPlayerName) )
-				ini.setValue( sectionName, CGI::escape(player.aliasNick ? player.aliasNick : player.mumbleNick), player.elo.to_s )
+			ini.removeValue( sectionName, CGI::escape(oldPlayerName) )
+			unless ( player.elo.eql?( 1000 ) && player.noMatches.eql?( 0 ) )
+				eloStr = "#{player.elo} #{player.noMatches}"
+				ini.setValue( sectionName, CGI::escape(player.aliasNick ? player.aliasNick : player.mumbleNick), eloStr )
 			end
 
 			ini.writeToFile( 'players.ini' )
@@ -1620,7 +1761,7 @@ class Bot
 
 			if player.admin.eql?( 'SuperUser' ) || player.admin.eql?( 'Admin' )
 
-				message_user(client, message.actor, _('Already a %{admin}.'), admin: player.admin)
+				client.send_user_message message.actor, "Already a #{player.admin}."
 				return
 
 			else
@@ -1703,7 +1844,7 @@ class Bot
 			if displayPlayers
 				if @players[ client ]
 					@players[ client ].each_pair do |session, player|
-						client.send_user_message message.actor, "Player: #{convert_symbols_to_html( player.playerName )}, level: #{player.level}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
+						client.send_user_message message.actor, "Player: #{convert_symbols_to_html( player.playerName )}, level: #{player.level}, elo: #{player.elo}, number of matches: #{player.noMatches}, roles: #{player.roles}, match: #{player.match}, team: #{player.team}"
 					end
 				else
 					message_user(client, message.actor, _('No players registered'))
@@ -1839,46 +1980,13 @@ class Bot
 		end
 
 		if match
-
-			results = Array.new
-
-			scores.each do |score|
-
-				if score.split('-').length != match.teams.length
-					message_user(client, message.actor, _('Malformed result: please use "BE"-"DS" for each map.'))
-					return
-				end
-
-				result = Result.new
-				result.teams = match.teams
-				result.scores = score.split('-')
-				results << result
-				
+			resultStr = set_result( client, match, scores, message.actor )
+			unless resultStr.nil?
+				client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
+				message_all( client, "#{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", [ match.id ], 2, message.actor )
 			end
-
-			match.results = results
-
-			match.status = 'Finished'
-			index = @matches.index{ |m| m.id.eql?( match.id ) }
-			@matches[ index ] = match
-
-			write_matches_ini
-
-			resultStr = ''
-			if match.results.length > 0
-				match.results.each do |res|
-					resultStr << " #{res.scores.join('-')}"
-				end
-			end
-
-			client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
-			message_all( client, "#{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", [ match.id ], 2, message.actor )
-			create_comment( client )
-
 		else
-
 			message_user(client, message.actor, _('No match found with results pending. Maybe the match has already been reported.'))
-
 		end
 
 	end
@@ -1916,47 +2024,13 @@ class Bot
 			match = @matches.select{ |m| m.id.eql?( matchId ) }.first
 
 			if match
-
-				results = Array.new
-
-				scores.each do |score|
-
-					if score.split('-').length != match.teams.length
-						message_user(client, message.actor, _('Malformed result: please use "BE"-"DS" for each map.'))
-						return
-					end
-
-					result = Result.new
-					result.teams = match.teams
-					result.scores = score.split('-')
-					results << result
-					
+				resultStr = set_result( client, match, scores, message.actor )
+				unless resultStr.nil?
+					client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
+					message_all( client, "Admin #{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", [ match.id ], 2, message.actor )
 				end
-
-				match.results.clear
-				match.results = results
-
-				match.status = 'Finished'
-				index = @matches.index{ |m| m.id.eql?( match.id ) }
-				@matches[ index ] = match
-
-				write_matches_ini
-
-				resultStr = ''
-				if match.results.length > 0
-					match.results.each do |res|
-						resultStr << " #{res.scores.join('-')}"
-					end
-				end
-
-				client.send_user_message message.actor, "The results of match (id: #{match.id}) set to: #{resultStr}."
-				message_all( client, "Admin #{mumbleNick} reported the results of the match (id: #{match.id}): #{resultStr}.", [ match.id ], 2, message.actor )
-				create_comment( client )
-
 			else
-
 				client.send_user_message message.actor, "No match with id \"#{matchId}\" found."
-
 			end
 
 		else
@@ -1968,6 +2042,166 @@ class Bot
 	def help_msg_admin_result client, message
 		message_user(client, message.actor, _('Syntax: !admin result "match_id" "scores"'))
 		message_user(client, message.actor, _('Sets the "scores" of "match_id" for all maps in form "ourcaps"-"theircaps" separated by a space.'))
+	end
+
+	def set_result client, match, scores, reporter
+
+		results = Array.new
+
+		scores.each do |score|
+
+			if score.split('-').length != match.teams.length
+				client.send_user_message reporter, 'Malformed result: please use "BE"-"DS" for each map.'
+				return nil
+			end
+
+			result = Result.new
+			result.teams = match.teams
+			result.scores = score.split('-')
+			results << result
+			
+		end
+
+		match.results.clear
+		match.results = results
+
+		match.status = 'Finished'
+		index = @matches.index{ |m| m.id.eql?( match.id ) }
+		@matches[ index ] = match
+
+		ratioNew = 0.0
+		match.players.each_key do |pN|
+
+			unless @eloCalculator.has_player?( pN )
+
+				elo = nil
+				noMatches = nil
+
+				player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+
+				if player.nil?
+					if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
+						ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
+						sectionName = 'ELO'
+						eloStr = ini.getValue( sectionName, CGI::escape( pN ) )
+						unless eloStr.nil?
+							elo = eloStr.split(' ')[0].to_i
+							noMatches = eloStr.split(' ')[1].to_i
+						end
+					end
+				else
+					elo = player.elo
+					noMatches = player.noMatches
+				end
+				elo = 1000 if elo.nil?
+				noMatches = 0 if noMatches.nil?
+
+				@eloCalculator.add_player( pN, elo, noMatches )
+
+				ratioNew += 1.0 if noMatches.eql?( 0 )
+
+			end
+
+		end
+		ratioNew = ratioNew / match.players.length
+
+		scores = @eloCalculator.add_match( match )
+		estimated = scores[0][ match.teams[0] ]
+		actual = scores[1][ match.teams[0] ]
+		match.perfELO = 1 - ( estimated - actual ).abs
+
+		if File.exists?( 'players.ini' )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'players.ini' )
+			FileUtils.cp( 'players.ini', 'players.bak' )
+		else
+			ini = Kesh::IO::Storage::IniFile.new
+		end
+
+		sectionName = "ELO"
+
+		match.players.each_key do |pN|
+			if @eloCalculator.has_player?( pN )
+
+				elo = @eloCalculator.get_elo( pN )
+				noMatches = @eloCalculator.get_noMatches( pN )
+
+				player = @players[ client ].select{ |m, p| p.playerName.downcase.eql?( pN.downcase ) }.values.first
+				unless player.nil?
+					player.elo = elo
+					player.noMatches = noMatches
+				end
+
+				ini.removeValue( sectionName, CGI::escape( pN ) )
+				unless ( elo.eql?( 1000 ) && noMatches.eql?( 0 ) )
+					eloStr = "#{elo} #{noMatches}"
+					ini.setValue( sectionName, CGI::escape( pN ), eloStr )
+				end
+
+			end
+		end
+
+		ini.writeToFile( 'players.ini' )
+
+		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/elo_history.ini' ) )
+			ini = Kesh::IO::Storage::IniFile.loadFromFile( 'elo_history.ini' )
+			FileUtils.cp( 'elo_history.ini', 'elo_history.bak' )
+		else
+			ini = Kesh::IO::Storage::IniFile.new
+		end		
+
+		sectionName = 'ELOPerformance'
+		i = 0
+		count = 1
+		if ini.hasSection?( sectionName )
+			i = ini.getValue( sectionName, 'Count' ).to_i
+			count += i
+			ini.removeValue( sectionName, 'Count' )
+		else
+			ini.addSection( sectionName )
+		end
+		ini.setValue( sectionName, 'Count', count.to_s )
+		ini.setValue( sectionName, "Date#{i}", match.date.to_time.utc.to_s )
+		ini.setValue( sectionName, "Estimated#{i}", estimated.to_s )
+		ini.setValue( sectionName, "Actual#{i}", actual.to_s )
+		ini.setValue( sectionName, "Performance#{i}", match.perfELO.to_s )
+		ini.setValue( sectionName, "RatioNew#{i}", ratioNew.to_s )
+
+		match.players.each_key do |pN|
+			if @eloCalculator.has_player?( pN )
+
+				elo = @eloCalculator.get_elo( pN )
+				sectionName = CGI::escape( pN )
+
+				i = 0
+				count = 1
+				if ini.hasSection?( sectionName )
+					i = ini.getValue( sectionName, 'Count' ).to_i
+					count += i
+					ini.removeValue( sectionName, 'Count' )
+				else
+					ini.addSection( sectionName )
+				end
+
+				ini.setValue( sectionName, 'Count', count.to_s )
+				ini.setValue( sectionName, "Date#{i}", match.date.to_time.utc.to_s )
+				ini.setValue( sectionName, "ELO#{i}", elo )
+
+			end
+		end
+
+		ini.writeToFile( 'elo_history.ini' )
+
+		write_matches_ini
+		create_comment( client )
+
+		resultStr = ''
+		if match.results.length > 0
+			match.results.each do |res|
+				resultStr << " #{res.scores.join('-')}"
+			end
+		end
+
+		return resultStr
 	end
 
 	def cmd_admin_delete client, message
@@ -2125,7 +2359,7 @@ class Bot
 		output = eval(command)
 		puts "Eval call returned: #{output}"
 		client.send_user_message session, "Output: #{output}"
-	rescue => e
+	rescue Exception => e
 		client.send_user_message session, "The eval threw an exception '#{e}'\nTRACE:\n#{e.backtrace.join('\n')}"
 	end
 
@@ -2152,6 +2386,33 @@ class Bot
 		end
 
 	rescue
+		return nil
+
+	end
+
+	def get_player_matches nick, date
+
+		matchesData = @query.get_match_history( nick )
+		matchIds = Array.new
+		matchesData.each do |matchData|
+			matchDate = DateTime.strptime( matchData[ 'Entry_Datetime' ], '%m/%d/%Y %I:%M:%S %p' ).to_time.utc
+			break if matchDate < date
+			matchIds << matchData[ 'MatchId']
+		end
+
+		return matchIds
+
+	rescue => e
+		return nil
+
+	end
+
+	def get_map_name matchId
+
+		matchData = @query.get_match_stats( matchId )
+		return matchData.first[ "Map_Name" ]
+
+	rescue => e
 		return nil
 
 	end
@@ -2281,6 +2542,10 @@ class Bot
 				ini.setValue( sectionName, "Result#{r.to_s}Comment", "#{result.comment}")
 			end
 
+			ini.setValue( sectionName, 'PerformanceELO', match.perfELO.to_s )
+
+			ini.setValue( sectionName, 'MatchIdsAPI', match.idsAPI.join(' ') ) unless match.idsAPI.empty?
+
 		end
 
 		ini.writeToFile( 'matches.ini' )
@@ -2355,7 +2620,7 @@ class Bot
 
 				while rIndex < rCount
 
-					rMap = section.getValue( "Result#{rIndex}Map")
+					rMap = section.getValue( "Result#{rIndex}Map" )
 					rTeams = teams
 					rScores = Array.new
 
@@ -2363,7 +2628,7 @@ class Bot
 						rScores << section.getValue( "Result#{rIndex}#{team}" ).to_i
 					end
 
-					rComment = section.getValue( "Result#{rIndex}Comment")
+					rComment = section.getValue( "Result#{rIndex}Comment" )
 
 					results << Result.new( rMap, rTeams, rScores, rComment )
 
@@ -2371,7 +2636,14 @@ class Bot
 
 				end
 
-				@matches << Match.new( idInt, label, status, date, teams, players, comment, results )
+				perfELO = section.getValue( 'PerformanceELO' )
+				perfELO = Float( perfELO ) unless perfELO.nil?
+
+				idsAPI = Array.new
+				idsAPIStr = section.getValue( 'MatchIdsAPI' )
+				idsAPI = idsAPIStr.split(' ') unless idsAPIStr.nil?
+
+				@matches << Match.new( idInt, label, status, date, teams, players, comment, results, perfELO, idsAPI )
 
 			end
 
@@ -2388,6 +2660,7 @@ class Bot
 		aliasNick = nil
 		muted = nil
 		elo = nil
+		noMatches = nil
 		locale = nil
 
 		if File.exists?( File.expand_path( File.dirname( __FILE__ ) + '/players.ini' ) )
@@ -2413,12 +2686,19 @@ class Bot
 			end
 
 			sectionName = 'ELO'
-			elo = ini.getValue( sectionName, CGI::escape(nick) )
+			eloStr = ini.getValue( sectionName, CGI::escape(nick) )
+			unless eloStr.nil?
+				elo = eloStr.split(' ')[0].to_i
+				noMatches = eloStr.split(' ')[1].to_i
+			end
 
 			sectionName = 'Locale'
 			locale = ini.getValue( sectionName, CGI::escape(nick) )
 
 		end
+
+		elo = 1000 if elo.nil?
+		noMatches = 0 if noMatches.nil?
 
 		stats = Array.new
 		stats << 'Name'
@@ -2441,16 +2721,17 @@ class Bot
 		end
 
 		return {
-			session: session,
-			mumbleNick: mumbleNick,
-			admin: admin,
-			aliasNick: aliasNick,
-			muted: muted,
-			elo: elo,
-			playerName: playerName,
-			level: level,
-			tag: tag,
-			locale: locale,
+				session: session,
+				mumbleNick: mumbleNick,
+				admin: admin,
+				aliasNick: aliasNick,
+				muted: muted,
+				elo: elo,
+				noMatches: noMatches,
+				playerName: playerName,
+				level: level,
+				tag: tag,
+				locale: locale
 		}
 
 	end
