@@ -1015,8 +1015,15 @@ class Bot
 					end
 
 					teamStrs = Array.new
-					teams.each_key do |team|
-						teamStrs << "#{teams[ team ].join(' ')} (#{team})"
+					teams.keys.sort.each do |team|
+						avgElo = 0
+						noPlayers = 0
+						suggestedPlayers.select {|pl| pl.autoTeam.eql?( team ) }.each do |pl|
+							avgElo += pl.elo
+							noPlayers += 1
+						end
+						avgElo = avgElo / noPlayers
+						teamStrs << "#{teams[ team ].join(' ')} (#{team}, Avg. ELO #{avgElo})"
 					end
 
 					message_all( client, "Suggested teams: #{teamStrs.join(', ')}", [ nil, @currentMatch[ client ] ], 2 )
