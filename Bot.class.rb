@@ -295,6 +295,8 @@ class Bot
 
 		@connections.keys.each do |cl|
 
+			next if @players[ cl ].nil?
+
 			admins = @players[ cl ].select{ |mN, pl| pl.admin.eql?( 'SuperUser' ) }
 
 			unless admins.empty?
